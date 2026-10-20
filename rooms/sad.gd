@@ -14,38 +14,40 @@ var drakkar: Hotspot
 
 
 func _ready() -> void:
-	walk_area = Rect2(60, 490, 1160, 140)
+	walk_area = Rect2(60, 370, 1160, 320)
+	far_scale = 0.62
+	near_scale = 1.15
 
-	add_hotspot("jablon", "Jabłoń", Vector2(900, 500), Vector2(280, 400), Vector2(790, 540), "tree")
-	add_hotspot("beczka", "Beczułka nalewki", Vector2(230, 490), Vector2(70, 90), Vector2(270, 520), "barrel")
-	add_hotspot("krzaki", "Krzaki", Vector2(1160, 520), Vector2(220, 110), Vector2(1070, 560), "bushes")
-	add_hotspot("wyjscie", "Do grodu", Vector2(30, 640), Vector2(60, 220), Vector2(70, 560))
+	add_hotspot("jablon", "Jabłoń", Vector2(880, 450), Vector2(260, 370), Vector2(770, 470), "tree")
+	add_hotspot("beczka", "Beczułka nalewki", Vector2(230, 610), Vector2(75, 95), Vector2(290, 630), "barrel")
+	add_hotspot("krzaki", "Krzaki", Vector2(1150, 660), Vector2(240, 120), Vector2(1040, 660), "bushes")
+	add_hotspot("wyjscie", "Do grodu", Vector2(30, 560), Vector2(60, 260), Vector2(80, 520))
 
-	drakkar = add_hotspot("wikingowie", "Wikingowie w latającym drakkarze", Vector2(560, 300), Vector2(320, 230), Vector2(560, 520), "drakkar")
-	wiking_a = add_character("Wiking", Vector2(440, 280), Color("4f7a3a"))
+	drakkar = add_hotspot("wikingowie", "Wikingowie w latającym drakkarze", Vector2(560, 260), Vector2(320, 230), Vector2(560, 390), "drakkar")
+	wiking_a = add_character("Wiking", Vector2(440, 240), Color("4f7a3a"))
 	wiking_a.braids = true
-	wiking_b = add_character("Wiking", Vector2(680, 280), Color("d9692b"))
+	wiking_b = add_character("Wiking", Vector2(680, 240), Color("d9692b"))
 	wiking_b.braids = true
 	wiking_b.facing = -1
 
-	leslaw = add_character("Lesław", Vector2(330, 560), Color("6f8f2f"))
+	leslaw = add_character("Lesław", Vector2(380, 450), Color("6f8f2f"))
 	leslaw.helmet = true
 	leslaw.feather = true
-	add_hotspot("leslaw", "Lesław Roztropny", leslaw.position + Vector2(0, 2), Vector2(80, 150), leslaw.position + Vector2(-100, 10))
+	add_hotspot("leslaw", "Lesław Roztropny", leslaw.position + Vector2(0, 2), Vector2(65, 120), leslaw.position + Vector2(-80, 10))
 
-	czeslaw = add_character("Czesław", Vector2(1000, 580), Color("9aa3ab"))
+	czeslaw = add_character("Czesław", Vector2(1000, 560), Color("9aa3ab"))
 	czeslaw.helmet = true
 	czeslaw.mustache = true
 	czeslaw.chainmail = true
 	czeslaw.facing = -1
 	add_hotspot("czeslaw", "Czesław Waleczny", czeslaw.position + Vector2(-40, 2), Vector2(170, 150), czeslaw.position + Vector2(-190, -10))
 
-	ksiaze = add_character("Książę Jarosław", Vector2(170, 590), Color("b03a2e"))
+	ksiaze = add_character("Książę Jarosław", Vector2(170, 560), Color("b03a2e"))
 	ksiaze.crown = true
 	ksiaze.beard = true
 	ksiaze.hide()
 
-	player = add_character("Wiesław", Vector2(90, 590), Color("7b5ea7"))
+	player = add_character("Wiesław", Vector2(90, 560), Color("7b5ea7"))
 	player.helmet = true
 
 	_set_night(false)
@@ -218,9 +220,9 @@ func _finale() -> void:
 	wiking_b.hide()
 	_set_night(false)
 	czeslaw.asleep = false
-	ksiaze.position = Vector2(-60, 590)
+	ksiaze.position = Vector2(-60, 560)
 	ksiaze.show()
-	await ksiaze.walk_to(Vector2(240, 590))
+	await ksiaze.walk_to(Vector2(240, 560))
 	await say_as(czeslaw, "To ciekawe.")
 	await say_as(leslaw, "Śmieszna sprawa.")
 	await say_as(ksiaze, "Czary mary? Synu, nie tylko powstrzymałeś rabusiów, ale odzyskałeś jabłka!")
@@ -249,17 +251,19 @@ func _draw() -> void:
 		draw_circle(Vector2(1138, 80), 36, Color("1d2b5a"))
 	else:
 		draw_circle(Vector2(1120, 130), 55, Color("ffe08a"))
-	draw_circle(Vector2(250, 640), 380, Color("a8d58c"))
-	draw_circle(Vector2(1000, 700), 420, Color("98cc7c"))
+	draw_circle(Vector2(250, 530), 380, Color("a8d58c"))
+	draw_circle(Vector2(1000, 590), 420, Color("98cc7c"))
 	# Distant gród behind the palisade.
 	var tower := Color("8fa6c8")
-	draw_rect(Rect2(150, 180, 90, 250), tower)
-	draw_colored_polygon(PackedVector2Array([Vector2(130, 185), Vector2(195, 120), Vector2(260, 185)]), Color("e0a832"))
+	draw_rect(Rect2(150, 70, 90, 250), tower)
+	draw_colored_polygon(PackedVector2Array([Vector2(130, 75), Vector2(195, 10), Vector2(260, 75)]), Color("e0a832"))
 	for x in range(0, 420, 18):
-		draw_rect(Rect2(x, 330, 16, 110), Color("7a5230"))
-	draw_rect(Rect2(0, 440, 1280, 280), Color("7cbf5a"))
+		draw_rect(Rect2(x, 220, 16, 110), Color("7a5230"))
+	draw_rect(Rect2(0, 330, 1280, 390), Color("7cbf5a"))
+	for y in [400, 480, 580]:
+		draw_line(Vector2(0, y), Vector2(1280, y), Color("72b252"), 2.0)
 	var wood := Color("8b5a2b")
-	draw_rect(Rect2(420, 395, 860, 10), wood)
-	draw_rect(Rect2(420, 425, 860, 10), wood)
+	draw_rect(Rect2(420, 285, 860, 10), wood)
+	draw_rect(Rect2(420, 315, 860, 10), wood)
 	for x in range(430, 1280, 55):
-		draw_rect(Rect2(x, 380, 14, 70), wood)
+		draw_rect(Rect2(x, 270, 14, 70), wood)

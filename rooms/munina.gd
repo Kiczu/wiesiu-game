@@ -11,40 +11,42 @@ var barany: Hotspot
 
 
 func _ready() -> void:
-	walk_area = Rect2(60, 500, 1160, 130)
+	walk_area = Rect2(60, 380, 1160, 310)
+	far_scale = 0.62
+	near_scale = 1.15
 
-	add_hotspot("drakkar", "Drakkar", Vector2(200, 620), Vector2(300, 200), Vector2(390, 590), "drakkar")
-	add_hotspot("karczma", "Karczma", Vector2(860, 470), Vector2(300, 300), Vector2(860, 540))
-	add_hotspot("garnek", "Wyszczerbiony garnek", Vector2(460, 515), Vector2(40, 40), Vector2(480, 545), "pot")
-	add_hotspot("kurnik", "Kurnik", Vector2(1150, 520), Vector2(140, 130), Vector2(1080, 560), "coop")
-	add_hotspot("kociol", "Kocioł smoły", Vector2(540, 530), Vector2(70, 80), Vector2(560, 570), "cauldron")
-	barany = add_hotspot("barany", "Trzy barany", Vector2(640, 620), Vector2(200, 70), Vector2(560, 600), "sheep")
+	add_hotspot("drakkar", "Drakkar", Vector2(200, 670), Vector2(300, 200), Vector2(410, 650), "drakkar")
+	add_hotspot("karczma", "Karczma", Vector2(860, 360), Vector2(300, 300), Vector2(860, 400))
+	add_hotspot("garnek", "Wyszczerbiony garnek", Vector2(470, 470), Vector2(36, 36), Vector2(500, 485), "pot")
+	add_hotspot("kurnik", "Kurnik", Vector2(1150, 470), Vector2(130, 120), Vector2(1070, 485), "coop")
+	add_hotspot("kociol", "Kocioł smoły", Vector2(580, 580), Vector2(70, 80), Vector2(650, 600), "cauldron")
+	barany = add_hotspot("barany", "Trzy barany", Vector2(760, 670), Vector2(200, 70), Vector2(640, 660), "sheep")
 	find_hotspot("garnek").visible = not Game.flag("garnek_wziety")
 	barany.visible = Game.flag("barany")
 
-	chlop_a = add_character("Chłop", Vector2(620, 520), Color("a07850"))
+	chlop_a = add_character("Chłop", Vector2(290, 440), Color("a07850"))
 	chlop_a.beard = true
-	chlop_b = add_character("Chłop", Vector2(690, 515), Color("8a9a5b"))
+	chlop_b = add_character("Chłop", Vector2(350, 435), Color("8a9a5b"))
 	chlop_b.mustache = true
 	chlop_b.facing = -1
-	add_hotspot("chlopi", "Chłopi", Vector2(655, 522), Vector2(150, 150), Vector2(600, 570))
+	add_hotspot("chlopi", "Chłopi", Vector2(320, 442), Vector2(120, 115), Vector2(420, 455))
 
-	karczmarz = add_character("Karczmarz", Vector2(800, 560), Color("d8d0b8"))
+	karczmarz = add_character("Karczmarz", Vector2(790, 420), Color("d8d0b8"))
 	karczmarz.mustache = true
 	karczmarz.facing = -1
-	add_hotspot("karczmarz", "Karczmarz", karczmarz.position + Vector2(0, 2), Vector2(80, 150), karczmarz.position + Vector2(-100, 20))
+	add_hotspot("karczmarz", "Karczmarz", karczmarz.position + Vector2(0, 2), Vector2(60, 115), karczmarz.position + Vector2(-80, 15))
 
-	rokita = add_character("Rokita", Vector2(1000, 580), Color("222222"))
+	rokita = add_character("Rokita", Vector2(1000, 570), Color("222222"))
 	rokita.skin = Color("c0392b")
 	rokita.horns = true
 	rokita.facing = -1
 	add_hotspot("rokita", "Gość w czarnej szacie", rokita.position + Vector2(0, 2), Vector2(80, 160), rokita.position + Vector2(-110, 10))
 	if Game.flag("rokita_w_zalodze"):
-		rokita.position = Vector2(150, 540)
+		rokita.position = Vector2(330, 620)
 		rokita.facing = 1
 		find_hotspot("rokita").hide()
 
-	player = add_character("Wiesław", Vector2(400, 610), Color("7b5ea7"))
+	player = add_character("Wiesław", Vector2(430, 650), Color("7b5ea7"))
 	player.helmet = true
 
 
@@ -209,7 +211,7 @@ func _threaten_rokita() -> void:
 	Game.remove_item("pierze")
 	Game.set_flag("rokita_w_zalodze")
 	find_hotspot("rokita").hide()
-	await rokita.walk_to(Vector2(150, 540))
+	await rokita.walk_to(Vector2(330, 620))
 	await say_as(karczmarz, "Odchodzi! Naprawdę odchodzi!")
 
 
@@ -228,19 +230,21 @@ func _finale() -> void:
 func _draw() -> void:
 	draw_rect(Rect2(0, 0, 1280, 720), Color("bfe3f2"))
 	draw_circle(Vector2(1100, 120), 50, Color("ffe08a"))
-	draw_circle(Vector2(300, 700), 520, Color("8fbf6a"))
-	draw_circle(Vector2(1100, 760), 560, Color("86b862"))
+	draw_circle(Vector2(300, 590), 520, Color("8fbf6a"))
+	draw_circle(Vector2(1100, 650), 560, Color("86b862"))
 	# Thatched huts on the hill.
 	for x in [120, 380, 1080]:
-		draw_rect(Rect2(x, 320, 130, 110), Color("c9a77a"))
-		draw_colored_polygon(PackedVector2Array([Vector2(x - 20, 330), Vector2(x + 65, 250), Vector2(x + 150, 330)]), Color("d8b45a"))
-		draw_rect(Rect2(x + 50, 370, 30, 60), Color("5a3a1e"))
+		draw_rect(Rect2(x, 220, 130, 110), Color("c9a77a"))
+		draw_colored_polygon(PackedVector2Array([Vector2(x - 20, 230), Vector2(x + 65, 150), Vector2(x + 150, 230)]), Color("d8b45a"))
+		draw_rect(Rect2(x + 50, 270, 30, 60), Color("5a3a1e"))
 	# The inn, bigger, with a sign.
-	draw_rect(Rect2(710, 240, 300, 230), Color("a57a4c"))
-	draw_colored_polygon(PackedVector2Array([Vector2(690, 250), Vector2(860, 160), Vector2(1030, 250)]), Color("d8b45a"))
-	draw_rect(Rect2(830, 380, 60, 90), Color("5a3a1e"))
-	draw_rect(Rect2(800, 280, 120, 40), Color("e8d8b0"))
-	draw_rect(Rect2(800, 280, 120, 40), Color("3b2a1a"), false, 3.0)
-	draw_string(ThemeDB.fallback_font, Vector2(812, 308), "KARCZMA", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color("3b2a1a"))
-	draw_rect(Rect2(0, 440, 1280, 280), Color("9a8a5a"))
-	draw_rect(Rect2(0, 440, 1280, 12), Color("7d6f48"))
+	draw_rect(Rect2(710, 130, 300, 230), Color("a57a4c"))
+	draw_colored_polygon(PackedVector2Array([Vector2(690, 140), Vector2(860, 50), Vector2(1030, 140)]), Color("d8b45a"))
+	draw_rect(Rect2(830, 270, 60, 90), Color("5a3a1e"))
+	draw_rect(Rect2(800, 170, 120, 40), Color("e8d8b0"))
+	draw_rect(Rect2(800, 170, 120, 40), Color("3b2a1a"), false, 3.0)
+	draw_string(ThemeDB.fallback_font, Vector2(812, 198), "KARCZMA", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color("3b2a1a"))
+	draw_rect(Rect2(0, 340, 1280, 380), Color("9a8a5a"))
+	draw_rect(Rect2(0, 340, 1280, 12), Color("7d6f48"))
+	for y in [420, 510, 610]:
+		draw_line(Vector2(0, y), Vector2(1280, y), Color("8e7f52"), 2.0)
