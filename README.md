@@ -12,6 +12,17 @@ The current build is a playable prototype with **placeholder art** (simple shape
 
 ## Controls
 
+Keyboard:
+
+- **WASD / arrows**: walk; the nearest object is highlighted
+- **E / Space / Enter**: use or talk to the highlighted object (with the selected item, if any); skip a line of dialogue
+- **Q**: look at the highlighted object
+- **I / Tab**: open the backpack
+- **1-9**: select an item from the backpack, or pick a dialogue option
+- **Esc**: put the selected item back, close the backpack
+
+Mouse (also for tablets):
+
 - **Left click**: walk, use an object, talk
 - **Right click**: look at an object, or put back the selected item
 - **Backpack (bottom right)**: open the inventory; pick an item, then click an object to use it on

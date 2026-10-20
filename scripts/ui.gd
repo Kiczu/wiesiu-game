@@ -27,6 +27,7 @@ var _end_text: Label
 var _fade: ColorRect
 var _caption: Label
 var _speaking := false
+var _hover_anchor := Vector2(-1, -1)
 var _skip := false
 
 
@@ -99,7 +100,8 @@ func choose(options: Array) -> int:
 		child.queue_free()
 	for i in options.size():
 		var button := Button.new()
-		button.text = options[i]
+		button.text = "%d. %s" % [i + 1, options[i]]
+		button.focus_mode = Control.FOCUS_NONE
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.add_theme_font_size_override("font_size", 22)
 		button.pressed.connect(func() -> void: choice_made.emit(i))
@@ -110,8 +112,19 @@ func choose(options: Array) -> int:
 	return index
 
 
-func set_hover(text: String) -> void:
+func is_choosing() -> bool:
+	return _choices.visible
+
+
+func pick_choice(index: int) -> void:
+	if index < _choices.get_child_count():
+		choice_made.emit(index)
+
+
+## Shows `text` next to the mouse, or above `anchor` when one is given (keyboard control).
+func set_hover(text: String, anchor := Vector2(-1, -1)) -> void:
 	_hover_label.text = text
+	_hover_anchor = anchor
 
 
 func select_item(id: String) -> void:
@@ -130,15 +143,20 @@ func toggle_inventory() -> void:
 
 
 func _process(_delta: float) -> void:
-	_hover_label.position = get_viewport().get_mouse_position() + Vector2(18, 12)
+	if _hover_anchor.x >= 0:
+		_hover_label.position = _hover_anchor - Vector2(_hover_label.size.x / 2, 34)
+	else:
+		_hover_label.position = get_viewport().get_mouse_position() + Vector2(18, 12)
 
 
 func _refresh_inventory() -> void:
 	for child in _inventory_grid.get_children():
 		child.queue_free()
-	for id in Game.inventory:
+	for i in Game.inventory.size():
+		var id := Game.inventory[i]
 		var button := Button.new()
-		button.text = Game.item_name(id)
+		button.text = "%d. %s" % [i + 1, Game.item_name(id)]
+		button.focus_mode = Control.FOCUS_NONE
 		button.icon = _color_icon(Game.ITEMS[id]["color"])
 		button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		button.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
@@ -221,7 +239,7 @@ func _build() -> void:
 	_fade.add_child(_caption)
 
 	var hint := Label.new()
-	hint.text = "Lewy przycisk: idź / użyj    Prawy: obejrzyj (albo odłóż przedmiot)    Plecak: prawy dolny róg"
+	hint.text = "WSAD: idź    E / spacja: użyj    Q: obejrzyj    I: plecak    1-9: przedmiot    Esc: odłóż    (myszką też można)"
 	hint.position = Vector2(12, 8)
 	hint.add_theme_font_size_override("font_size", 16)
 	hint.add_theme_color_override("font_color", Color(0, 0, 0, 0.6))

@@ -77,6 +77,18 @@ func hotspot_at(point: Vector2) -> Hotspot:
 	return found
 
 
+## The visible hotspot whose walk point is closest to `point`, within `reach`.
+func hotspot_near(point: Vector2, reach := 170.0) -> Hotspot:
+	var best: Hotspot = null
+	var best_distance := reach
+	for h in _hotspots():
+		var distance := point.distance_to(clamp_to_walk_area(h.walk_point))
+		if h.visible and distance < best_distance:
+			best = h
+			best_distance = distance
+	return best
+
+
 func clamp_to_walk_area(point: Vector2) -> Vector2:
 	return point.clamp(walk_area.position, walk_area.end)
 

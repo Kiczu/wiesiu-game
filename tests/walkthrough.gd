@@ -17,8 +17,17 @@ func _ready() -> void:
 		await _main.run(_main.room.do_look.bind(_main.room.find_hotspot(id)))
 	Game.test_choices = [0, 1, 2, 3]
 	await _do("ksiaze")
-	await _do("stol")
-	_check(Game.has_item("kubek"), "cup in inventory")
+	var player: Character = _main.room.player
+	player.step(Vector2.LEFT, 100.0, _main.room.walk_area)
+	_check(player.position.x == _main.room.walk_area.position.x, "keyboard walking stays inside the walk area")
+	player.position = Vector2(380, 560)
+	_check(_main.room.hotspot_near(player.position).id == "stol", "the table is the nearest hotspot")
+	await _press(KEY_E)
+	_check(Game.has_item("kubek"), "cup taken with the E key")
+	await _press(KEY_1)
+	_check(_main.ui.selected_item == "kubek", "key 1 selects the first item")
+	await _press(KEY_ESCAPE)
+	_check(_main.ui.selected_item == "", "Esc puts the item back")
 
 	await _do("drzwi")
 	_check(_main.room_id == "sad", "the door leads to the orchard")
@@ -84,6 +93,15 @@ func _ready() -> void:
 
 	print("RESULT: " + ("FAIL" if _failed else "OK"))
 	get_tree().quit(1 if _failed else 0)
+
+
+func _press(key: Key) -> void:
+	var event := InputEventKey.new()
+	event.physical_keycode = key
+	event.pressed = true
+	_main._unhandled_input(event)
+	while _main.busy:
+		await get_tree().process_frame
 
 
 func _do(id: String, item := "") -> void:

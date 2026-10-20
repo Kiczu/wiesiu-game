@@ -26,6 +26,7 @@ var talking := false:
 
 var _target := Vector2.ZERO
 var _walking := false
+var _stepping := false
 var _anim := 0.0
 
 const OUTLINE := Color("2b1d14")
@@ -43,6 +44,17 @@ func walk_to(point: Vector2) -> void:
 	_target = point
 	_walking = true
 	await arrived
+
+
+## Moves one frame in `direction` (keyboard control), staying inside `area`.
+func step(direction: Vector2, delta: float, area: Rect2) -> void:
+	if _walking:
+		_walking = false
+		arrived.emit()
+	position = (position + direction * speed * delta).clamp(area.position, area.end)
+	if absf(direction.x) > 0.1:
+		facing = 1 if direction.x > 0 else -1
+	_stepping = true
 
 
 func face(point: Vector2) -> void:
@@ -69,9 +81,10 @@ func _process(delta: float) -> void:
 			position += to_target.normalized() * step
 			if absf(to_target.x) > 1.0:
 				facing = 1 if to_target.x > 0 else -1
-	if _walking or talking or asleep:
+	if _walking or _stepping or talking or asleep:
 		_anim += delta
 		queue_redraw()
+	_stepping = false
 	# Fake depth: characters lower on screen are closer, so larger.
 	var depth := clampf(inverse_lerp(470.0, 640.0, position.y), 0.0, 1.0)
 	scale = Vector2.ONE * lerpf(0.85, 1.05, depth)
@@ -81,8 +94,9 @@ func _draw() -> void:
 	if asleep:
 		_draw_asleep()
 		return
-	var bob := absf(sin(_anim * 10.0)) * -4.0 if _walking else 0.0
-	var stride := sin(_anim * 10.0) * 8.0 if _walking else 0.0
+	var moving := _walking or _stepping
+	var bob := absf(sin(_anim * 10.0)) * -4.0 if moving else 0.0
+	var stride := sin(_anim * 10.0) * 8.0 if moving else 0.0
 	draw_rect(Rect2(-16 + stride, -34, 12, 34), Color("5a3e2b"))
 	draw_rect(Rect2(4 - stride, -34, 12, 34), Color("5a3e2b"))
 	var body := Rect2(-26, -92 + bob, 52, 62)
