@@ -29,6 +29,11 @@ func _ready() -> void:
 	_check(_main.room.hotspot_in_reach(player) == null, "the table is not highlighted behind Wiesław's back")
 	player.facing = -1
 	_check(_main.room.hotspot_in_reach(player).id == "stol", "the table is in reach when facing it")
+	player.position = Vector2(240, 550)
+	player.facing = 1
+	_check(_main.room.hotspot_in_reach(player).id == "stol", "the table is in reach from the left side too")
+	player.position = Vector2(400, 550)
+	player.facing = -1
 	await _press(KEY_E)
 	_check(Game.has_item("kubek"), "cup taken with the E key")
 	await _press(KEY_1)
