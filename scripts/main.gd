@@ -12,7 +12,7 @@ var room_id := ""
 var ui: GameUI
 ## True while a cutscene runs; clicks are ignored then.
 var busy := false
-## Last input came from the keyboard: the hotspot nearest to Wiesław is the target, not the one under the mouse.
+## Last input came from the keyboard: the hotspot in front of Wiesław is the target, not the one under the mouse.
 var keyboard_mode := false
 
 const KEYS := {
@@ -84,7 +84,7 @@ func _process(delta: float) -> void:
 	var hovered: Hotspot = null
 	if not busy and not ui.is_end_shown():
 		if keyboard_mode:
-			hovered = room.hotspot_near(room.player.position)
+			hovered = room.hotspot_in_reach(room.player)
 		else:
 			hovered = room.hotspot_at(get_global_mouse_position())
 	for h in room._hotspots():
@@ -162,13 +162,13 @@ func _on_key(event: InputEventKey) -> void:
 	elif ui.is_inventory_open():
 		return
 	elif event.is_action("interact"):
-		var h := room.hotspot_near(room.player.position)
+		var h := room.hotspot_in_reach(room.player)
 		if h:
 			var item := ui.selected_item
 			ui.select_item("")
 			run(room.do_interact.bind(h, item))
 	elif event.is_action("look"):
-		var h := room.hotspot_near(room.player.position)
+		var h := room.hotspot_in_reach(room.player)
 		if h:
 			run(room.do_look.bind(h))
 
