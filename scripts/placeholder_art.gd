@@ -17,6 +17,14 @@ static func draw(h: Hotspot, art: String) -> void:
 			_door(h)
 		"throne":
 			_throne(h)
+		"pot":
+			_pot(h)
+		"cauldron":
+			_cauldron(h)
+		"coop":
+			_coop(h)
+		"sheep":
+			_sheep(h)
 		"bushes":
 			_bushes(h)
 		"drakkar":
@@ -106,6 +114,40 @@ static func _drakkar(h: Hotspot) -> void:
 	])
 	h.draw_colored_polygon(hull, hull_color)
 	h.draw_polyline(hull + PackedVector2Array([hull[0]]), OUTLINE, 2.0)
-	if Game.flag("jablka_odzyskane"):
+	if Game.flag("jablka_w_drakkarze"):
 		for i in 9:
 			h.draw_circle(Vector2(-w / 2 + 40 + i * (w - 80) / 8.0, -74), 10, Color("d62828"))
+
+
+static func _pot(h: Hotspot) -> void:
+	h.draw_circle(Vector2(0, -16), 16, Color("7a4a2a"))
+	h.draw_rect(Rect2(-12, -34, 24, 6), Color("5a3a1e"))
+	h.draw_line(Vector2(6, -30), Vector2(12, -20), Color("f4e9d0"), 2.0)
+
+
+static func _cauldron(h: Hotspot) -> void:
+	for i in 3:
+		h.draw_line(Vector2(-14 + i * 14, 0), Vector2(-10 + i * 10, -14), Color("e07a1f"), 5.0)
+	h.draw_circle(Vector2(0, -36), 28, Color("2b2b2b"))
+	h.draw_rect(Rect2(-30, -62, 60, 12), Color("2b2b2b"))
+	h.draw_rect(Rect2(-24, -62, 48, 6), Color("111111"))
+
+
+static func _coop(h: Hotspot) -> void:
+	var w := h.size.x
+	var hh := h.size.y
+	h.draw_rect(Rect2(-w / 2, -hh * 0.7, w, hh * 0.7), WOOD)
+	h.draw_colored_polygon(PackedVector2Array([Vector2(-w / 2 - 8, -hh * 0.7), Vector2(0, -hh), Vector2(w / 2 + 8, -hh * 0.7)]), Color("e0a832"))
+	h.draw_rect(Rect2(-12, -30, 24, 30), Color("3b2a1a"))
+	if not Game.flag("pierze_wziete"):
+		h.draw_circle(Vector2(w / 2 - 14, -10), 12, Color("f4f4f4"))
+
+
+static func _sheep(h: Hotspot) -> void:
+	for i in 3:
+		var at := Vector2(-60 + i * 60, -24)
+		for puff in [Vector2(-12, 0), Vector2(0, -8), Vector2(12, 0), Vector2(0, 6)]:
+			h.draw_circle(at + puff, 14, Color("f4f4f4"))
+		h.draw_circle(at + Vector2(22, -6), 9, Color("3b3b3b"))
+		h.draw_line(at + Vector2(-8, 16), at + Vector2(-8, 26), Color("3b3b3b"), 3.0)
+		h.draw_line(at + Vector2(8, 16), at + Vector2(8, 26), Color("3b3b3b"), 3.0)

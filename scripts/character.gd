@@ -13,6 +13,8 @@ signal arrived
 @export var mustache := false
 @export var braids := false
 @export var chainmail := false
+@export var horns := false
+@export var skin := Color("f2c29b")
 @export var asleep := false
 @export var speed := 280.0
 
@@ -26,7 +28,6 @@ var _target := Vector2.ZERO
 var _walking := false
 var _anim := 0.0
 
-const SKIN := Color("f2c29b")
 const OUTLINE := Color("2b1d14")
 
 
@@ -93,9 +94,12 @@ func _draw() -> void:
 	draw_rect(body, OUTLINE, false, 2.0)
 	draw_rect(Rect2(-26, -46 + bob, 52, 6), Color("6b4423"))
 	var head := Vector2(0, -114 + bob)
-	draw_circle(head, 24, SKIN)
+	if horns:
+		for side in [-1, 1]:
+			draw_colored_polygon(PackedVector2Array([head + Vector2(side * 10, -18), head + Vector2(side * 22, -40), head + Vector2(side * 20, -12)]), Color("f4e9d0"))
+	draw_circle(head, 24, skin)
 	draw_arc(head, 24, 0, TAU, 32, OUTLINE, 2.0)
-	draw_circle(head + Vector2(16 * facing, 4), 9, Color("e8a87c"))
+	draw_circle(head + Vector2(16 * facing, 4), 9, skin.darkened(0.12))
 	draw_circle(head + Vector2(6 * facing, -6), 3.5, OUTLINE)
 	draw_circle(head + Vector2(16 * facing, -7), 3.5, OUTLINE)
 	if beard:
@@ -146,7 +150,7 @@ func _draw_asleep() -> void:
 	draw_rect(Rect2(-100, -40 - breath, 64, 40 + breath), body_color)
 	draw_rect(Rect2(-36, -26, 50, 26), Color("5a3e2b"))
 	var head := Vector2(-124, -24)
-	draw_circle(head, 24, SKIN)
+	draw_circle(head, 24, skin)
 	draw_arc(head, 24, 0, TAU, 32, OUTLINE, 2.0)
 	draw_circle(head + Vector2(0, -16), 9, Color("e8a87c"))
 	draw_line(head + Vector2(-12, -4), head + Vector2(-4, -4), OUTLINE, 2.0)

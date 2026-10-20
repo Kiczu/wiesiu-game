@@ -7,6 +7,9 @@ const ITEMS := {
 	"nalewka": {"name": "Kubek nalewki", "color": Color("8e1b3a")},
 	"jablko": {"name": "Jabłko", "color": Color("d62828")},
 	"oko": {"name": "Magiczne oko", "color": Color("6fd3ff")},
+	"garnek": {"name": "Wyszczerbiony garnek", "color": Color("7a4a2a")},
+	"smola": {"name": "Garnek smoły", "color": Color("1b1b1b")},
+	"pierze": {"name": "Worek pierza", "color": Color("f4f4f4")},
 }
 
 var inventory: Array[String] = []
