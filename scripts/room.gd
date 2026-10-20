@@ -77,13 +77,18 @@ func hotspot_at(point: Vector2) -> Hotspot:
 	return found
 
 
-## The visible hotspot whose walk point is closest to `point`, within `reach`.
-func hotspot_near(point: Vector2, reach := 170.0) -> Hotspot:
+## The hotspot `who` can reach: its walk point is within `reach` and the object is in front of them
+## (or right above them). The closest one wins.
+func hotspot_in_reach(who: Character, reach := 80.0) -> Hotspot:
 	var best: Hotspot = null
 	var best_distance := reach
 	for h in _hotspots():
-		var distance := point.distance_to(clamp_to_walk_area(h.walk_point))
-		if h.visible and distance < best_distance:
+		if not h.visible:
+			continue
+		var distance := who.position.distance_to(clamp_to_walk_area(h.walk_point))
+		var dx := h.global_position.x - who.position.x
+		var in_front := absf(dx) <= h.size.x / 2 or signf(dx) == who.facing
+		if in_front and distance < best_distance:
 			best = h
 			best_distance = distance
 	return best

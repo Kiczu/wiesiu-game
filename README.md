@@ -14,7 +14,7 @@ The current build is a playable prototype with **placeholder art** (simple shape
 
 Keyboard:
 
-- **WASD / arrows**: walk; the nearest object is highlighted
+- **WASD / arrows**: walk; an object is highlighted when Wiesław stands next to it and faces it
 - **E / Space / Enter**: use or talk to the highlighted object (with the selected item, if any); skip a line of dialogue
 - **Q**: look at the highlighted object
 - **I / Tab**: open the backpack
