@@ -212,6 +212,8 @@ func _finale() -> void:
 	await say("Pieszo. Ruch na świeżym powietrzu dobrze wam zrobi.")
 	Game.remove_item("oko")
 	Game.set_flag("jablka_odzyskane")
+	Game.set_flag("jablka_w_drakkarze")
+	drakkar.queue_redraw()
 	wiking_a.hide()
 	wiking_b.hide()
 	_set_night(false)
@@ -226,9 +228,8 @@ func _finale() -> void:
 	await say("Chciałbym zatrzymać latający statek i ruszyć w świat.")
 	await say_as(ksiaze, "A po co?")
 	await say("W poszukiwaniu przygód.")
-	Game.set_flag("koniec")
-	ui.show_end("Koniec Księgi I",
-		"Wiesław złapał rabusiów, odzyskał jabłka i zdobył latający drakkar.\nPrzygoda dopiero się zaczyna...")
+	Game.set_flag("ksiega_1_ukonczona")
+	go_to("munina", "Podróż Wiesława trwała długo. Minął puszcze pełne zwierza, niebosiężne góry i bezkresne stepy...\n\nW końcu trafił do małej wsi gdzieś na Podkarpaciu.")
 
 
 func _set_night(night: bool) -> void:

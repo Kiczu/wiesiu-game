@@ -9,6 +9,8 @@ var walk_area := Rect2(60, 480, 1160, 150)
 var entered_from := ""
 ## Set by `go_to`; main switches rooms once the current action finishes.
 var pending_exit := ""
+## Optional narration shown on the black screen while switching rooms.
+var pending_caption := ""
 
 
 func _init() -> void:
@@ -25,8 +27,9 @@ func interact(_id: String, _verb: String, _item: String) -> bool:
 	return false
 
 
-func go_to(room_id: String) -> void:
+func go_to(room_id: String, caption := "") -> void:
 	pending_exit = room_id
+	pending_caption = caption
 
 
 func say(text: String) -> void:

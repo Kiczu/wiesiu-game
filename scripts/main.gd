@@ -3,6 +3,7 @@ extends Node2D
 const ROOMS := {
 	"sala": preload("res://rooms/sala.gd"),
 	"sad": preload("res://rooms/sad.gd"),
+	"munina": preload("res://rooms/munina.gd"),
 }
 const FIRST_ROOM := "sala"
 
@@ -26,6 +27,8 @@ func run(scene: Callable) -> void:
 	await scene.call()
 	while room.pending_exit != "":
 		await ui.fade_out()
+		if room.pending_caption != "":
+			await ui.show_caption(room.pending_caption)
 		_enter_room(room.pending_exit)
 		await ui.fade_in()
 		await room.intro()

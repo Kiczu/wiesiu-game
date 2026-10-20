@@ -25,6 +25,7 @@ var _end_screen: Control
 var _end_title: Label
 var _end_text: Label
 var _fade: ColorRect
+var _caption: Label
 var _speaking := false
 var _skip := false
 
@@ -162,6 +163,20 @@ func _color_icon(color: Color) -> Texture2D:
 	return ImageTexture.create_from_image(image)
 
 
+## Narration on the black screen between rooms. Ends after a while or on click.
+func show_caption(text: String) -> void:
+	_caption.text = text
+	_speaking = true
+	_skip = false
+	var duration := 0.0 if Game.fast else 2.0 + text.length() * 0.05
+	var elapsed := 0.0
+	while elapsed < duration and not _skip:
+		await get_tree().process_frame
+		elapsed += get_process_delta_time()
+	_speaking = false
+	_caption.text = ""
+
+
 func fade_out() -> void:
 	await _fade_to(1.0)
 
@@ -196,6 +211,14 @@ func _build() -> void:
 	_fade.modulate.a = 0.0
 	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_fade)
+	_caption = Label.new()
+	_caption.position = Vector2(240, 0)
+	_caption.size = Vector2(800, SCREEN.y)
+	_caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_caption.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_caption.add_theme_font_size_override("font_size", 28)
+	_fade.add_child(_caption)
 
 	var hint := Label.new()
 	hint.text = "Lewy przycisk: idź / użyj    Prawy: obejrzyj (albo odłóż przedmiot)    Plecak: prawy dolny róg"
