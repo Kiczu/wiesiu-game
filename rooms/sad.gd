@@ -40,6 +40,7 @@ func _ready() -> void:
 	czeslaw.mustache = true
 	czeslaw.chainmail = true
 	czeslaw.facing = -1
+	czeslaw.asleep = Game.flag("czeslaw_spi") and not Game.flag("jablka_odzyskane")
 	add_hotspot("czeslaw", "Czesław Waleczny", czeslaw.position + Vector2(-40, 2), Vector2(170, 150), czeslaw.position + Vector2(-190, -10))
 
 	ksiaze = add_character("Książę Jarosław", Vector2(170, 560), Color("b03a2e"))

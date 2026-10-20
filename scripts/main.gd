@@ -10,6 +10,9 @@ const FIRST_ROOM := "sala"
 var room: Room
 var room_id := ""
 var ui: GameUI
+var menu: GameMenu
+## Tests start straight in the first room, without the main menu.
+var skip_menu := false
 ## True while a cutscene runs; clicks are ignored then.
 var busy := false
 ## Last input came from the keyboard: the hotspot in front of Wiesław is the target, not the one under the mouse.
@@ -30,11 +33,55 @@ const KEYS := {
 
 func _ready() -> void:
 	_bind_keys()
+	Game.load_settings()
+	GameMenu.apply_fullscreen()
 	ui = GameUI.new()
 	add_child(ui)
-	ui.restart_requested.connect(_restart)
-	_enter_room(FIRST_ROOM)
+	ui.restart_requested.connect(_to_main_menu)
+	menu = GameMenu.new()
+	add_child(menu)
+	menu.new_game_requested.connect(_new_game)
+	menu.load_requested.connect(_load)
+	menu.save_requested.connect(func(slot: int) -> void: Game.save_game(slot, room_id))
+	menu.resume_requested.connect(menu.close)
+	menu.main_menu_requested.connect(_to_main_menu)
+	if Game.pending_load >= 0:
+		var slot := Game.pending_load
+		Game.pending_load = -1
+		_start(Game.load_game(slot))
+	elif skip_menu:
+		_start(FIRST_ROOM)
+	else:
+		menu.show_main()
+
+
+func _start(id: String) -> void:
+	menu.close()
+	_enter_room(id)
 	run(room.intro)
+
+
+func _new_game() -> void:
+	Game.reset()
+	_start(FIRST_ROOM)
+
+
+## Loading mid-game reloads the scene first, so nothing from the old room keeps running.
+func _load(slot: int) -> void:
+	if Game.read_save(slot).is_empty():
+		return
+	if room:
+		Game.pending_load = slot
+		get_tree().paused = false
+		get_tree().reload_current_scene()
+	else:
+		_start(Game.load_game(slot))
+
+
+func _to_main_menu() -> void:
+	Game.reset()
+	get_tree().paused = false
+	get_tree().reload_current_scene()
 
 
 func run(scene: Callable) -> void:
@@ -45,6 +92,8 @@ func run(scene: Callable) -> void:
 		if room.pending_caption != "":
 			await ui.show_caption(room.pending_caption)
 		_enter_room(room.pending_exit)
+		if not Game.fast:
+			Game.save_game(0, room_id)
 		await ui.fade_in()
 		await room.intro()
 	busy = false
@@ -78,6 +127,8 @@ func _can_play() -> bool:
 
 
 func _process(delta: float) -> void:
+	if not room:
+		return
 	var direction := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	if direction != Vector2.ZERO and _can_play():
 		keyboard_mode = true
@@ -157,8 +208,10 @@ func _on_key(event: InputEventKey) -> void:
 	elif event.is_action("cancel"):
 		if ui.is_inventory_open():
 			ui.toggle_inventory()
-		else:
+		elif ui.selected_item != "":
 			ui.select_item("")
+		else:
+			menu.show_pause()
 	elif number >= 0 and number < 9:
 		if number < Game.inventory.size():
 			var id := Game.inventory[number]
@@ -178,10 +231,8 @@ func _on_key(event: InputEventKey) -> void:
 
 
 func _toggle_fullscreen() -> void:
-	var fullscreen := DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN
-	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED if fullscreen else DisplayServer.WINDOW_MODE_FULLSCREEN)
+	Game.fullscreen = DisplayServer.window_get_mode() != DisplayServer.WINDOW_MODE_FULLSCREEN
+	GameMenu.apply_fullscreen()
+	Game.save_settings()
 
 
-func _restart() -> void:
-	Game.reset()
-	get_tree().reload_current_scene()
