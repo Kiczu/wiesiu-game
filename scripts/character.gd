@@ -9,6 +9,11 @@ signal arrived
 @export var speech_color := Color.WHITE
 @export var helmet := false
 @export var crown := false
+@export var feather := false
+@export var beard := false
+@export var mustache := false
+@export var braids := false
+@export var chainmail := false
 @export var asleep := false
 @export var speed := 280.0
 
@@ -82,6 +87,10 @@ func _draw() -> void:
 	draw_rect(Rect2(4 - stride, -34, 12, 34), Color("5a3e2b"))
 	var body := Rect2(-26, -92 + bob, 52, 62)
 	draw_rect(body, body_color)
+	if chainmail:
+		for y in range(-86, -34, 8):
+			for x in range(-20, 24, 8):
+				draw_arc(Vector2(x, y + bob), 3, 0, PI, 4, Color(0, 0, 0, 0.35), 1.0)
 	draw_rect(body, OUTLINE, false, 2.0)
 	draw_rect(Rect2(-26, -46 + bob, 52, 6), Color("6b4423"))
 	var head := Vector2(0, -114 + bob)
@@ -90,12 +99,24 @@ func _draw() -> void:
 	draw_circle(head + Vector2(16 * facing, 4), 9, Color("e8a87c"))
 	draw_circle(head + Vector2(6 * facing, -6), 3.5, OUTLINE)
 	draw_circle(head + Vector2(16 * facing, -7), 3.5, OUTLINE)
+	if beard:
+		draw_colored_polygon(PackedVector2Array([head + Vector2(-22, 6), head + Vector2(22, 6), head + Vector2(0, 40)]), Color("f4f4f4"))
+	if braids:
+		draw_rect(Rect2(head + Vector2(-30, -10), Vector2(8, 40)), Color("f2c14e"))
+		draw_rect(Rect2(head + Vector2(22, -10), Vector2(8, 40)), Color("f2c14e"))
+		if not helmet:
+			draw_circle(head + Vector2(0, -12), 20, Color("f2c14e"))
 	if talking and fmod(_anim, 0.3) < 0.15:
 		draw_circle(head + Vector2(8 * facing, 14), 5, Color("7a2e2e"))
 	else:
 		draw_line(head + Vector2(2 * facing, 14), head + Vector2(14 * facing, 13), OUTLINE, 2.0)
+	if mustache:
+		draw_circle(head + Vector2(10 * facing, 10), 7, Color("5a3e2b"))
+		draw_circle(head + Vector2(22 * facing, 10), 7, Color("5a3e2b"))
 	if helmet:
 		_draw_helmet(head)
+	if feather:
+		draw_line(head + Vector2(0, -34), head + Vector2(-12 * facing, -56), Color("d62828"), 6.0)
 	if crown:
 		_draw_crown(head)
 
