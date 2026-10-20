@@ -1,6 +1,6 @@
 extends Room
 ## The prince's orchard, after Book I of the comic. Puzzle chain:
-## cup + barrel -> mead, mead -> Czesław falls asleep, bushes -> night and the Vikings arrive,
+## cup (from the throne room) + barrel -> mead, mead -> Czesław falls asleep, bushes -> night and the Vikings arrive,
 ## apple thrown at the Vikings -> magic eye, eye -> the Vikings give up the apples and the drakkar.
 
 const NIGHT_TINT := Color(0.55, 0.6, 0.95)
@@ -11,7 +11,6 @@ var czeslaw: Character
 var wiking_a: Character
 var wiking_b: Character
 var drakkar: Hotspot
-var pieniek: Hotspot
 
 
 func _ready() -> void:
@@ -19,7 +18,6 @@ func _ready() -> void:
 
 	add_hotspot("jablon", "Jabłoń", Vector2(900, 500), Vector2(280, 400), Vector2(790, 540), "tree")
 	add_hotspot("beczka", "Beczułka nalewki", Vector2(230, 490), Vector2(70, 90), Vector2(270, 520), "barrel")
-	pieniek = add_hotspot("pieniek", "Pieniek", Vector2(470, 505), Vector2(60, 60), Vector2(420, 530), "stump")
 	add_hotspot("krzaki", "Krzaki", Vector2(1160, 520), Vector2(220, 110), Vector2(1070, 560), "bushes")
 	add_hotspot("wyjscie", "Do grodu", Vector2(30, 640), Vector2(60, 220), Vector2(70, 560))
 
@@ -45,25 +43,20 @@ func _ready() -> void:
 	ksiaze = add_character("Książę Jarosław", Vector2(170, 590), Color("b03a2e"))
 	ksiaze.crown = true
 	ksiaze.beard = true
+	ksiaze.hide()
 
-	player = add_character("Wiesław", Vector2(560, 590), Color("7b5ea7"))
+	player = add_character("Wiesław", Vector2(90, 590), Color("7b5ea7"))
 	player.helmet = true
-	player.facing = -1
 
 	_set_night(false)
 
 
 func intro() -> void:
-	await say_as(ksiaze, "Synkowie! Ktoś nocami wykrada jabłka z mojego sadu!")
-	await say_as(leslaw, "Myślałem nad tym, ojcze. Długo. Bardzo długo.")
-	await say_as(czeslaw, "A ja pilnowałem! Liczyłem jabłka, żeby nie zasnąć.")
-	await say_as(ksiaze, "I obaj zasnęliście! Wiesławie, teraz twoja kolej. Złap rabusiów.")
-	await say("Spokojnie, ojcze. Mam plan.")
-	await ksiaze.walk_to(Vector2(-60, 590))
-	ksiaze.hide()
-	await say("...Jeszcze nie mam, ale zaraz będę miał.")
-	await say_as(czeslaw, "Ja zostaję na warcie! Jeden... dwa... trzy...")
-
+	if Game.flag("sad_odwiedzony"):
+		return
+	Game.set_flag("sad_odwiedzony")
+	await say_as(czeslaw, "Ja pilnuję! Jeden... dwa... trzy...")
+	await say_as(leslaw, "A ja myślę.")
 
 func interact(id: String, verb: String, item: String) -> bool:
 	match id:
@@ -76,23 +69,6 @@ func interact(id: String, verb: String, item: String) -> bool:
 				else:
 					await say("Kilka jabłek mniej nikomu nie zrobi różnicy. Najwyżej zwali się na rabusiów.")
 					Game.add_item("jablko")
-			else:
-				return false
-
-		"pieniek":
-			if verb == "look":
-				if Game.flag("kubek_wziety"):
-					await say("Zwykły pieniek.")
-				else:
-					await say("Pieniek. Ktoś zostawił na nim kubek. Pewnie Lesław, w przerwie od myślenia.")
-			elif verb == "use":
-				if Game.flag("kubek_wziety"):
-					await say("Nic tu już nie ma.")
-				else:
-					Game.set_flag("kubek_wziety")
-					pieniek.queue_redraw()
-					Game.add_item("kubek")
-					await say("Kubek się przyda. Kubek zawsze się przyda.")
 			else:
 				return false
 
@@ -175,8 +151,10 @@ func interact(id: String, verb: String, item: String) -> bool:
 		"wyjscie":
 			if verb == "look":
 				await say("Droga do grodu.")
+			elif Game.flag("noc"):
+				await say("Nie teraz! Zasadzka trwa.")
 			else:
-				await say("Bez rabusiów nie mam po co wracać. Ojciec by mnie zjadł. Razem z jabłkami.")
+				go_to("sala")
 
 		_:
 			return false

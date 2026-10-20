@@ -11,8 +11,12 @@ static func draw(h: Hotspot, art: String) -> void:
 			_tree(h)
 		"barrel":
 			_barrel(h)
-		"stump":
-			_stump(h)
+		"table":
+			_table(h)
+		"door":
+			_door(h)
+		"throne":
+			_throne(h)
 		"bushes":
 			_bushes(h)
 		"drakkar":
@@ -44,14 +48,35 @@ static func _barrel(h: Hotspot) -> void:
 	h.draw_rect(body, OUTLINE, false, 2.0)
 
 
-static func _stump(h: Hotspot) -> void:
+static func _table(h: Hotspot) -> void:
 	var w := h.size.x
-	h.draw_rect(Rect2(-w / 2, -30, w, 30), Color("6b4423"))
-	h.draw_rect(Rect2(-w / 2, -34, w, 6), Color("c8a06a"))
+	h.draw_rect(Rect2(-w / 2, -60, w, 12), WOOD)
+	h.draw_rect(Rect2(-w / 2 + 8, -48, 10, 48), Color("6b4423"))
+	h.draw_rect(Rect2(w / 2 - 18, -48, 10, 48), Color("6b4423"))
 	if not Game.flag("kubek_wziety"):
-		h.draw_rect(Rect2(-8, -54, 16, 20), Color("a0522d"))
-		h.draw_rect(Rect2(-8, -54, 16, 20), OUTLINE, false, 1.5)
+		h.draw_rect(Rect2(-8, -82, 16, 22), Color("a0522d"))
+		h.draw_rect(Rect2(-8, -82, 16, 22), OUTLINE, false, 1.5)
 
+
+static func _door(h: Hotspot) -> void:
+	var rect := Rect2(-h.size.x / 2, -h.size.y, h.size.x, h.size.y)
+	h.draw_rect(rect, Color("5a3a1e"))
+	for i in 4:
+		var x := rect.position.x + rect.size.x * (i + 1) / 5.0
+		h.draw_line(Vector2(x, rect.position.y), Vector2(x, 0), OUTLINE, 2.0)
+	h.draw_rect(rect, OUTLINE, false, 3.0)
+	h.draw_circle(Vector2(rect.position.x + 18, -h.size.y / 2), 6, Color("e0a832"))
+
+
+static func _throne(h: Hotspot) -> void:
+	var w := h.size.x
+	var hh := h.size.y
+	h.draw_rect(Rect2(-w / 2, -hh, w, hh * 0.7), WOOD)
+	h.draw_rect(Rect2(-w / 2 - 10, -hh * 0.4, w + 20, 22), Color("6b4423"))
+	h.draw_rect(Rect2(-w / 2 + 6, -hh * 0.3, 14, hh * 0.3), Color("6b4423"))
+	h.draw_rect(Rect2(w / 2 - 20, -hh * 0.3, 14, hh * 0.3), Color("6b4423"))
+	h.draw_circle(Vector2(0, -hh * 0.75), 16, Color("e0a832"))
+	h.draw_rect(Rect2(-w / 2, -hh, w, hh * 0.7), OUTLINE, false, 2.0)
 
 static func _bushes(h: Hotspot) -> void:
 	var w := h.size.x
