@@ -20,6 +20,7 @@ Keyboard:
 - **I / Tab**: open the backpack
 - **1-9**: select an item from the backpack, or pick a dialogue option
 - **Esc**: put the selected item back, close the backpack
+- **F11**: switch between full screen (the default) and a window
 
 Mouse (also for tablets):
 
