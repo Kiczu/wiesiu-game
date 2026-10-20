@@ -48,6 +48,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if busy or ui.is_end_shown():
 		return
+	if ui.is_inventory_open():
+		ui.toggle_inventory()
+		return
 	var point := get_global_mouse_position()
 	var h := room.hotspot_at(point)
 	if event.button_index == MOUSE_BUTTON_RIGHT:

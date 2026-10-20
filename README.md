@@ -14,7 +14,7 @@ The current build is a playable prototype with **placeholder art** (simple shape
 
 - **Left click**: walk, use an object, talk
 - **Right click**: look at an object, or put back the selected item
-- **Click an inventory item, then an object**: use the item on it
+- **Backpack (bottom right)**: open the inventory; pick an item, then click an object to use it on
 - **Click during dialogue**: skip the line
 
 ## Demo: Book I, "O dwóch takich co ukradli jabłka"
