@@ -6,11 +6,17 @@ signal choice_made(index: int)
 
 const SCREEN := Vector2(1280, 720)
 const BACKPACK_SIZE := Vector2(84, 84)
+const BUBBLE_MAX_WIDTH := 460.0
+const BUBBLE_FONT_SIZE := 21
+const INK := Color("1a1a1a")
 
 var selected_item := ""
 
 var _hover_label: Label
-var _speech: Label
+var _bubble: PanelContainer
+var _bubble_text: Label
+var _tail: Polygon2D
+var _tail_outline: Line2D
 var _backpack: BackpackButton
 var _inventory_panel: PanelContainer
 var _inventory_grid: GridContainer
@@ -29,13 +35,7 @@ func _ready() -> void:
 
 
 func say(who: Character, text: String) -> void:
-	_speech.text = text
-	_speech.add_theme_color_override("font_color", who.speech_color)
-	var head := who.head_position()
-	_speech.position = Vector2(
-		clampf(head.x - _speech.size.x / 2, 10, SCREEN.x - _speech.size.x - 10),
-		maxf(head.y - _speech.size.y, -80))
-	_speech.show()
+	await _show_bubble(who.head_position(), text)
 	who.talking = true
 	_speaking = true
 	_skip = false
@@ -46,7 +46,40 @@ func say(who: Character, text: String) -> void:
 		elapsed += get_process_delta_time()
 	_speaking = false
 	who.talking = false
-	_speech.hide()
+	_bubble.hide()
+	_tail.hide()
+	_tail_outline.hide()
+
+
+## Comic-style balloon above the speaker, with a tail pointing at their head.
+func _show_bubble(head: Vector2, text: String) -> void:
+	_bubble_text.text = text.to_upper()
+	var font := _bubble_text.get_theme_font("font")
+	var text_width := font.get_string_size(_bubble_text.text, HORIZONTAL_ALIGNMENT_LEFT, -1, BUBBLE_FONT_SIZE).x
+	var width := minf(text_width + 4, BUBBLE_MAX_WIDTH)
+	_bubble_text.custom_minimum_size.x = width
+	_bubble_text.size = Vector2(width, 0)
+	_bubble.modulate.a = 0.0
+	_bubble.show()
+	_bubble.reset_size()
+	# Let the containers settle so the wrapped height is known before placing the balloon.
+	if not Game.fast:
+		for i in 3:
+			await get_tree().process_frame
+			_bubble.reset_size()
+	var size := _bubble.size
+	var bottom := maxf(head.y - 36, size.y + 10)
+	var left := clampf(head.x - size.x / 2, 10, SCREEN.x - size.x - 10)
+	_bubble.position = Vector2(left, bottom - size.y)
+	var base_x := clampf(head.x, left + 30, left + size.x - 30)
+	var tip := Vector2(head.x, maxf(head.y - 6, bottom + 14))
+	var base_left := Vector2(base_x - 14, bottom - 3)
+	var base_right := Vector2(base_x + 14, bottom - 3)
+	_tail.polygon = PackedVector2Array([base_left, tip, base_right])
+	_tail_outline.points = PackedVector2Array([base_left, tip, base_right])
+	_bubble.modulate.a = 1.0
+	_tail.show()
+	_tail_outline.show()
 
 
 func is_speaking() -> bool:
@@ -176,17 +209,36 @@ func _build() -> void:
 	_inventory_panel.resized.connect(func() -> void:
 		_inventory_panel.position = _backpack.position + Vector2(BACKPACK_SIZE.x, 0) - _inventory_panel.size - Vector2(0, 12))
 
-	_speech = Label.new()
-	_speech.size = Vector2(560, 160)
-	_speech.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_speech.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_speech.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
-	_speech.add_theme_font_size_override("font_size", 26)
-	_speech.add_theme_constant_override("outline_size", 10)
-	_speech.add_theme_color_override("font_outline_color", Color.BLACK)
-	_speech.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_speech.hide()
-	add_child(_speech)
+	_bubble = PanelContainer.new()
+	var balloon := StyleBoxFlat.new()
+	balloon.bg_color = Color.WHITE
+	balloon.border_color = INK
+	balloon.set_border_width_all(3)
+	balloon.set_corner_radius_all(24)
+	balloon.content_margin_left = 18
+	balloon.content_margin_right = 18
+	balloon.content_margin_top = 10
+	balloon.content_margin_bottom = 12
+	_bubble.add_theme_stylebox_override("panel", balloon)
+	_bubble.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bubble.hide()
+	add_child(_bubble)
+	_bubble_text = Label.new()
+	_bubble_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_bubble_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_bubble_text.add_theme_font_size_override("font_size", BUBBLE_FONT_SIZE)
+	_bubble_text.add_theme_color_override("font_color", INK)
+	_bubble_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bubble.add_child(_bubble_text)
+	_tail = Polygon2D.new()
+	_tail.color = Color.WHITE
+	_tail.hide()
+	add_child(_tail)
+	_tail_outline = Line2D.new()
+	_tail_outline.width = 3.0
+	_tail_outline.default_color = INK
+	_tail_outline.hide()
+	add_child(_tail_outline)
 
 	_choices = VBoxContainer.new()
 	_choices.position = Vector2(40, 380)

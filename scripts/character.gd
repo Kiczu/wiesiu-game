@@ -6,7 +6,6 @@ signal arrived
 
 @export var display_name := ""
 @export var body_color := Color("7b5ea7")
-@export var speech_color := Color.WHITE
 @export var helmet := false
 @export var crown := false
 @export var feather := false
