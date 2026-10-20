@@ -14,6 +14,8 @@ var entered_from := ""
 var pending_exit := ""
 ## Optional narration shown on the black screen while switching rooms.
 var pending_caption := ""
+## Optional mini-game played on the way (see main.gd MINIGAMES).
+var pending_minigame := ""
 
 
 func _init() -> void:
@@ -30,9 +32,10 @@ func interact(_id: String, _verb: String, _item: String) -> bool:
 	return false
 
 
-func go_to(room_id: String, caption := "") -> void:
+func go_to(room_id: String, caption := "", minigame := "") -> void:
 	pending_exit = room_id
 	pending_caption = caption
+	pending_minigame = minigame
 
 
 func say(text: String) -> void:

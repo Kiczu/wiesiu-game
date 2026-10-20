@@ -232,7 +232,7 @@ func _finale() -> void:
 	await say_as(ksiaze, "A po co?")
 	await say("W poszukiwaniu przygód.")
 	Game.set_flag("ksiega_1_ukonczona")
-	go_to("munina", "Podróż Wiesława trwała długo. Minął puszcze pełne zwierza, niebosiężne góry i bezkresne stepy...\n\nW końcu trafił do małej wsi gdzieś na Podkarpaciu.")
+	go_to("munina", "Wiesław ruszył w świat latającym drakkarem. Przed nim puszcze pełne zwierza, niebosiężne góry i bezkresne stepy...", "flight")
 
 
 func _set_night(night: bool) -> void:

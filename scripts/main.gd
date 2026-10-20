@@ -6,6 +6,7 @@ const ROOMS := {
 	"munina": preload("res://rooms/munina.gd"),
 }
 const FIRST_ROOM := "sala"
+const MINIGAMES := {"flight": preload("res://minigames/flight.gd")}
 
 var room: Room
 var room_id := ""
@@ -91,12 +92,25 @@ func run(scene: Callable) -> void:
 		await ui.fade_out()
 		if room.pending_caption != "":
 			await ui.show_caption(room.pending_caption)
+		if room.pending_minigame != "":
+			await _play_minigame(room.pending_minigame)
 		_enter_room(room.pending_exit)
 		if not Game.fast:
 			Game.save_game(0, room_id)
 		await ui.fade_in()
 		await room.intro()
 	busy = false
+
+
+## Saving is off during a mini-game: the save would put the player back before it.
+func _play_minigame(id: String) -> void:
+	var minigame: Node = MINIGAMES[id].new()
+	minigame.pause_requested.connect(menu.show_pause)
+	menu.can_save = false
+	add_child(minigame)
+	await minigame.finished
+	minigame.queue_free()
+	menu.can_save = true
 
 
 func _enter_room(id: String) -> void:

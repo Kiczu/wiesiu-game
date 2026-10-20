@@ -17,6 +17,8 @@ var _box: VBoxContainer
 ## "main" or "pause": where Back on a sub-page leads.
 var _home := "main"
 var _page := ""
+## Off during mini-games and cutscenes that a save could not restore.
+var can_save := true
 
 
 func _ready() -> void:
@@ -97,7 +99,7 @@ func _main_page() -> void:
 func _pause_page() -> void:
 	_start_page("pause", "Pauza")
 	_button("Wróć do gry", func() -> void: resume_requested.emit())
-	_button("Zapisz grę", _slots_page.bind(true))
+	_button("Zapisz grę", _slots_page.bind(true), not can_save)
 	_button("Wczytaj grę", _slots_page.bind(false), Game.latest_save() < 0)
 	_button("Ustawienia", _settings_page)
 	_button("Menu główne", func() -> void: main_menu_requested.emit())
