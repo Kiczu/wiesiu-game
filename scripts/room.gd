@@ -29,12 +29,11 @@ func say_as(who: Character, text: String) -> void:
 	await ui.say(who, text)
 
 
-func add_character(display_name: String, at: Vector2, body: Color, speech: Color) -> Character:
+func add_character(display_name: String, at: Vector2, body: Color) -> Character:
 	var c := Character.new()
 	c.display_name = display_name
 	c.position = at
 	c.body_color = body
-	c.speech_color = speech
 	add_child(c)
 	return c
 

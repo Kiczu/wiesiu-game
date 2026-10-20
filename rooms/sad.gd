@@ -24,29 +24,29 @@ func _ready() -> void:
 	add_hotspot("wyjscie", "Do grodu", Vector2(30, 640), Vector2(60, 220), Vector2(70, 560))
 
 	drakkar = add_hotspot("wikingowie", "Wikingowie w latającym drakkarze", Vector2(560, 300), Vector2(320, 230), Vector2(560, 520), "drakkar")
-	wiking_a = add_character("Wiking", Vector2(440, 280), Color("4f7a3a"), Color("c8f7a0"))
+	wiking_a = add_character("Wiking", Vector2(440, 280), Color("4f7a3a"))
 	wiking_a.braids = true
-	wiking_b = add_character("Wiking", Vector2(680, 280), Color("d9692b"), Color("ffc59e"))
+	wiking_b = add_character("Wiking", Vector2(680, 280), Color("d9692b"))
 	wiking_b.braids = true
 	wiking_b.facing = -1
 
-	leslaw = add_character("Lesław", Vector2(330, 560), Color("6f8f2f"), Color("d8f5a2"))
+	leslaw = add_character("Lesław", Vector2(330, 560), Color("6f8f2f"))
 	leslaw.helmet = true
 	leslaw.feather = true
 	add_hotspot("leslaw", "Lesław Roztropny", leslaw.position + Vector2(0, 2), Vector2(80, 150), leslaw.position + Vector2(-100, 10))
 
-	czeslaw = add_character("Czesław", Vector2(1000, 580), Color("9aa3ab"), Color("e0e6ff"))
+	czeslaw = add_character("Czesław", Vector2(1000, 580), Color("9aa3ab"))
 	czeslaw.helmet = true
 	czeslaw.mustache = true
 	czeslaw.chainmail = true
 	czeslaw.facing = -1
 	add_hotspot("czeslaw", "Czesław Waleczny", czeslaw.position + Vector2(-40, 2), Vector2(170, 150), czeslaw.position + Vector2(-190, -10))
 
-	ksiaze = add_character("Książę Jarosław", Vector2(170, 590), Color("b03a2e"), Color("ffd27f"))
+	ksiaze = add_character("Książę Jarosław", Vector2(170, 590), Color("b03a2e"))
 	ksiaze.crown = true
 	ksiaze.beard = true
 
-	player = add_character("Wiesław", Vector2(560, 590), Color("7b5ea7"), Color.WHITE)
+	player = add_character("Wiesław", Vector2(560, 590), Color("7b5ea7"))
 	player.helmet = true
 	player.facing = -1
 
