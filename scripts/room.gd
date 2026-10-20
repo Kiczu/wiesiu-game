@@ -5,6 +5,9 @@ extends Node2D
 var player: Character
 var ui: GameUI
 var walk_area := Rect2(60, 480, 1160, 150)
+## Character scale at the back and at the front of the walk area (fake perspective).
+var far_scale := 0.85
+var near_scale := 1.05
 ## The room the player came from; empty on a new game.
 var entered_from := ""
 ## Set by `go_to`; main switches rooms once the current action finishes.
@@ -102,6 +105,11 @@ func hotspot_in_reach(who: Character, reach := Vector2(40, 60), walk_point_reach
 			best = h
 			best_score = score
 	return best
+
+
+func depth_scale(y: float) -> float:
+	var depth := clampf(inverse_lerp(walk_area.position.y, walk_area.end.y, y), 0.0, 1.0)
+	return lerpf(far_scale, near_scale, depth)
 
 
 func clamp_to_walk_area(point: Vector2) -> Vector2:

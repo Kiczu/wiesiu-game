@@ -20,19 +20,19 @@ func _ready() -> void:
 	var player: Character = _main.room.player
 	player.step(Vector2.LEFT, 100.0, _main.room.walk_area)
 	_check(player.position.x == _main.room.walk_area.position.x, "keyboard walking stays inside the walk area")
-	player.position = Vector2(520, 550)
+	player.position = Vector2(540, 600)
 	player.facing = -1
 	var reached: Hotspot = _main.room.hotspot_in_reach(player)
 	_check(reached == null or reached.id != "stol", "the table is out of reach from further away on the same line")
-	player.position = Vector2(400, 550)
+	player.position = Vector2(420, 600)
 	player.facing = 1
 	_check(_main.room.hotspot_in_reach(player) == null, "the table is not highlighted behind Wiesław's back")
 	player.facing = -1
 	_check(_main.room.hotspot_in_reach(player).id == "stol", "the table is in reach when facing it")
-	player.position = Vector2(240, 550)
+	player.position = Vector2(230, 600)
 	player.facing = 1
 	_check(_main.room.hotspot_in_reach(player).id == "stol", "the table is in reach from the left side too")
-	player.position = Vector2(400, 550)
+	player.position = Vector2(420, 600)
 	player.facing = -1
 	await _press(KEY_E)
 	_check(Game.has_item("kubek"), "cup taken with the E key")
