@@ -24,6 +24,7 @@ var _choices: VBoxContainer
 var _end_screen: Control
 var _end_title: Label
 var _end_text: Label
+var _fade: ColorRect
 var _speaking := false
 var _skip := false
 
@@ -161,6 +162,23 @@ func _color_icon(color: Color) -> Texture2D:
 	return ImageTexture.create_from_image(image)
 
 
+func fade_out() -> void:
+	await _fade_to(1.0)
+
+
+func fade_in() -> void:
+	await _fade_to(0.0)
+
+
+func _fade_to(alpha: float) -> void:
+	if Game.fast:
+		_fade.modulate.a = alpha
+		return
+	var tween := create_tween()
+	tween.tween_property(_fade, "modulate:a", alpha, 0.35)
+	await tween.finished
+
+
 func show_end(title: String, text: String) -> void:
 	_end_title.text = title
 	_end_text.text = text
@@ -172,6 +190,13 @@ func is_end_shown() -> bool:
 
 
 func _build() -> void:
+	_fade = ColorRect.new()
+	_fade.color = Color.BLACK
+	_fade.size = SCREEN
+	_fade.modulate.a = 0.0
+	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_fade)
+
 	var hint := Label.new()
 	hint.text = "Lewy przycisk: idź / użyj    Prawy: obejrzyj (albo odłóż przedmiot)    Plecak: prawy dolny róg"
 	hint.position = Vector2(12, 8)

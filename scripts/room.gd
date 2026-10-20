@@ -5,6 +5,10 @@ extends Node2D
 var player: Character
 var ui: GameUI
 var walk_area := Rect2(60, 480, 1160, 150)
+## The room the player came from; empty on a new game.
+var entered_from := ""
+## Set by `go_to`; main switches rooms once the current action finishes.
+var pending_exit := ""
 
 
 func _init() -> void:
@@ -19,6 +23,10 @@ func intro() -> void:
 ## Return false to let Wiesław answer with a generic line.
 func interact(_id: String, _verb: String, _item: String) -> bool:
 	return false
+
+
+func go_to(room_id: String) -> void:
+	pending_exit = room_id
 
 
 func say(text: String) -> void:

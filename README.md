@@ -19,15 +19,16 @@ The current build is a playable prototype with **placeholder art** (simple shape
 
 ## Demo: Book I, "O dwóch takich co ukradli jabłka"
 
-Prince Jarosław's apples are stolen at night and both older brothers have failed, so Wiesław takes over. Solution (spoiler): take the cup from the stump, fill it at the mead barrel and give it to Czesław so he falls asleep, pick an apple, hide in the bushes, throw the apple at the Vikings to grab their shared magic eye, then use the eye on them.
+The game starts in the throne room: Prince Jarosław's apples are stolen at night and both older brothers have failed, so Wiesław takes over. Solution (spoiler): take the cup from the table in the throne room, go through the door to the orchard, fill it at the mead barrel and give it to Czesław so he falls asleep, pick an apple, hide in the bushes, throw the apple at the Vikings to grab their shared magic eye, then use the eye on them.
 
 ## Layout
 
 | Path | Contents |
 |---|---|
+| `rooms/sala.gd` | The throne room where Book I starts |
 | `rooms/sad.gd` | The orchard from Book I: objects, dialogue and puzzles |
 | `scripts/game.gd` | Item list and game state (inventory, flags); autoloaded as `Game` |
-| `scripts/room.gd` | Base class for rooms |
+| `scripts/room.gd` | Base class for rooms; `go_to` switches to another room |
 | `scripts/character.gd` | Characters (placeholder drawing) |
 | `scripts/hotspot.gd` | Clickable objects |
 | `scripts/placeholder_art.gd` | Placeholder drawings, to be replaced by the author's art |
