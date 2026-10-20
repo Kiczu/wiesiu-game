@@ -3,8 +3,10 @@ extends Node
 signal inventory_changed
 
 const ITEMS := {
-	"grabie": {"name": "Grabie", "color": Color("8b5a2b")},
-	"pioro": {"name": "Złote pióro", "color": Color("ffcc33")},
+	"kubek": {"name": "Kubek", "color": Color("a0522d")},
+	"nalewka": {"name": "Kubek nalewki", "color": Color("8e1b3a")},
+	"jablko": {"name": "Jabłko", "color": Color("d62828")},
+	"oko": {"name": "Magiczne oko", "color": Color("6fd3ff")},
 }
 
 var inventory: Array[String] = []

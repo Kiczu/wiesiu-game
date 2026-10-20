@@ -17,15 +17,15 @@ The current build is a playable prototype with **placeholder art** (simple shape
 - **Click an inventory item, then an object**: use the item on it
 - **Click during dialogue**: skip the line
 
-## Demo: who stole the prince's apples?
+## Demo: Book I, "O dwóch takich co ukradli jabłka"
 
-The prince tells Wiesław to find the thief of the golden apples. Solution (spoiler): take the rake, use it on the apple tree, and show the golden feather to the prince. Optionally, tickle the sleeping guard with the feather.
+Prince Jarosław's apples are stolen at night and both older brothers have failed, so Wiesław takes over. Solution (spoiler): take the cup from the stump, fill it at the mead barrel and give it to Czesław so he falls asleep, pick an apple, hide in the bushes, throw the apple at the Vikings to grab their shared magic eye, then use the eye on them.
 
 ## Layout
 
 | Path | Contents |
 |---|---|
-| `rooms/sad.gd` | The orchard: objects, dialogue and puzzle |
+| `rooms/sad.gd` | The orchard from Book I: objects, dialogue and puzzles |
 | `scripts/game.gd` | Item list and game state (inventory, flags); autoloaded as `Game` |
 | `scripts/room.gd` | Base class for rooms |
 | `scripts/character.gd` | Characters (placeholder drawing) |

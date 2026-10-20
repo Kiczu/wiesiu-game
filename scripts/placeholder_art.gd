@@ -2,16 +2,21 @@ class_name PlaceholderArt
 ## Placeholder shapes, to be replaced by the author's art.
 
 const OUTLINE := Color("2b1d14")
+const WOOD := Color("8b5a2b")
 
 
 static func draw(h: Hotspot, art: String) -> void:
 	match art:
 		"tree":
 			_tree(h)
-		"rake":
-			_rake(h)
-		"well":
-			_well(h)
+		"barrel":
+			_barrel(h)
+		"stump":
+			_stump(h)
+		"bushes":
+			_bushes(h)
+		"drakkar":
+			_drakkar(h)
 
 
 static func _tree(h: Hotspot) -> void:
@@ -24,31 +29,58 @@ static func _tree(h: Hotspot) -> void:
 	]
 	for c in crown:
 		h.draw_circle(c, w * 0.24, Color("3f8f3a"))
-	for apple in [Vector2(-70, -hh * 0.58), Vector2(55, -hh * 0.7), Vector2(-20, -hh * 0.5)]:
-		h.draw_circle(apple, 10, Color("ffcc33"))
-		h.draw_arc(apple, 10, 0, TAU, 16, OUTLINE, 1.5)
-	if not Game.flag("pioro_zdobyte"):
-		var f := Vector2(70, -hh * 0.9)
-		var feather := PackedVector2Array([f, f + Vector2(14, -10), f + Vector2(34, -6), f + Vector2(16, 4)])
-		h.draw_colored_polygon(feather, Color("ffb000"))
-		h.draw_line(f, f + Vector2(34, -6), Color("fff1a8"), 2.0)
+	for apple in [Vector2(-70, -hh * 0.58), Vector2(55, -hh * 0.7), Vector2(-20, -hh * 0.5), Vector2(80, -hh * 0.55), Vector2(-40, -hh * 0.85)]:
+		h.draw_circle(apple, 9, Color("d62828"))
+		h.draw_arc(apple, 9, 0, TAU, 16, OUTLINE, 1.5)
 
 
-static func _rake(h: Hotspot) -> void:
-	var hh := h.size.y
-	h.draw_line(Vector2(0, 0), Vector2(6, -hh + 10), Color("8b5a2b"), 6.0)
-	h.draw_rect(Rect2(-14, -hh, 40, 8), Color("6b6b6b"))
-	for i in 5:
-		h.draw_line(Vector2(-12 + i * 9, -hh + 8), Vector2(-12 + i * 9, -hh + 20), Color("6b6b6b"), 3.0)
-
-
-static func _well(h: Hotspot) -> void:
+static func _barrel(h: Hotspot) -> void:
 	var w := h.size.x
 	var hh := h.size.y
-	h.draw_rect(Rect2(-w / 2, -hh * 0.45, w, hh * 0.45), Color("9a9a9a"))
-	h.draw_rect(Rect2(-w / 2, -hh * 0.45, w, hh * 0.45), OUTLINE, false, 2.0)
-	h.draw_rect(Rect2(-w / 2 + 6, -hh, 8, hh * 0.55), Color("6b4423"))
-	h.draw_rect(Rect2(w / 2 - 14, -hh, 8, hh * 0.55), Color("6b4423"))
-	var roof := PackedVector2Array([Vector2(-w / 2 - 10, -hh + 4), Vector2(0, -hh - 30), Vector2(w / 2 + 10, -hh + 4)])
-	h.draw_colored_polygon(roof, Color("a0522d"))
-	h.draw_polyline(roof, OUTLINE, 2.0)
+	var body := Rect2(-w / 2, -hh, w, hh)
+	h.draw_rect(body, WOOD)
+	for y in [-hh * 0.8, -hh * 0.2]:
+		h.draw_line(Vector2(-w / 2, y), Vector2(w / 2, y), Color("4a4a4a"), 4.0)
+	h.draw_rect(body, OUTLINE, false, 2.0)
+
+
+static func _stump(h: Hotspot) -> void:
+	var w := h.size.x
+	h.draw_rect(Rect2(-w / 2, -30, w, 30), Color("6b4423"))
+	h.draw_rect(Rect2(-w / 2, -34, w, 6), Color("c8a06a"))
+	if not Game.flag("kubek_wziety"):
+		h.draw_rect(Rect2(-8, -54, 16, 20), Color("a0522d"))
+		h.draw_rect(Rect2(-8, -54, 16, 20), OUTLINE, false, 1.5)
+
+
+static func _bushes(h: Hotspot) -> void:
+	var w := h.size.x
+	var hh := h.size.y
+	for i in 4:
+		var x := -w / 2 + w * (i + 0.5) / 4.0
+		h.draw_circle(Vector2(x, -hh * 0.45), hh * 0.5, Color("2f6f2a"))
+
+
+static func _drakkar(h: Hotspot) -> void:
+	var w := h.size.x
+	var hh := h.size.y
+	# Mast and the striped sail sit behind the hull.
+	h.draw_rect(Rect2(-4, -hh, 8, hh * 0.75), Color("6b4423"))
+	for i in 6:
+		var stripe := Color("d62828") if i % 2 == 0 else Color.WHITE
+		h.draw_rect(Rect2(-60, -hh + 10 + i * 14, 120, 14), stripe)
+	var hull_color := Color("9b6b3d")
+	for side in [-1, 1]:
+		var prow := PackedVector2Array([
+			Vector2(side * (w / 2 - 40), -70), Vector2(side * (w / 2 + 30), -130), Vector2(side * w / 2, -70),
+		])
+		h.draw_colored_polygon(prow, hull_color)
+		h.draw_polyline(prow + PackedVector2Array([prow[0]]), OUTLINE, 2.0)
+	var hull := PackedVector2Array([
+		Vector2(-w / 2, -70), Vector2(w / 2, -70), Vector2(w / 2 - 40, 0), Vector2(-w / 2 + 40, 0),
+	])
+	h.draw_colored_polygon(hull, hull_color)
+	h.draw_polyline(hull + PackedVector2Array([hull[0]]), OUTLINE, 2.0)
+	if Game.flag("jablka_odzyskane"):
+		for i in 9:
+			h.draw_circle(Vector2(-w / 2 + 40 + i * (w - 80) / 8.0, -74), 10, Color("d62828"))

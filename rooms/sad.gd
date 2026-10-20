@@ -1,185 +1,286 @@
 extends Room
-## The prince's orchard. Puzzle: take the rake, knock the golden feather off the apple tree
-## and show it to the prince. Optional: tickle the sleeping guard with the feather for a hint.
+## The prince's orchard, after Book I of the comic. Puzzle chain:
+## cup + barrel -> mead, mead -> Czesław falls asleep, bushes -> night and the Vikings arrive,
+## apple thrown at the Vikings -> magic eye, eye -> the Vikings give up the apples and the drakkar.
+
+const NIGHT_TINT := Color(0.55, 0.6, 0.95)
 
 var ksiaze: Character
-var straznik: Character
-var jablon: Hotspot
-var grabie: Hotspot
+var leslaw: Character
+var czeslaw: Character
+var wiking_a: Character
+var wiking_b: Character
+var drakkar: Hotspot
+var pieniek: Hotspot
 
 
 func _ready() -> void:
 	walk_area = Rect2(60, 490, 1160, 140)
 
-	jablon = add_hotspot("jablon", "Jabłoń", Vector2(900, 500), Vector2(280, 400), Vector2(790, 540), "tree")
-	grabie = add_hotspot("grabie", "Grabie", Vector2(160, 470), Vector2(44, 150), Vector2(210, 510), "rake")
-	add_hotspot("studnia", "Studnia", Vector2(420, 480), Vector2(120, 140), Vector2(420, 530), "well")
-	add_hotspot("wyjscie", "Do zamku", Vector2(30, 640), Vector2(60, 220), Vector2(70, 560))
+	add_hotspot("jablon", "Jabłoń", Vector2(900, 500), Vector2(280, 400), Vector2(790, 540), "tree")
+	add_hotspot("beczka", "Beczułka nalewki", Vector2(230, 490), Vector2(70, 90), Vector2(270, 520), "barrel")
+	pieniek = add_hotspot("pieniek", "Pieniek", Vector2(470, 505), Vector2(60, 60), Vector2(420, 530), "stump")
+	add_hotspot("krzaki", "Krzaki", Vector2(1160, 520), Vector2(220, 110), Vector2(1070, 560), "bushes")
+	add_hotspot("wyjscie", "Do grodu", Vector2(30, 640), Vector2(60, 220), Vector2(70, 560))
 
-	ksiaze = add_character("Książę", Vector2(600, 530), Color("b03a2e"), Color("ffd27f"))
+	drakkar = add_hotspot("wikingowie", "Wikingowie w latającym drakkarze", Vector2(560, 300), Vector2(320, 230), Vector2(560, 520), "drakkar")
+	wiking_a = add_character("Wiking", Vector2(440, 280), Color("4f7a3a"), Color("c8f7a0"))
+	wiking_a.braids = true
+	wiking_b = add_character("Wiking", Vector2(680, 280), Color("d9692b"), Color("ffc59e"))
+	wiking_b.braids = true
+	wiking_b.facing = -1
+
+	leslaw = add_character("Lesław", Vector2(330, 560), Color("6f8f2f"), Color("d8f5a2"))
+	leslaw.helmet = true
+	leslaw.feather = true
+	add_hotspot("leslaw", "Lesław Roztropny", leslaw.position + Vector2(0, 2), Vector2(80, 150), leslaw.position + Vector2(-100, 10))
+
+	czeslaw = add_character("Czesław", Vector2(1000, 580), Color("9aa3ab"), Color("e0e6ff"))
+	czeslaw.helmet = true
+	czeslaw.mustache = true
+	czeslaw.chainmail = true
+	czeslaw.facing = -1
+	add_hotspot("czeslaw", "Czesław Waleczny", czeslaw.position + Vector2(-40, 2), Vector2(170, 150), czeslaw.position + Vector2(-190, -10))
+
+	ksiaze = add_character("Książę Jarosław", Vector2(170, 590), Color("b03a2e"), Color("ffd27f"))
 	ksiaze.crown = true
-	ksiaze.facing = -1
-	add_hotspot("ksiaze", "Książę", ksiaze.position + Vector2(0, 2), Vector2(80, 150), ksiaze.position + Vector2(-100, 20))
+	ksiaze.beard = true
 
-	straznik = add_character("Strażnik", Vector2(1150, 610), Color("4a6b8a"), Color("aee3ff"))
-	straznik.helmet = true
-	straznik.asleep = true
-	add_hotspot("straznik", "Strażnik (śpi)", straznik.position + Vector2(-50, 2), Vector2(180, 70), straznik.position + Vector2(-230, 0))
-
-	player = add_character("Wiesław", Vector2(300, 580), Color("7b5ea7"), Color.WHITE)
+	player = add_character("Wiesław", Vector2(560, 590), Color("7b5ea7"), Color.WHITE)
 	player.helmet = true
+	player.facing = -1
+
+	_set_night(false)
 
 
 func intro() -> void:
-	await say_as(ksiaze, "Wiesławie! Ktoś znowu wykradł jabłka z mojego ogrodu!")
-	await say("Może same spadły, książę? Jabłka tak mają.")
-	await say_as(ksiaze, "Złote jabłka? Same? Z samego czubka jabłoni?")
-	await say_as(ksiaze, "Znajdź złodzieja. Inaczej żadnego obiadu przez tydzień!")
-	await say("...Już szukam.")
+	await say_as(ksiaze, "Synkowie! Ktoś nocami wykrada jabłka z mojego sadu!")
+	await say_as(leslaw, "Myślałem nad tym, ojcze. Długo. Bardzo długo.")
+	await say_as(czeslaw, "A ja pilnowałem! Liczyłem jabłka, żeby nie zasnąć.")
+	await say_as(ksiaze, "I obaj zasnęliście! Wiesławie, teraz twoja kolej. Złap rabusiów.")
+	await say("Spokojnie, ojcze. Mam plan.")
+	await ksiaze.walk_to(Vector2(-60, 590))
+	ksiaze.hide()
+	await say("...Jeszcze nie mam, ale zaraz będę miał.")
+	await say_as(czeslaw, "Ja zostaję na warcie! Jeden... dwa... trzy...")
 
 
 func interact(id: String, verb: String, item: String) -> bool:
 	match id:
 		"jablon":
 			if verb == "look":
-				await say("Książęca jabłoń. Złotych jabłek zostało tyle, co kot napłakał.")
-				if not Game.flag("pioro_zdobyte"):
-					await say("Coś błyszczy wysoko w gałęziach...")
+				await say("Ojcowska jabłoń. Jabłek jakby mniej niż wczoraj.")
 			elif verb == "use":
-				if Game.flag("pioro_zdobyte"):
-					await say("Nic już tam nie błyszczy. Oprócz mojego geniuszu.")
+				if Game.has_item("jablko"):
+					await say("Jedno w kieszeni wystarczy. Na razie.")
 				else:
-					await say("Za wysoko. Wspinaczka to wysiłek, a wysiłek to... no, wysiłek.")
-			elif item == "grabie":
-				if Game.flag("pioro_zdobyte"):
-					await say("Więcej nie strącę. Grabie też mają swoje granice.")
-				else:
-					await say("Hop! ...Hop! ...HOP!")
-					Game.set_flag("pioro_zdobyte")
-					jablon.queue_redraw()
-					Game.add_item("pioro")
-					await say("Złote pióro! Albo złodziej nosi bardzo elegancki kapelusz...")
+					await say("Kilka jabłek mniej nikomu nie zrobi różnicy. Najwyżej zwali się na rabusiów.")
+					Game.add_item("jablko")
 			else:
 				return false
 
-		"grabie":
+		"pieniek":
 			if verb == "look":
-				await say("Grabie. Narzędzie pracy. Brrr.")
+				if Game.flag("kubek_wziety"):
+					await say("Zwykły pieniek.")
+				else:
+					await say("Pieniek. Ktoś zostawił na nim kubek. Pewnie Lesław, w przerwie od myślenia.")
 			elif verb == "use":
-				await say("Wezmę. Nie do pracy, broń Perunie.")
-				grabie.hide()
-				Game.add_item("grabie")
+				if Game.flag("kubek_wziety"):
+					await say("Nic tu już nie ma.")
+				else:
+					Game.set_flag("kubek_wziety")
+					pieniek.queue_redraw()
+					Game.add_item("kubek")
+					await say("Kubek się przyda. Kubek zawsze się przyda.")
 			else:
 				return false
 
-		"studnia":
+		"beczka":
 			if verb == "look":
-				await say("Studnia. Gdyby była w niej żywa woda, nie zdziwiłbym się. Ale to chyba zwykła.")
+				await say("Beczułka ojcowskiej nalewki. Według tajnej receptury, z piwnic kasztelu.")
 			elif verb == "use":
-				await say("Nie chce mi się pić. Ani niczego innego, prawdę mówiąc.")
-			elif item == "grabie":
-				await say("Grabie do studni? Książę by mi tego nie darował.")
+				await say("Prosto z beczki? Nie jestem wikingiem. Potrzebuję naczynia.")
+			elif item == "kubek":
+				Game.remove_item("kubek")
+				Game.add_item("nalewka")
+				await say("Pełen kubek. Pachnie jak dobry pomysł.")
+			else:
+				return false
+
+		"czeslaw":
+			if Game.flag("czeslaw_spi"):
+				if verb == "look":
+					await say("Czesław Waleczny. Walczy ze snem i przegrywa.")
+				else:
+					await say("Niech śpi. Śpiący brat to cichy brat.")
+			elif verb == "look":
+				await say("Mój brat Czesław, zwany Walecznym. Liczy jabłka na głos, żeby nie zasnąć.")
+			elif verb == "use":
+				await say_as(czeslaw, "Nie przeszkadzaj, gubię rachubę! Czterdzieści... czterdzieści...")
+				await say("Przy takim liczeniu żaden złodziej się tu nie pokaże.")
+			elif item == "nalewka":
+				await say("Ojciec przysyła ci coś na rozgrzewkę. Długa noc przed tobą.")
+				Game.remove_item("nalewka")
+				await say_as(czeslaw, "No, skoro ojciec... Pięćdziesiąt jeden... pięćdziesiąt... dwa...")
+				czeslaw.asleep = true
+				Game.set_flag("czeslaw_spi")
+				await say_as(czeslaw, "CHRRR...")
+				await say("Cisza. Teraz złodzieje mogą przyjść. Wystarczy się dobrze schować.")
+			elif item == "jablko":
+				await say("Mam mu dać jabłko? Przecież on je liczy. Jeszcze się pomyli.")
+			else:
+				return false
+
+		"leslaw":
+			if verb == "look":
+				await say("Lesław, zwany Roztropnym. Myśli. Od wczoraj.")
+			elif verb == "use":
+				await _talk_to_leslaw()
+			elif item == "nalewka":
+				await say_as(leslaw, "Nie piję, kiedy myślę. A myślę zawsze.")
+			else:
+				return false
+
+		"krzaki":
+			if verb == "look":
+				await say("Gęste krzaki. Idealne na zasadzkę.")
+			elif verb == "use":
+				if Game.flag("noc"):
+					await say("Wikingowie są tutaj. Nie czas na chowanie się.")
+				elif not Game.flag("czeslaw_spi"):
+					await say("Przy tym liczeniu nikt nie przyjdzie. Najpierw trzeba uciszyć Czesława.")
+				else:
+					await _night_falls()
+			else:
+				return false
+
+		"wikingowie":
+			if verb == "look":
+				await say("Dwóch wikingów, latający drakkar i jedno oko na spółkę. Ciekawe, kto tu steruje.")
+			elif (verb == "use" and Game.has_item("oko")) or item == "oko":
+				await _finale()
+			elif verb == "use":
+				await say("Hej, wy tam! Co robicie w sadzie mojego ojca?")
+				await say_as(wiking_a, "Daj mi oko, nic nie widzę! Kto to gada?")
+				await say_as(wiking_b, "Nie dam, teraz moja kolej!")
+				await say("Kłócą się o to oko. Gdyby ich czymś rozproszyć...")
+			elif item == "jablko":
+				await _steal_the_eye()
+			elif item == "nalewka":
+				await say("Szkoda ojcowskiej nalewki na złodziei.")
 			else:
 				return false
 
 		"wyjscie":
 			if verb == "look":
-				await say("Droga do zamku. Tam jest kuchnia. A w kuchni obiad.")
+				await say("Droga do grodu.")
 			else:
-				await say("Książę wyraźnie powiedział: bez złodzieja nie ma obiadu.")
-
-		"straznik":
-			if verb == "look":
-				await say("Strażnik sadu. Pilnuje go z zamkniętymi oczami. Szanuję.")
-			elif verb == "use":
-				await say_as(straznik, "Chrrr... jeszcze pięć minutek, mamo...")
-				await say("Kolega po fachu.")
-			elif item == "pioro":
-				await _wake_guard()
-			elif item == "grabie":
-				await say("Lepiej nie. Śpiący strażnik to szczęśliwy strażnik.")
-			else:
-				return false
-
-		"ksiaze":
-			if verb == "look":
-				await say("Książę. Bardzo przejęty swoimi jabłkami.")
-			elif verb == "use":
-				await _talk_to_prince()
-			elif item == "pioro":
-				await _finale()
-			elif item == "grabie":
-				await say_as(ksiaze, "Grabisz? Wreszcie jakaś praca!")
-				await say("To nie tak, jak wygląda.")
-			else:
-				return false
+				await say("Bez rabusiów nie mam po co wracać. Ojciec by mnie zjadł. Razem z jabłkami.")
 
 		_:
 			return false
 	return true
 
 
-func _talk_to_prince() -> void:
-	await say("Książę...")
+func _talk_to_leslaw() -> void:
+	await say("Lesławie...")
 	while true:
-		var options := ["Gdzie mam szukać złodzieja?", "A może najpierw obiad?"]
-		if Game.has_item("pioro"):
-			options.append("Mam dowód! (pokaż złote pióro)")
-		options.append("Nic, nic. Już idę.")
-		var picked: String = options[await ui.choose(options)]
+		var options := ["Masz jakiś pomysł?", "Kto kradnie jabłka?", "Jak złapać złodzieja?", "Nic, myśl dalej."]
+		var picked := await ui.choose(options)
 		match picked:
-			"Gdzie mam szukać złodzieja?":
-				await say("Gdzie mam szukać złodzieja?")
-				await say_as(ksiaze, "Przy jabłoni, rzecz jasna! Ty naprawdę jesteś wojem?")
-			"A może najpierw obiad?":
-				await say("A może najpierw obiad? Na pełny brzuch lepiej się myśli.")
-				await say_as(ksiaze, "Najpierw złodziej!")
-			"Mam dowód! (pokaż złote pióro)":
-				await _finale()
-				return
+			0:
+				await say("Masz jakiś pomysł?")
+				await say_as(leslaw, "Pracuję nad tym. Pomysły nie lubią pośpiechu.")
+			1:
+				await say("Kto kradnie jabłka?")
+				await say_as(leslaw, "Ktoś, kto lubi jabłka. Tyle wymyśliłem.")
+			2:
+				await say("Jak złapać złodzieja?")
+				await say_as(leslaw, "Złodziej nie przyjdzie, gdy ktoś hałasuje. A Czesław hałasuje.")
+				await say_as(leslaw, "Trzeba by go uciszyć. I schować się. Tylko nie mów nikomu, że to mój pomysł.")
 			_:
-				await say("Nic, nic. Już idę.")
+				await say("Nic, myśl dalej.")
 				return
 
 
-func _wake_guard() -> void:
-	await say("Kici kici...")
-	straznik.asleep = false
-	await say_as(straznik, "Hi hi hi! Co?! Nie śpię! Pilnuję!")
-	await say("Widziałeś w nocy złodzieja?")
-	await say_as(straznik, "W nocy? Widziałem tylko jasność nad jabłonią, jakby słońce wzeszło. Ładny to był sen.")
-	straznik.asleep = true
-	await say_as(straznik, "Chrrr...")
-	Game.set_flag("straznik_przesluchany")
+func _night_falls() -> void:
+	await say("Zasadzka. Czyli leżę w krzakach i czekam. To akurat umiem.")
+	_set_night(true)
+	await say_as(wiking_a, "Na Odyna! W końcu jesteśmy na miejscu. Szykuj skrzynki!")
+	await say_as(wiking_b, "Zrobię to szybciej, jak dasz mi nasze wspólne oko.")
+	await say_as(wiking_a, "Oko jest moje do północy. Taka umowa.")
+	await say("Wikingowie? W latającej łodzi? I z jednym okiem na dwóch?")
+
+
+func _steal_the_eye() -> void:
+	Game.remove_item("jablko")
+	await say("Hej, łapcie! Świeże, prosto z drzewa!")
+	await say_as(wiking_a, "Jabłko! Moje!")
+	await say_as(wiking_b, "Puszczaj, moje!")
+	await say("BRZDĘK!")
+	Game.add_item("oko")
+	await say("Ups. Ktoś tu zgubił oko. Ja je tylko znalazłem.")
+	await say_as(wiking_b, "Nic nie widzę! Gdzie oko?!")
 
 
 func _finale() -> void:
-	await say("Książę, spójrz, co znalazłem na jabłoni!")
-	await say_as(ksiaze, "Złote pióro... To Żar-ptak! To on kradnie moje jabłka!")
-	await say("No to sprawa rozwiązana. Idę na obiad.")
-	await say_as(ksiaze, "Rozwiązana? Teraz musisz go jeszcze złapać!")
-	await say("...Wiedziałem, że w tym planie jest jakiś haczyk.")
+	await say("Mam was, psubraty! Myśleliście, że ujdzie wam na sucho ta grabież?")
+	await say_as(wiking_a, "Zlituj się! Mamy żony i dzieci!")
+	await say_as(wiking_b, "Zrobimy, co zechcesz, ale oddaj nam oko!")
+	await say("Po pierwsze, oddacie jabłka. Wszystkie, co do sztuki.")
+	await say("Po drugie, łódź zostaje u mnie. Jako rekompensata za straty moralne.")
+	await say_as(wiking_a, "A jak wrócimy do domu?")
+	await say("Pieszo. Ruch na świeżym powietrzu dobrze wam zrobi.")
+	Game.remove_item("oko")
+	Game.set_flag("jablka_odzyskane")
+	wiking_a.hide()
+	wiking_b.hide()
+	_set_night(false)
+	czeslaw.asleep = false
+	ksiaze.position = Vector2(-60, 590)
+	ksiaze.show()
+	await ksiaze.walk_to(Vector2(240, 590))
+	await say_as(czeslaw, "To ciekawe.")
+	await say_as(leslaw, "Śmieszna sprawa.")
+	await say_as(ksiaze, "Czary mary? Synu, nie tylko powstrzymałeś rabusiów, ale odzyskałeś jabłka!")
+	await say_as(ksiaze, "Żądaj, czego chcesz!")
+	await say("Chciałbym zatrzymać latający statek i ruszyć w świat.")
+	await say_as(ksiaze, "A po co?")
+	await say("W poszukiwaniu przygód.")
 	Game.set_flag("koniec")
-	ui.show_end("Koniec dema",
-		"Wiesław odkrył, kto kradnie złote jabłka.\nCzy złapie Żar-ptaka? Okaże się... jak się wyśpi.")
+	ui.show_end("Koniec Księgi I",
+		"Wiesław złapał rabusiów, odzyskał jabłka i zdobył latający drakkar.\nPrzygoda dopiero się zaczyna...")
 
 
-## Placeholder background until the author's art arrives.
+func _set_night(night: bool) -> void:
+	Game.set_flag("noc", night)
+	modulate = NIGHT_TINT if night else Color.WHITE
+	drakkar.visible = night or Game.flag("jablka_odzyskane")
+	wiking_a.visible = night
+	wiking_b.visible = night
+	queue_redraw()
+
+
 func _draw() -> void:
-	draw_rect(Rect2(0, 0, 1280, 720), Color("9fd3f0"))
-	draw_circle(Vector2(1120, 90), 50, Color("fff3b0"))
+	var night: bool = Game.flag("noc")
+	draw_rect(Rect2(0, 0, 1280, 720), Color("1d2b5a") if night else Color("f6c48a"))
+	if night:
+		draw_circle(Vector2(1120, 90), 40, Color("fff6c8"))
+		draw_circle(Vector2(1138, 80), 36, Color("1d2b5a"))
+	else:
+		draw_circle(Vector2(1120, 130), 55, Color("ffe08a"))
 	draw_circle(Vector2(250, 640), 380, Color("a8d58c"))
 	draw_circle(Vector2(1000, 700), 420, Color("98cc7c"))
-	var castle := Color("c9b8a6")
-	draw_rect(Rect2(140, 230, 220, 200), castle)
-	for x in [120, 330]:
-		draw_rect(Rect2(x, 170, 50, 260), castle)
-		draw_colored_polygon(PackedVector2Array([Vector2(x - 8, 172), Vector2(x + 25, 110), Vector2(x + 58, 172)]), Color("b0413e"))
-	draw_rect(Rect2(225, 340, 50, 90), Color("6b4423"))
+	# Distant gród behind the palisade.
+	var tower := Color("8fa6c8")
+	draw_rect(Rect2(150, 180, 90, 250), tower)
+	draw_colored_polygon(PackedVector2Array([Vector2(130, 185), Vector2(195, 120), Vector2(260, 185)]), Color("e0a832"))
+	for x in range(0, 420, 18):
+		draw_rect(Rect2(x, 330, 16, 110), Color("7a5230"))
 	draw_rect(Rect2(0, 440, 1280, 280), Color("7cbf5a"))
-	draw_colored_polygon(PackedVector2Array([Vector2(0, 520), Vector2(300, 540), Vector2(700, 600), Vector2(700, 650), Vector2(0, 650)]), Color("d8c08a"))
 	var wood := Color("8b5a2b")
-	draw_rect(Rect2(0, 395, 1280, 10), wood)
-	draw_rect(Rect2(0, 425, 1280, 10), wood)
-	for x in range(10, 1280, 55):
+	draw_rect(Rect2(420, 395, 860, 10), wood)
+	draw_rect(Rect2(420, 425, 860, 10), wood)
+	for x in range(430, 1280, 55):
 		draw_rect(Rect2(x, 380, 14, 70), wood)
