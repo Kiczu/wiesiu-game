@@ -239,7 +239,7 @@ func _build() -> void:
 	_fade.add_child(_caption)
 
 	var hint := Label.new()
-	hint.text = "WSAD: idź    E / spacja: użyj    Q: obejrzyj    I: plecak    1-9: przedmiot    Esc: odłóż    (myszką też można)"
+	hint.text = "WSAD: idź    E / spacja: użyj    Q: obejrzyj    I: plecak    1-9: przedmiot    Esc: odłóż    F11: okno"
 	hint.position = Vector2(12, 8)
 	hint.add_theme_font_size_override("font_size", 16)
 	hint.add_theme_color_override("font_color", Color(0, 0, 0, 0.6))

@@ -24,6 +24,7 @@ const KEYS := {
 	"look": [KEY_Q],
 	"inventory": [KEY_I, KEY_TAB],
 	"cancel": [KEY_ESCAPE],
+	"fullscreen": [KEY_F11],
 }
 
 
@@ -136,6 +137,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _on_key(event: InputEventKey) -> void:
+	if event.is_action("fullscreen"):
+		_toggle_fullscreen()
+		return
 	var number := event.physical_keycode - KEY_1
 	if ui.is_speaking():
 		if event.is_action("interact") or event.is_action("cancel"):
@@ -171,6 +175,11 @@ func _on_key(event: InputEventKey) -> void:
 		var h := room.hotspot_in_reach(room.player)
 		if h:
 			run(room.do_look.bind(h))
+
+
+func _toggle_fullscreen() -> void:
+	var fullscreen := DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED if fullscreen else DisplayServer.WINDOW_MODE_FULLSCREEN)
 
 
 func _restart() -> void:
