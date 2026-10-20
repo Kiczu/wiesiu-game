@@ -77,20 +77,30 @@ func hotspot_at(point: Vector2) -> Hotspot:
 	return found
 
 
-## The hotspot `who` can reach: its walk point is within `reach` and the object is in front of them
-## (or right above them). The closest one wins.
-func hotspot_in_reach(who: Character, reach := 80.0) -> Hotspot:
+## The hotspot `who` can reach: they stand next to its base or at its walk point, and it is in front of them
+## or right above them. Reach is the same from the left and the right. The closest one wins; objects on the
+## floor win over ones hanging on the wall or in the sky above them.
+func hotspot_in_reach(who: Character, reach := Vector2(40, 60), walk_point_reach := 50.0) -> Hotspot:
 	var best: Hotspot = null
-	var best_distance := reach
+	var best_score := INF
 	for h in _hotspots():
 		if not h.visible:
 			continue
-		var distance := who.position.distance_to(clamp_to_walk_area(h.walk_point))
 		var dx := h.global_position.x - who.position.x
-		var in_front := absf(dx) <= h.size.x / 2 or signf(dx) == who.facing
-		if in_front and distance < best_distance:
+		var gap_x := maxf(absf(dx) - h.size.x / 2, 0.0)
+		if gap_x > 0.0 and signf(dx) != who.facing:
+			continue
+		var base_y := clampf(h.global_position.y, walk_area.position.y, walk_area.end.y)
+		var gap_y := absf(base_y - who.position.y)
+		var near_base := gap_x <= reach.x and gap_y <= reach.y
+		var walk_distance := who.position.distance_to(clamp_to_walk_area(h.walk_point))
+		if not near_base and walk_distance > walk_point_reach:
+			continue
+		var score := minf(gap_x + gap_y if near_base else INF, walk_distance)
+		score += absf(h.global_position.y - base_y) * 0.3 + absf(dx) * 0.1
+		if score < best_score:
 			best = h
-			best_distance = distance
+			best_score = score
 	return best
 
 
