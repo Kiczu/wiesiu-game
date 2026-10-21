@@ -19,21 +19,8 @@ var busy := false
 ## Last input came from the keyboard: the hotspot in front of Wiesław is the target, not the one under the mouse.
 var keyboard_mode := false
 
-const KEYS := {
-	"move_left": [KEY_A, KEY_LEFT],
-	"move_right": [KEY_D, KEY_RIGHT],
-	"move_up": [KEY_W, KEY_UP],
-	"move_down": [KEY_S, KEY_DOWN],
-	"interact": [KEY_E, KEY_SPACE, KEY_ENTER],
-	"look": [KEY_Q],
-	"inventory": [KEY_I, KEY_TAB],
-	"cancel": [KEY_ESCAPE],
-	"fullscreen": [KEY_F11],
-}
-
 
 func _ready() -> void:
-	_bind_keys()
 	Game.load_settings()
 	GameMenu.apply_fullscreen()
 	ui = GameUI.new()
@@ -123,17 +110,6 @@ func _enter_room(id: String) -> void:
 	room.entered_from = from
 	room_id = id
 	add_child(room)
-
-
-func _bind_keys() -> void:
-	for action in KEYS:
-		if InputMap.has_action(action):
-			continue
-		InputMap.add_action(action)
-		for key in KEYS[action]:
-			var event := InputEventKey.new()
-			event.physical_keycode = key
-			InputMap.action_add_event(action, event)
 
 
 func _can_play() -> bool:

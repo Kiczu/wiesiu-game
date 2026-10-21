@@ -12,6 +12,19 @@ const ITEMS := {
 	"pierze": {"name": "Worek pierza", "color": Color("f4f4f4")},
 }
 
+## Keyboard actions, bound at startup so every scene (also a mini-game run on its own) has them.
+const KEYS := {
+	"move_left": [KEY_A, KEY_LEFT],
+	"move_right": [KEY_D, KEY_RIGHT],
+	"move_up": [KEY_W, KEY_UP],
+	"move_down": [KEY_S, KEY_DOWN],
+	"interact": [KEY_E, KEY_SPACE, KEY_ENTER],
+	"look": [KEY_Q],
+	"inventory": [KEY_I, KEY_TAB],
+	"cancel": [KEY_ESCAPE],
+	"fullscreen": [KEY_F11],
+}
+
 var inventory: Array[String] = []
 var flags := {}
 
@@ -30,6 +43,21 @@ var pending_load := -1
 var fast := false
 ## Test mode: dialogue choices to pick, in order.
 var test_choices: Array[int] = []
+
+
+func _ready() -> void:
+	_bind_keys()
+
+
+func _bind_keys() -> void:
+	for action in KEYS:
+		if InputMap.has_action(action):
+			continue
+		InputMap.add_action(action)
+		for key in KEYS[action]:
+			var event := InputEventKey.new()
+			event.physical_keycode = key
+			InputMap.action_add_event(action, event)
 
 
 func add_item(id: String) -> void:

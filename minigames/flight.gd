@@ -53,6 +53,12 @@ func _ready() -> void:
 		state = "won"
 		finished.emit.call_deferred()
 		return
+	if get_parent() == get_tree().root:
+		# Run on its own (F6 in the editor): fly again after landing.
+		finished.connect(func() -> void:
+			_fade = 1.0
+			_restart()
+			set_process(true))
 	_restart()
 
 

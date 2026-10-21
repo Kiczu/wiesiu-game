@@ -39,7 +39,7 @@ The game starts in the throne room: Prince Jarosław's apples are stolen at nigh
 
 ## Mini-game: the flight to Munina
 
-After the orchard the drakkar flies to Munina as a short mini-game (40 s): steer up and down with W/S, the arrows or by holding the mouse, dodge birds and storm clouds and catch apples. Three hits and the flight starts over. More mini-games go in `minigames/` and are started with `go_to(room, caption, minigame)`.
+After the orchard the drakkar flies to Munina as a short mini-game (40 s): steer up and down with W/S, the arrows or by holding the mouse, dodge birds and storm clouds and catch apples. Three hits and the flight starts over. To try it alone, open `minigames/flight.tscn` in Godot and press **F6** (it loops after landing). More mini-games go in `minigames/` and are started with `go_to(room, caption, minigame)`.
 
 ## Demo: Book II, Munina
 

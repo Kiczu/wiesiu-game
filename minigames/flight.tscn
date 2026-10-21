@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bkmsqnigklu6k"]
+
+[ext_resource type="Script" uid="uid://cn7ywj28rnuvd" path="res://minigames/flight.gd" id="1_flight"]
+
+[node name="Flight" type="CanvasLayer"]
+script = ExtResource("1_flight")
