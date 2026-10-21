@@ -10,6 +10,10 @@ The current build is a playable prototype with **placeholder art** (simple shape
 2. In Godot, click **Import** and select `project.godot`.
 3. Press **F5**.
 
+## Menu and saving
+
+The game opens on the main menu (continue, new game, load, settings). Esc opens the pause menu, where the game can be saved to one of 3 slots. The game also autosaves on every room change. Saves and settings are stored in Godot's user folder (on Windows `%APPDATA%\Godot\app_userdata\<project name>`).
+
 ## Controls
 
 Keyboard:
@@ -19,7 +23,7 @@ Keyboard:
 - **Q**: look at the highlighted object
 - **I / Tab**: open the backpack
 - **1-9**: select an item from the backpack, or pick a dialogue option
-- **Esc**: put the selected item back, close the backpack
+- **Esc**: put the selected item back, close the backpack; with nothing selected it opens the pause menu
 - **F11**: switch between full screen (the default) and a window
 
 Mouse (also for tablets):
@@ -49,5 +53,6 @@ The drakkar takes Wiesław to Munina, a village where a horned guest called Roki
 | `scripts/character.gd` | Characters (placeholder drawing) |
 | `scripts/hotspot.gd` | Clickable objects |
 | `scripts/placeholder_art.gd` | Placeholder drawings, to be replaced by the author's art |
+| `scripts/menu.gd` | Main menu, pause menu, save/load slots and settings |
 | `scripts/ui.gd` | Speech, hover label, inventory, dialogue choices, end screen |
 | `tests/walkthrough.gd` | Plays the whole demo automatically |

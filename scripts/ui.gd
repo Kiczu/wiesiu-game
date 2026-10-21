@@ -42,7 +42,7 @@ func say(who: Character, text: String) -> void:
 	who.talking = true
 	_speaking = true
 	_skip = false
-	var duration := 0.0 if Game.fast else 1.5 + text.length() * 0.06
+	var duration := 0.0 if Game.fast else (1.5 + text.length() * 0.06) / Game.text_speed
 	var elapsed := 0.0
 	while elapsed < duration and not _skip:
 		await get_tree().process_frame
@@ -239,7 +239,7 @@ func _build() -> void:
 	_fade.add_child(_caption)
 
 	var hint := Label.new()
-	hint.text = "WSAD: idź    E / spacja: użyj    Q: obejrzyj    I: plecak    1-9: przedmiot    Esc: odłóż    F11: okno"
+	hint.text = "WSAD: idź    E / spacja: użyj    Q: obejrzyj    I: plecak    1-9: przedmiot    Esc: odłóż / menu    F11: okno"
 	hint.position = Vector2(12, 8)
 	hint.add_theme_font_size_override("font_size", 16)
 	hint.add_theme_color_override("font_color", Color(0, 0, 0, 0.6))
@@ -339,7 +339,7 @@ func _build() -> void:
 	_end_text.add_theme_font_size_override("font_size", 24)
 	box.add_child(_end_text)
 	var again := Button.new()
-	again.text = "Zagraj jeszcze raz"
+	again.text = "Menu główne"
 	again.add_theme_font_size_override("font_size", 24)
 	again.pressed.connect(func() -> void: restart_requested.emit())
 	box.add_child(again)

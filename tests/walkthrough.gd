@@ -8,7 +8,9 @@ var _main: Node
 
 func _ready() -> void:
 	Game.fast = true
+	Game.save_prefix = "user://test_save_"
 	_main = load("res://scenes/main.tscn").instantiate()
+	_main.skip_menu = true
 	add_child(_main)
 	await get_tree().process_frame
 
@@ -40,6 +42,13 @@ func _ready() -> void:
 	_check(_main.ui.selected_item == "kubek", "key 1 selects the first item")
 	await _press(KEY_ESCAPE)
 	_check(_main.ui.selected_item == "", "Esc puts the item back")
+	await _press(KEY_ESCAPE)
+	_check(_main.menu.is_open() and get_tree().paused, "Esc with nothing selected opens the pause menu")
+	_main.menu.resume_requested.emit()
+	_check(not _main.menu.is_open() and not get_tree().paused, "resuming closes the menu")
+	_main.menu.save_requested.emit(1)
+	var saved := Game.read_save(1)
+	_check(saved.get("room") == "sala" and "kubek" in saved.get("inventory", []), "the game is saved to slot 1")
 
 	await _do("drzwi")
 	_check(_main.room_id == "sad", "the door leads to the orchard")
@@ -102,6 +111,12 @@ func _ready() -> void:
 	await _do("drakkar")
 	_check(Game.flag("koniec"), "demo finished")
 	_check(_main.ui.is_end_shown(), "end screen is shown")
+
+	_check(Game.load_game(1) == "sala", "loading slot 1 returns the throne room")
+	_check(Game.has_item("kubek") and not Game.flag("koniec"), "loading restores the inventory and progress")
+	_check(Game.load_game(2) == "", "an empty slot loads nothing")
+	for slot in Game.SAVE_SLOTS + 1:
+		DirAccess.remove_absolute(Game.save_prefix + str(slot) + ".json")
 
 	print("RESULT: " + ("FAIL" if _failed else "OK"))
 	get_tree().quit(1 if _failed else 0)
