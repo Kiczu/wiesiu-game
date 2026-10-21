@@ -10,6 +10,14 @@ The current build is a playable prototype with **placeholder art** (simple shape
 2. In Godot, click **Import** and select `project.godot`.
 3. Press **F5**.
 
+## Browser build (itch.io)
+
+1. In Godot: **Project → Export → Web → Export Project**, save as `build/web/index.html` (the Web export templates must be installed: **Editor → Manage Export Templates**).
+2. Zip the contents of `build/web` (the files, not the folder).
+3. On itch.io create a project with *Kind of project: HTML*, upload the zip, tick *This file will be played in the browser*, set the viewport to 1280 x 720 and enable the fullscreen button.
+
+The Web preset is single-threaded, so itch.io's *SharedArrayBuffer support* option is not needed. In the browser the game starts inside the page; F11 or the itch.io button switches to fullscreen.
+
 ## Menu and saving
 
 The game opens on the main menu (continue, new game, load, settings). Esc opens the pause menu, where the game can be saved to one of 3 slots. The game also autosaves on every room change. Saves and settings are stored in Godot's user folder (on Windows `%APPDATA%\Godot\app_userdata\<project name>`).
