@@ -8,25 +8,27 @@ var czeslaw: Character
 
 
 func _ready() -> void:
-	walk_area = Rect2(80, 500, 1060, 130)
+	walk_area = Rect2(80, 380, 1120, 310)
+	far_scale = 0.62
+	near_scale = 1.15
 
-	add_hotspot("okno", "Okno", Vector2(200, 330), Vector2(120, 150), Vector2(220, 540))
-	add_hotspot("sztandar", "Sztandar", Vector2(640, 330), Vector2(160, 260), Vector2(560, 540))
-	add_hotspot("tron", "Tron", Vector2(640, 490), Vector2(130, 200), Vector2(560, 540), "throne")
-	add_hotspot("stol", "Stół", Vector2(330, 520), Vector2(130, 90), Vector2(400, 550), "table")
-	add_hotspot("drzwi", "Drzwi do sadu", Vector2(1200, 560), Vector2(110, 230), Vector2(1110, 570), "door")
+	add_hotspot("okno", "Okno", Vector2(200, 250), Vector2(120, 150), Vector2(220, 400))
+	add_hotspot("sztandar", "Sztandar", Vector2(640, 250), Vector2(160, 220), Vector2(530, 400))
+	add_hotspot("tron", "Tron", Vector2(640, 385), Vector2(80, 125), Vector2(560, 405), "throne")
+	add_hotspot("stol", "Stół", Vector2(330, 590), Vector2(150, 90), Vector2(430, 610), "table")
+	add_hotspot("drzwi", "Drzwi do sadu", Vector2(1150, 375), Vector2(80, 150), Vector2(1110, 395), "door")
 
-	ksiaze = add_character("Książę Jarosław", Vector2(740, 540), Color("b03a2e"))
+	ksiaze = add_character("Książę Jarosław", Vector2(720, 405), Color("b03a2e"))
 	ksiaze.crown = true
 	ksiaze.beard = true
 	ksiaze.facing = -1
-	add_hotspot("ksiaze", "Książę Jarosław", ksiaze.position + Vector2(0, 2), Vector2(80, 160), ksiaze.position + Vector2(-110, 30))
+	add_hotspot("ksiaze", "Książę Jarosław", ksiaze.position + Vector2(0, 2), Vector2(60, 110), ksiaze.position + Vector2(-70, 15))
 
-	leslaw = add_character("Lesław", Vector2(850, 590), Color("6f8f2f"))
+	leslaw = add_character("Lesław", Vector2(850, 540), Color("6f8f2f"))
 	leslaw.helmet = true
 	leslaw.feather = true
 	leslaw.facing = -1
-	czeslaw = add_character("Czesław", Vector2(960, 600), Color("9aa3ab"))
+	czeslaw = add_character("Czesław", Vector2(980, 640), Color("9aa3ab"))
 	czeslaw.helmet = true
 	czeslaw.mustache = true
 	czeslaw.chainmail = true
@@ -35,10 +37,10 @@ func _ready() -> void:
 		leslaw.hide()
 		czeslaw.hide()
 
-	player = add_character("Wiesław", Vector2(560, 600), Color("7b5ea7"))
+	player = add_character("Wiesław", Vector2(600, 620), Color("7b5ea7"))
 	player.helmet = true
 	if entered_from == "sad":
-		player.position = Vector2(1110, 580)
+		player.position = Vector2(1110, 400)
 		player.facing = -1
 
 
@@ -54,8 +56,8 @@ func intro() -> void:
 	await say("Spokojnie, ojcze. Mam plan.")
 	await say_as(czeslaw, "Ja i tak idę pilnować!")
 	await say_as(leslaw, "A ja idę myśleć.")
-	leslaw.walk_to(Vector2(1260, 590))
-	await czeslaw.walk_to(Vector2(1260, 600))
+	leslaw.walk_to(Vector2(1150, 382))
+	await czeslaw.walk_to(Vector2(1150, 385))
 	leslaw.hide()
 	czeslaw.hide()
 	await say("...Jeszcze nie mam, ale zaraz będę miał.")
@@ -141,17 +143,19 @@ func _talk_to_prince() -> void:
 
 
 func _draw() -> void:
-	# Log walls, a plank floor, a red banner with crossed swords and a window.
+	# Log walls, a deep plank floor in perspective, a red banner with crossed swords and a window.
 	draw_rect(Rect2(0, 0, 1280, 720), Color("8a6239"))
-	for y in range(0, 470, 36):
+	for y in range(0, 360, 30):
 		draw_line(Vector2(0, y), Vector2(1280, y), Color("5e4024"), 4.0)
-	draw_rect(Rect2(0, 470, 1280, 250), Color("a37b4c"))
-	for x in range(-200, 1280, 120):
-		draw_line(Vector2(x, 720), Vector2(x + 200, 470), Color("7d5a35"), 2.0)
-	draw_rect(Rect2(140, 180, 120, 150), Color("9fd3f0"))
-	draw_rect(Rect2(140, 180, 120, 150), Color("3b2a1a"), false, 6.0)
-	draw_line(Vector2(200, 180), Vector2(200, 330), Color("3b2a1a"), 5.0)
-	draw_rect(Rect2(560, 70, 160, 260), Color("b0202a"))
-	draw_line(Vector2(590, 110), Vector2(690, 230), Color("d8d8d8"), 8.0)
-	draw_line(Vector2(690, 110), Vector2(590, 230), Color("d8d8d8"), 8.0)
-	draw_rect(Rect2(560, 70, 160, 260), Color("3b2a1a"), false, 3.0)
+	draw_rect(Rect2(0, 360, 1280, 360), Color("a37b4c"))
+	for x in range(-640, 1960, 110):
+		draw_line(Vector2(x, 720), Vector2(640 + (x - 640) * 0.45, 360), Color("7d5a35"), 2.0)
+	for y in [420, 500, 600]:
+		draw_line(Vector2(0, y), Vector2(1280, y), Color("8d6a40"), 1.5)
+	draw_rect(Rect2(140, 100, 120, 150), Color("9fd3f0"))
+	draw_rect(Rect2(140, 100, 120, 150), Color("3b2a1a"), false, 6.0)
+	draw_line(Vector2(200, 100), Vector2(200, 250), Color("3b2a1a"), 5.0)
+	draw_rect(Rect2(560, 30, 160, 220), Color("b0202a"))
+	draw_line(Vector2(590, 65), Vector2(690, 175), Color("d8d8d8"), 8.0)
+	draw_line(Vector2(690, 65), Vector2(590, 175), Color("d8d8d8"), 8.0)
+	draw_rect(Rect2(560, 30, 160, 220), Color("3b2a1a"), false, 3.0)

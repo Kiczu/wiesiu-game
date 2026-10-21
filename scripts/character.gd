@@ -51,7 +51,7 @@ func step(direction: Vector2, delta: float, area: Rect2) -> void:
 	if _walking:
 		_walking = false
 		arrived.emit()
-	position = (position + direction * speed * delta).clamp(area.position, area.end)
+	position = (position + direction * speed * scale.x * delta).clamp(area.position, area.end)
 	if absf(direction.x) > 0.1:
 		facing = 1 if direction.x > 0 else -1
 	_stepping = true
@@ -72,7 +72,7 @@ func head_position() -> Vector2:
 func _process(delta: float) -> void:
 	if _walking:
 		var to_target := _target - position
-		var step := speed * delta
+		var step := speed * scale.x * delta
 		if to_target.length() <= step:
 			position = _target
 			_walking = false
@@ -86,8 +86,9 @@ func _process(delta: float) -> void:
 		queue_redraw()
 	_stepping = false
 	# Fake depth: characters lower on screen are closer, so larger.
-	var depth := clampf(inverse_lerp(470.0, 640.0, position.y), 0.0, 1.0)
-	scale = Vector2.ONE * lerpf(0.85, 1.05, depth)
+	var room := get_parent() as Room
+	if room:
+		scale = Vector2.ONE * room.depth_scale(position.y)
 
 
 func _draw() -> void:
