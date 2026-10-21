@@ -1,6 +1,6 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=2 format=3 uid="uid://bnuj2od0b7851"]
 
-[ext_resource type="Script" path="res://tests/walkthrough.gd" id="1"]
+[ext_resource type="Script" uid="uid://co4d8n3hvjkbw" path="res://tests/walkthrough.gd" id="1_walk"]
 
 [node name="Walkthrough" type="Node"]
-script = ExtResource("1")
+script = ExtResource("1_walk")

@@ -37,6 +37,10 @@ Mouse (also for tablets):
 
 The game starts in the throne room: Prince Jarosław's apples are stolen at night and both older brothers have failed, so Wiesław takes over. Solution (spoiler): take the cup from the table in the throne room, go through the door to the orchard, fill it at the mead barrel and give it to Czesław so he falls asleep, pick an apple, hide in the bushes, throw the apple at the Vikings to grab their shared magic eye, then use the eye on them.
 
+## Mini-game: the flight to Munina
+
+After the orchard the drakkar flies to Munina as a short mini-game (40 s): steer up and down with W/S, the arrows or by holding the mouse, dodge birds and storm clouds and catch apples. Three hits and the flight starts over. To try it alone, open `minigames/flight.tscn` in Godot and press **F6** (it loops after landing). More mini-games go in `minigames/` and are started with `go_to(room, caption, minigame)`.
+
 ## Demo: Book II, Munina
 
 The drakkar takes Wiesław to Munina, a village where a horned guest called Rokita eats and drinks at the inn without paying. Solution (spoiler): talk to the innkeeper, fill the chipped pot at the tar cauldron, take the sack of feathers by the coop, show the tar and feathers to Rokita, collect the reward from the innkeeper and board the drakkar.
@@ -54,5 +58,6 @@ The drakkar takes Wiesław to Munina, a village where a horned guest called Roki
 | `scripts/hotspot.gd` | Clickable objects |
 | `scripts/placeholder_art.gd` | Placeholder drawings, to be replaced by the author's art |
 | `scripts/menu.gd` | Main menu, pause menu, save/load slots and settings |
+| `minigames/flight.gd` | The drakkar flight mini-game between Book I and Munina |
 | `scripts/ui.gd` | Speech, hover label, inventory, dialogue choices, end screen |
 | `tests/walkthrough.gd` | Plays the whole demo automatically |

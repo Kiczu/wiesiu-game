@@ -6,6 +6,7 @@ const ROOMS := {
 	"munina": preload("res://rooms/munina.gd"),
 }
 const FIRST_ROOM := "sala"
+const MINIGAMES := {"flight": preload("res://minigames/flight.gd")}
 
 var room: Room
 var room_id := ""
@@ -18,21 +19,8 @@ var busy := false
 ## Last input came from the keyboard: the hotspot in front of Wiesław is the target, not the one under the mouse.
 var keyboard_mode := false
 
-const KEYS := {
-	"move_left": [KEY_A, KEY_LEFT],
-	"move_right": [KEY_D, KEY_RIGHT],
-	"move_up": [KEY_W, KEY_UP],
-	"move_down": [KEY_S, KEY_DOWN],
-	"interact": [KEY_E, KEY_SPACE, KEY_ENTER],
-	"look": [KEY_Q],
-	"inventory": [KEY_I, KEY_TAB],
-	"cancel": [KEY_ESCAPE],
-	"fullscreen": [KEY_F11],
-}
-
 
 func _ready() -> void:
-	_bind_keys()
 	Game.load_settings()
 	GameMenu.apply_fullscreen()
 	ui = GameUI.new()
@@ -91,12 +79,25 @@ func run(scene: Callable) -> void:
 		await ui.fade_out()
 		if room.pending_caption != "":
 			await ui.show_caption(room.pending_caption)
+		if room.pending_minigame != "":
+			await _play_minigame(room.pending_minigame)
 		_enter_room(room.pending_exit)
 		if not Game.fast:
 			Game.save_game(0, room_id)
 		await ui.fade_in()
 		await room.intro()
 	busy = false
+
+
+## Saving is off during a mini-game: the save would put the player back before it.
+func _play_minigame(id: String) -> void:
+	var minigame: Node = MINIGAMES[id].new()
+	minigame.pause_requested.connect(menu.show_pause)
+	menu.can_save = false
+	add_child(minigame)
+	await minigame.finished
+	minigame.queue_free()
+	menu.can_save = true
 
 
 func _enter_room(id: String) -> void:
@@ -109,17 +110,6 @@ func _enter_room(id: String) -> void:
 	room.entered_from = from
 	room_id = id
 	add_child(room)
-
-
-func _bind_keys() -> void:
-	for action in KEYS:
-		if InputMap.has_action(action):
-			continue
-		InputMap.add_action(action)
-		for key in KEYS[action]:
-			var event := InputEventKey.new()
-			event.physical_keycode = key
-			InputMap.action_add_event(action, event)
 
 
 func _can_play() -> bool:

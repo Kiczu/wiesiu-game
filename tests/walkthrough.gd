@@ -84,7 +84,7 @@ func _ready() -> void:
 	_check(Game.has_item("oko"), "magic eye in inventory")
 	await _do("wikingowie", "oko")
 	_check(Game.flag("jablka_odzyskane"), "apples recovered")
-	_check(_main.room_id == "munina", "the drakkar flies to Munina")
+	_check(_main.room_id == "munina", "the drakkar flies to Munina, through the flight mini-game")
 	_check(not _main.ui.is_end_shown(), "Book I does not end the demo")
 
 	for id in ["drakkar", "karczma", "garnek", "kurnik", "kociol", "chlopi", "karczmarz", "rokita"]:
@@ -112,6 +112,8 @@ func _ready() -> void:
 	_check(Game.flag("koniec"), "demo finished")
 	_check(_main.ui.is_end_shown(), "end screen is shown")
 
+	await _check_flight_game()
+
 	_check(Game.load_game(1) == "sala", "loading slot 1 returns the throne room")
 	_check(Game.has_item("kubek") and not Game.flag("koniec"), "loading restores the inventory and progress")
 	_check(Game.load_game(2) == "", "an empty slot loads nothing")
@@ -120,6 +122,34 @@ func _ready() -> void:
 
 	print("RESULT: " + ("FAIL" if _failed else "OK"))
 	get_tree().quit(1 if _failed else 0)
+
+
+func _check_flight_game() -> void:
+	Game.fast = false
+	var flight := FlightGame.new()
+	add_child(flight)
+	flight.set_process(false)
+	Game.fast = true
+	var ship := Vector2(FlightGame.SHIP_X, flight.ship_y)
+	flight.objects.append({"kind": "apple", "pos": ship, "speed": 0.0})
+	flight.step(0.016, 0.0)
+	_check(flight.apples == 1 and flight.lives == FlightGame.LIVES, "flight: catching an apple")
+	flight.objects.append({"kind": "bird", "pos": ship, "speed": 0.0})
+	flight.step(0.016, 0.0)
+	_check(flight.lives == FlightGame.LIVES - 1, "flight: a bird costs a life")
+	for i in 2:
+		flight.objects.append({"kind": "cloud", "pos": ship, "speed": 0.0})
+		flight.step(0.016, 0.0)
+	_check(flight.state == "lost", "flight: three hits and the flight is lost")
+	flight._restart()
+	_check(flight.state == "" and flight.lives == FlightGame.LIVES, "flight: starting over")
+	flight.step(1.0, -1.0)
+	_check(flight.ship_y >= 90.0, "flight: the ship stays on screen")
+	while flight.state == "":
+		flight.objects.clear()
+		flight.step(0.5, 0.0)
+	_check(flight.state == "won", "flight: reaching the end wins")
+	flight.queue_free()
 
 
 func _press(key: Key) -> void:
