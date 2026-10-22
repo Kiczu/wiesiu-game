@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://dq8pl4tf0rm2w"]
+
+[ext_resource type="Script" uid="uid://bv27bpb2ttpxn" path="res://minigames/platformer.gd" id="1_platformer"]
+
+[node name="Platformer" type="Node2D"]
+script = ExtResource("1_platformer")

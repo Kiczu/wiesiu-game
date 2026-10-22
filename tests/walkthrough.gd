@@ -113,6 +113,7 @@ func _ready() -> void:
 	_check(_main.ui.is_end_shown(), "end screen is shown")
 
 	await _check_flight_game()
+	await _check_platformer()
 
 	_check(Game.load_game(1) == "sala", "loading slot 1 returns the throne room")
 	_check(Game.has_item("kubek") and not Game.flag("koniec"), "loading restores the inventory and progress")
@@ -150,6 +151,67 @@ func _check_flight_game() -> void:
 		flight.step(0.5, 0.0)
 	_check(flight.state == "won", "flight: reaching the end wins")
 	flight.queue_free()
+
+
+func _check_platformer() -> void:
+	var level := PlatformerGame.new()
+	level.auto_input = true
+	add_child(level)
+	await _physics(20)
+	var player := level.player
+	_check(player.is_on_floor() and is_equal_approx(player.position.y, 640.0), "platformer: Wiesław stands on the ground")
+	var start_x := player.position.x
+	level.input_x = 1.0
+	await _physics(20)
+	level.input_x = 0.0
+	_check(player.position.x > start_x + 60.0, "platformer: walking right")
+	level.input_jump = true
+	var top := player.position.y
+	for i in 60:
+		await _physics(1)
+		top = minf(top, player.position.y)
+	level.input_jump = false
+	await _physics(30)
+	var rise := 640.0 - top
+	_check(rise > 3.0 * PlatformerGame.TILE and rise < 4.0 * PlatformerGame.TILE, "platformer: a full jump clears three tiles (%d px)" % rise)
+	# Bump the first ? block from below.
+	player.position = Vector2(9.5 * PlatformerGame.TILE, 640.0)
+	await _physics(5)
+	var apples := level.apples
+	level.input_jump = true
+	await _physics(40)
+	level.input_jump = false
+	await _physics(30)
+	_check(level.apples == apples + 1 and level.LEVEL[5][9] == "?" and level.map[5][9] == "X", "platformer: bumping a ? block gives an apple")
+	# Land on a Viking's head.
+	var viking: Character = level.vikings[0]["node"]
+	var count := level.vikings.size()
+	player.position = viking.position + Vector2(0, -120)
+	player.velocity = Vector2(0, 300)
+	await _physics(10)
+	_check(level.vikings.size() == count - 1 and level.lives == PlatformerGame.LIVES, "platformer: jumping on a Viking knocks him out")
+	# Walk into a Viking.
+	viking = level.vikings[0]["node"]
+	player.position = viking.position + Vector2(-10, 0)
+	player.velocity = Vector2.ZERO
+	await _physics(3)
+	_check(level.lives == PlatformerGame.LIVES - 1, "platformer: touching a Viking costs a heart")
+	# Fall into the first pit, away from the Vikings.
+	await _physics(100)
+	level.lives = PlatformerGame.LIVES
+	player.position = Vector2(29.5 * PlatformerGame.TILE, 600.0)
+	player.velocity = Vector2.ZERO
+	await _physics(60)
+	_check(level.lives == PlatformerGame.LIVES - 1 and player.position.y <= 640.0, "platformer: falling into a pit costs a heart and goes back (%d, %d)" % [level.lives, player.position.y])
+	player.position = Vector2((level.LEVEL[9].find("D") + 0.5) * PlatformerGame.TILE, 640.0)
+	await _physics(3)
+	_check(level.state == "won", "platformer: reaching the drakkar wins")
+	level.queue_free()
+
+
+func _physics(frames: int) -> void:
+	for i in frames:
+		await get_tree().physics_frame
 
 
 func _press(key: Key) -> void:

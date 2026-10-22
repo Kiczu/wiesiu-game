@@ -19,6 +19,8 @@ signal arrived
 @export var speed := 280.0
 
 var facing := 1
+## Legs keep moving without the character going anywhere (the platformer moves the body itself).
+var running := false
 var talking := false:
 	set(value):
 		talking = value
@@ -81,7 +83,7 @@ func _process(delta: float) -> void:
 			position += to_target.normalized() * step
 			if absf(to_target.x) > 1.0:
 				facing = 1 if to_target.x > 0 else -1
-	if _walking or _stepping or talking or asleep:
+	if _walking or _stepping or running or talking or asleep:
 		_anim += delta
 		queue_redraw()
 	_stepping = false
@@ -95,7 +97,7 @@ func _draw() -> void:
 	if asleep:
 		_draw_asleep()
 		return
-	var moving := _walking or _stepping
+	var moving := _walking or _stepping or running
 	var bob := absf(sin(_anim * 10.0)) * -4.0 if moving else 0.0
 	var stride := sin(_anim * 10.0) * 8.0 if moving else 0.0
 	draw_rect(Rect2(-16 + stride, -34, 12, 34), Color("5a3e2b"))

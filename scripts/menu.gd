@@ -4,6 +4,7 @@ extends CanvasLayer
 ## While it is open the game is paused; the menu itself keeps running.
 
 signal new_game_requested
+signal platformer_requested
 signal load_requested(slot: int)
 signal save_requested(slot: int)
 signal resume_requested
@@ -89,6 +90,7 @@ func _main_page() -> void:
 	if latest >= 0:
 		_button("Kontynuuj", func() -> void: load_requested.emit(latest))
 	_button("Nowa gra", func() -> void: new_game_requested.emit())
+	_button("Platformówka (wersja próbna)", func() -> void: platformer_requested.emit())
 	_button("Wczytaj grę", _slots_page.bind(false), latest < 0)
 	_button("Ustawienia", _settings_page)
 	if not OS.has_feature("web"):

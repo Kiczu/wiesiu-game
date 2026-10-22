@@ -49,6 +49,12 @@ The game starts in the throne room: Prince Jarosław's apples are stolen at nigh
 
 After the orchard the drakkar flies to Munina as a short mini-game (40 s): steer up and down with W/S, the arrows or by holding the mouse, dodge birds and storm clouds and catch apples. Three hits and the flight starts over. To try it alone, open `minigames/flight.tscn` in Godot and press **F6** (it loops after landing). More mini-games go in `minigames/` and are started with `go_to(room, caption, minigame)`.
 
+## Platformer version (trial)
+
+**Platformówka (wersja próbna)** in the main menu is a Mario-style take: a few comic pages, then one level where the player walks (A/D or arrows) and jumps (space or W, hold for a higher jump) after the drakkar. Jumping on a Viking knocks him out, bumping a `?` block from below gives an apple, thorns and Vikings cost one of three hearts, a pit sends Wiesław back to the last flag. To try only the level, open `minigames/platformer.tscn` and press **F6**.
+
+The level is the text map `LEVEL` at the top of `minigames/platformer.gd`, one character per 64 px tile (the legend is above it). To change the level, edit the map: every row must stay the same length.
+
 ## Demo: Book II, Munina
 
 The drakkar takes Wiesław to Munina, a village where a horned guest called Rokita eats and drinks at the inn without paying. Solution (spoiler): talk to the innkeeper, fill the chipped pot at the tar cauldron, take the sack of feathers by the coop, show the tar and feathers to Rokita, collect the reward from the innkeeper and board the drakkar.
@@ -67,5 +73,8 @@ The drakkar takes Wiesław to Munina, a village where a horned guest called Roki
 | `scripts/placeholder_art.gd` | Placeholder drawings, to be replaced by the author's art |
 | `scripts/menu.gd` | Main menu, pause menu, save/load slots and settings |
 | `minigames/flight.gd` | The drakkar flight mini-game between Book I and Munina |
+| `minigames/platformer.gd` | The platformer level and its text map (platformer version) |
+| `minigames/book_one_story.gd` | Comic pages before and after the platformer level |
+| `scripts/comic.gd` | Comic pages: panels with characters, speech bubbles and captions |
 | `scripts/ui.gd` | Speech, hover label, inventory, dialogue choices, end screen |
 | `tests/walkthrough.gd` | Plays the whole demo automatically |

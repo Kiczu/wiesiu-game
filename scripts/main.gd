@@ -29,6 +29,7 @@ func _ready() -> void:
 	menu = GameMenu.new()
 	add_child(menu)
 	menu.new_game_requested.connect(_new_game)
+	menu.platformer_requested.connect(func() -> void: _play_trial(PlatformerGame.new()))
 	menu.load_requested.connect(_load)
 	menu.save_requested.connect(func(slot: int) -> void: Game.save_game(slot, room_id))
 	menu.resume_requested.connect(menu.close)
@@ -58,12 +59,26 @@ func _new_game() -> void:
 func _load(slot: int) -> void:
 	if Game.read_save(slot).is_empty():
 		return
-	if room:
+	if room or busy:
 		Game.pending_load = slot
 		get_tree().paused = false
 		get_tree().reload_current_scene()
 	else:
 		_start(Game.load_game(slot))
+
+
+## The platformer version: comic pages, one level, comic pages, the end screen.
+## `busy` keeps the adventure controls off, since there is no room meanwhile.
+func _play_trial(level: Node) -> void:
+	menu.close()
+	busy = true
+	menu.can_save = false
+	for part in [ComicStrip.new(BookOneStory.intro_pages()), level, ComicStrip.new(BookOneStory.outro_pages())]:
+		part.pause_requested.connect(menu.show_pause)
+		add_child(part)
+		await part.finished
+		part.queue_free()
+	ui.show_end("Koniec wersji próbnej", "Złapane jabłka: %d. Dalsze przygody czekają w kolejnych księgach!" % int(Game.flag("jablka_proba")))
 
 
 func _to_main_menu() -> void:
