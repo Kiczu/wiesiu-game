@@ -40,6 +40,8 @@ const HURT_TIME := 1.5
 const STOMP_BOUNCE := 650.0
 const VIKING_SPEED := 70.0
 const PLAYER_SIZE := Vector2(40, 92)
+## How many times smaller the level is drawn in pixel mode; bigger gives chunkier pixels.
+const PIXEL_SCALE := 2
 
 var lives := LIVES
 var apples := 0
@@ -57,10 +59,17 @@ var checkpoint := Vector2.ZERO
 
 var _level: Node2D
 var _tiles: Node2D
-var _wieslaw: Character
+var _wieslaw: CutoutCharacter
 var _camera: Camera2D
 var _hud: Node2D
 var _background: Node2D
+var _back: CanvasLayer
+## The level is drawn into its own viewport, so it can be drawn at half resolution (pixel mode).
+var _world: SubViewport
+var _view: SubViewportContainer
+## Pixel mode: the level is drawn PIXEL_SCALE times smaller (640 x 360) and enlarged without smoothing,
+## so even turning parts of the puppet snap to a pixel grid. P switches it, to compare with the smooth look.
+var pixel_mode := false
 var _drakkar: Hotspot
 var _coyote := 0.0
 var _buffered := 0.0
@@ -73,11 +82,18 @@ var _effects: Array[Dictionary] = []
 
 
 func _ready() -> void:
-	var back := CanvasLayer.new()
-	back.layer = -1
-	add_child(back)
+	_view = SubViewportContainer.new()
+	_view.stretch = true
+	_view.size = SCREEN
+	_view.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	add_child(_view)
+	_world = SubViewport.new()
+	_view.add_child(_world)
+	_back = CanvasLayer.new()
+	_back.layer = -1
+	_world.add_child(_back)
 	_background = Node2D.new()
-	back.add_child(_background)
+	_back.add_child(_background)
 	_background.draw.connect(_draw_background)
 	var front := CanvasLayer.new()
 	front.layer = 2
@@ -98,7 +114,7 @@ func _ready() -> void:
 
 func restart() -> void:
 	if _level:
-		remove_child(_level)
+		_world.remove_child(_level)
 		_level.queue_free()
 	lives = LIVES
 	apples = 0
@@ -109,7 +125,7 @@ func restart() -> void:
 	vikings.clear()
 	map.assign(LEVEL)
 	_level = Node2D.new()
-	add_child(_level)
+	_world.add_child(_level)
 	_tiles = Node2D.new()
 	_tiles.draw.connect(_draw_tiles)
 	_level.add_child(_tiles)
@@ -140,10 +156,8 @@ func _add_player() -> void:
 	shape.shape.size = PLAYER_SIZE
 	shape.position = Vector2(0, -PLAYER_SIZE.y / 2)
 	player.add_child(shape)
-	_wieslaw = Character.new()
-	_wieslaw.helmet = true
-	_wieslaw.body_color = Color("7b5ea7")
-	_wieslaw.scale = Vector2(0.68, 0.68)
+	_wieslaw = CutoutCharacter.new()
+	_wieslaw.scale = Vector2(0.84, 0.84)
 	player.add_child(_wieslaw)
 	_camera = Camera2D.new()
 	_camera.limit_left = 0
@@ -155,6 +169,18 @@ func _add_player() -> void:
 	player.add_child(_camera)
 	_level.add_child(player)
 	_camera.make_current()
+	set_pixel_mode(pixel_mode)
+
+
+func set_pixel_mode(on: bool) -> void:
+	pixel_mode = on
+	_view.stretch_shrink = PIXEL_SCALE if on else 1
+	_world.snap_2d_transforms_to_pixel = on
+	_world.snap_2d_vertices_to_pixel = on
+	_back.scale = Vector2.ONE / _view.stretch_shrink
+	if _camera:
+		_camera.zoom = Vector2.ONE / _view.stretch_shrink
+		_camera.reset_smoothing()
 
 
 func _add_viking(at: Vector2) -> void:
@@ -214,7 +240,7 @@ func _physics_process(delta: float) -> void:
 	_buffered = maxf(_buffered - delta, 0.0)
 	if state == "won":
 		_end_time += delta
-		_wieslaw.running = false
+		_wieslaw.pose = "win"
 		if _end_time >= 2.0:
 			set_physics_process(false)
 			finished.emit()
@@ -251,8 +277,14 @@ func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 		_bump_block(player.position + Vector2(0, -PLAYER_SIZE.y - 4))
 	if absf(steer) > 0.1:
 		_wieslaw.facing = 1 if steer > 0 else -1
-	_wieslaw.running = player.is_on_floor() and absf(player.velocity.x) > 20.0
-	_wieslaw.visible = fmod(_hurt, 0.2) < 0.12
+	if _hurt > HURT_TIME - 0.4:
+		_wieslaw.pose = "hurt"
+	elif not player.is_on_floor():
+		_wieslaw.pose = "jump" if player.velocity.y < 0.0 else "fall"
+	else:
+		_wieslaw.pose = "run" if absf(player.velocity.x) > 20.0 else "idle"
+	# Blinks after the hurt pose, while he cannot be hit again.
+	_wieslaw.visible = _hurt > HURT_TIME - 0.4 or fmod(_hurt, 0.2) < 0.12
 	if player.position.y > map.size() * TILE + 120:
 		_hit(true)
 
@@ -330,6 +362,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action("cancel"):
 		pause_requested.emit()
+		get_viewport().set_input_as_handled()
+	elif event is InputEventKey and event.physical_keycode == KEY_P:
+		set_pixel_mode(not pixel_mode)
 		get_viewport().set_input_as_handled()
 	elif state == "lost" and (event.is_action("interact") or event is InputEventMouseButton):
 		restart()
@@ -432,6 +467,8 @@ func _draw_hud() -> void:
 	for i in LIVES:
 		v.draw_circle(Vector2(40 + i * 40, 40), 14, Color("d62828") if i < lives else Color(0, 0, 0, 0.25))
 	v.draw_string(font, Vector2(170, 50), "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, ink)
+	var mode := "P: tryb %s" % ("pikselowy" if pixel_mode else "gładki")
+	v.draw_string(font, Vector2(0, 50), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 24, ink)
 	var message := ""
 	if state == "" and player and player.position.x < 900.0:
 		message = "A/D albo strzałki: chodzenie. Spacja albo W: skok (przytrzymaj, a skoczysz wyżej).\nSkacz Wikingom na głowy i rozbijaj skrzynki ze znakiem zapytania!"

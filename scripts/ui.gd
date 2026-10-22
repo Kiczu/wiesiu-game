@@ -17,6 +17,7 @@ var _bubble: PanelContainer
 var _bubble_text: Label
 var _tail: Polygon2D
 var _tail_outline: Line2D
+var _hint: Label
 var _backpack: BackpackButton
 var _inventory_panel: PanelContainer
 var _inventory_grid: GridContainer
@@ -212,6 +213,12 @@ func _fade_to(alpha: float) -> void:
 	await tween.finished
 
 
+## Off in the platformer, which has its own controls and no backpack.
+func show_adventure_controls(on: bool) -> void:
+	_hint.visible = on
+	_backpack.visible = on
+
+
 func show_end(title: String, text: String) -> void:
 	_end_title.text = title
 	_end_text.text = text
@@ -238,7 +245,8 @@ func _build() -> void:
 	_caption.add_theme_font_size_override("font_size", 28)
 	_fade.add_child(_caption)
 
-	var hint := Label.new()
+	_hint = Label.new()
+	var hint := _hint
 	hint.text = "WSAD: idź    E / spacja: użyj    Q: obejrzyj    I: plecak    1-9: przedmiot    Esc: odłóż / menu    F11: okno"
 	hint.position = Vector2(12, 8)
 	hint.add_theme_font_size_override("font_size", 16)

@@ -203,6 +203,13 @@ func _check_platformer() -> void:
 	player.velocity = Vector2.ZERO
 	await _physics(60)
 	_check(level.lives == PlatformerGame.LIVES - 1 and player.position.y <= 640.0, "platformer: falling into a pit costs a heart and goes back (%d, %d)" % [level.lives, player.position.y])
+	level.set_pixel_mode(true)
+	level.input_x = 1.0
+	var before := player.position.x
+	await _physics(10)
+	level.input_x = 0.0
+	_check(level.pixel_mode and player.position.x > before and level._wieslaw.pose == "run", "platformer: pixel mode plays the same, Wiesław runs")
+	level.set_pixel_mode(false)
 	player.position = Vector2((level.LEVEL[9].find("D") + 0.5) * PlatformerGame.TILE, 640.0)
 	await _physics(3)
 	_check(level.state == "won", "platformer: reaching the drakkar wins")

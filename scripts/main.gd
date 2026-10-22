@@ -73,6 +73,7 @@ func _play_trial(level: Node) -> void:
 	menu.close()
 	busy = true
 	menu.can_save = false
+	ui.show_adventure_controls(false)
 	for part in [ComicStrip.new(BookOneStory.intro_pages()), level, ComicStrip.new(BookOneStory.outro_pages())]:
 		part.pause_requested.connect(menu.show_pause)
 		add_child(part)
