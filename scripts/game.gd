@@ -35,7 +35,8 @@ const SETTINGS_PATH := "user://settings.cfg"
 var save_prefix := "user://save_"
 ## Settings: speech bubbles stay on screen 1 / text_speed as long.
 var text_speed := 1.0
-var fullscreen := true
+## The browser build starts in the page; F11 or the itch.io button goes fullscreen.
+var fullscreen := not OS.has_feature("web")
 ## Slot to load after the scene reloads (loading from the pause menu).
 var pending_load := -1
 
