@@ -45,6 +45,9 @@ const PIXEL_SCALE := 2
 ## Ready-made tiles and background layers: level.json names the files and how the layers scroll.
 ## Without it the level is drawn from plain shapes.
 const LEVEL_ART := "res://art/platformer/level/"
+## Music (music.ogg, looped) and sound effects (<name>.ogg) for the level, each used when present.
+const AUDIO_DIR := "res://art/platformer/audio/"
+const SOUNDS := ["jump", "apple", "bump", "stomp", "hurt", "checkpoint", "win", "lose"]
 
 var lives := LIVES
 var apples := 0
@@ -68,6 +71,9 @@ var _hud: Node2D
 var _background: Node2D
 ## Loaded LEVEL_ART: {"scale", "tiles": {name: Texture2D}, "background": [{texture, speed, top, gap}]}.
 var _art := {}
+var _sounds := {}
+var _players: Array[AudioStreamPlayer] = []
+var _music: AudioStreamPlayer
 var _back: CanvasLayer
 ## The level is drawn into its own viewport, so it can be drawn at half resolution (pixel mode).
 var _world: SubViewport
@@ -101,6 +107,7 @@ func _ready() -> void:
 	_back.add_child(_background)
 	_background.draw.connect(_draw_background)
 	_load_art()
+	_load_audio()
 	var front := CanvasLayer.new()
 	front.layer = 2
 	add_child(front)
@@ -152,6 +159,8 @@ func restart() -> void:
 					_drakkar.position = at + Vector2(60, 0)
 					_level.add_child(_drakkar)
 	_add_player()
+	if _music and not _music.playing:
+		_music.play()
 	set_physics_process(true)
 
 
@@ -287,6 +296,7 @@ func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 	_coyote = COYOTE_TIME if player.is_on_floor() else maxf(_coyote - delta, 0.0)
 	if _buffered > 0.0 and _coyote > 0.0:
 		v.y = -JUMP_SPEED
+		_play("jump")
 		_buffered = 0.0
 		_coyote = 0.0
 	if not jump_held and v.y < 0.0:
@@ -295,6 +305,7 @@ func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 	player.move_and_slide()
 	if player.is_on_ceiling():
 		_bump_block(player.position + Vector2(0, -PLAYER_SIZE.y - 4))
+		_play("bump")
 	if absf(steer) > 0.1:
 		_wieslaw.facing = 1 if steer > 0 else -1
 	if _hurt > HURT_TIME - 0.4:
@@ -314,6 +325,7 @@ func _bump_block(point: Vector2) -> void:
 		return
 	_set_tile(point, "X")
 	apples += 1
+	_play("apple")
 	var center := Vector2((floori(point.x / TILE) + 0.5) * TILE, floori(point.y / TILE) * TILE)
 	_effects.append({"kind": "apple", "pos": center, "time": 0.0})
 
@@ -338,13 +350,17 @@ func _check_touches() -> void:
 			"a":
 				_set_tile(corner, " ")
 				apples += 1
+				_play("apple")
 			"x":
 				_hit(false)
 			"C":
 				checkpoint = Vector2((floori(corner.x / TILE) + 0.5) * TILE, (floori(corner.y / TILE) + 1) * TILE)
+				_play("checkpoint")
 				_set_tile(corner, "c")
 			"D":
 				state = "won"
+				_stop_music()
+				_play("win")
 				Game.set_flag("jablka_proba", apples)
 				return
 	for viking in vikings.duplicate():
@@ -358,6 +374,7 @@ func _check_touches() -> void:
 			_effects.append({"kind": "viking", "pos": node.position, "time": 0.0, "color": viking["color"]})
 			node.queue_free()
 			player.velocity.y = -STOMP_BOUNCE
+			_play("stomp")
 		else:
 			_hit(false)
 
@@ -369,7 +386,10 @@ func _hit(fell: bool) -> void:
 	_hurt = HURT_TIME
 	if lives <= 0:
 		state = "lost"
+		_stop_music()
+		_play("lose")
 		return
+	_play("hurt")
 	if fell:
 		player.position = checkpoint
 		player.velocity = Vector2.ZERO
@@ -386,6 +406,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventKey and event.physical_keycode == KEY_P:
 		set_pixel_mode(not pixel_mode)
 		get_viewport().set_input_as_handled()
+	elif event is InputEventKey and event.physical_keycode == KEY_M:
+		AudioServer.set_bus_mute(0, not AudioServer.is_bus_mute(0))
+		_hud.queue_redraw()
+		get_viewport().set_input_as_handled()
 	elif state == "lost" and (event.is_action("interact") or event is InputEventMouseButton):
 		restart()
 		get_viewport().set_input_as_handled()
@@ -400,6 +424,42 @@ func _redraw() -> void:
 func _visible_columns() -> Vector2i:
 	var left := _camera.get_screen_center_position().x - SCREEN.x / 2 if _camera else 0.0
 	return Vector2i(maxi(floori(left / TILE) - 1, 0), floori((left + SCREEN.x) / TILE) + 2)
+
+
+func _load_audio() -> void:
+	for sound in SOUNDS:
+		if ResourceLoader.exists(AUDIO_DIR + sound + ".ogg"):
+			_sounds[sound] = load(AUDIO_DIR + sound + ".ogg")
+	# A few players, so sounds close together do not cut each other off.
+	for i in 4:
+		var player_node := AudioStreamPlayer.new()
+		player_node.volume_db = -4.0
+		add_child(player_node)
+		_players.append(player_node)
+	if ResourceLoader.exists(AUDIO_DIR + "music.ogg"):
+		var stream: AudioStreamOggVorbis = load(AUDIO_DIR + "music.ogg")
+		stream.loop = true
+		_music = AudioStreamPlayer.new()
+		_music.stream = stream
+		_music.volume_db = -10.0
+		add_child(_music)
+
+
+func _play(sound: String) -> void:
+	if not _sounds.has(sound):
+		return
+	for player_node in _players:
+		if not player_node.playing:
+			player_node.stream = _sounds[sound]
+			player_node.play()
+			return
+	_players[0].stream = _sounds[sound]
+	_players[0].play()
+
+
+func _stop_music() -> void:
+	if _music:
+		_music.stop()
 
 
 func _load_art() -> void:
@@ -536,6 +596,8 @@ func _draw_hud() -> void:
 	v.draw_string_outline(font, Vector2(170, 50), "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, 6, halo)
 	v.draw_string(font, Vector2(170, 50), "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, ink)
 	var mode := "P: tryb %s" % ("pikselowy" if pixel_mode else "gładki")
+	if _music or not _sounds.is_empty():
+		mode = "M: dźwięk %s     %s" % ["wył." if AudioServer.is_bus_mute(0) else "wł.", mode]
 	v.draw_string_outline(font, Vector2(0, 50), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 24, 6, halo)
 	v.draw_string(font, Vector2(0, 50), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 24, ink)
 	var message := ""
