@@ -42,9 +42,9 @@ const VIKING_SPEED := 70.0
 const PLAYER_SIZE := Vector2(40, 92)
 ## How many times smaller the level is drawn in pixel mode; bigger gives chunkier pixels.
 const PIXEL_SCALE := 2
-## Ready-made tiles and background layers: level.json names the files and how the layers scroll.
-## Without it the level is drawn from plain shapes.
-const LEVEL_ART := "res://art/platformer/level/"
+## Ready-made tiles and background layers, one set per folder: level.json names the files and how
+## the layers scroll. L switches between the sets that are there and plain shapes.
+const LEVEL_ART_SETS := ["res://art/platformer/level_autor/", "res://art/platformer/level/"]
 ## Music (music.ogg, looped) and sound effects (<name>.ogg) for the level, each used when present.
 const AUDIO_DIR := "res://art/platformer/audio/"
 const SOUNDS := ["jump", "apple", "bump", "stomp", "hurt", "checkpoint", "win", "lose"]
@@ -69,8 +69,10 @@ var _wieslaw: CutoutCharacter
 var _camera: Camera2D
 var _hud: Node2D
 var _background: Node2D
-## Loaded LEVEL_ART: {"scale", "tiles": {name: Texture2D}, "background": [{texture, speed, top, gap}]}.
+## The art set in use: {"scale", "tiles": {name: Texture2D}, "background": [{texture, speed, top, bottom, gap, mirror}]}.
 var _art := {}
+var _art_sets: Array[Dictionary] = []
+var _art_index := 0
 var _sounds := {}
 var _players: Array[AudioStreamPlayer] = []
 var _music: AudioStreamPlayer
@@ -406,6 +408,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventKey and event.physical_keycode == KEY_P:
 		set_pixel_mode(not pixel_mode)
 		get_viewport().set_input_as_handled()
+	elif event is InputEventKey and event.physical_keycode == KEY_L:
+		next_art_set()
+		get_viewport().set_input_as_handled()
 	elif event is InputEventKey and event.physical_keycode == KEY_M:
 		AudioServer.set_bus_mute(0, not AudioServer.is_bus_mute(0))
 		_hud.queue_redraw()
@@ -463,19 +468,44 @@ func _stop_music() -> void:
 
 
 func _load_art() -> void:
-	if not FileAccess.file_exists(LEVEL_ART + "level.json"):
-		return
-	var spec: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(LEVEL_ART + "level.json"))
+	for dir in LEVEL_ART_SETS:
+		if FileAccess.file_exists(dir + "level.json"):
+			_art_sets.append(_load_art_set(dir))
+	_background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	if not _art_sets.is_empty():
+		_art = _art_sets[0]
+
+
+func _load_art_set(dir: String) -> Dictionary:
+	var spec: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(dir + "level.json"))
 	var tiles := {}
 	for tile_name in spec["tiles"]:
-		tiles[tile_name] = load(LEVEL_ART + spec["tiles"][tile_name])
+		tiles[tile_name] = load(dir + spec["tiles"][tile_name])
 	var layers := []
 	for layer in spec["background"]:
-		var texture: Texture2D = load(LEVEL_ART + layer["file"])
+		var texture: Texture2D = load(dir + layer["file"])
 		layers.append({"texture": texture, "speed": layer.get("speed", 0.0), "top": layer.get("top", -1.0),
-			"gap": layer.get("gap", 0.0), "fill": texture.get_image().get_pixel(0, 0)})
-	_art = {"scale": spec.get("scale", 1.0), "tiles": tiles, "background": layers}
-	_background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			"bottom": layer.get("bottom", SCREEN.y), "gap": layer.get("gap", 0.0), "mirror": layer.get("mirror", false),
+			"fill": texture.get_image().get_pixel(0, 0)})
+	return {"scale": spec.get("scale", 1.0), "tiles": tiles, "background": layers}
+
+
+## Next art set; after the last one, plain shapes.
+func next_art_set() -> void:
+	if _art_sets.is_empty():
+		return
+	_art_index = (_art_index + 1) % (_art_sets.size() + 1)
+	_art = _art_sets[_art_index] if _art_index < _art_sets.size() else {}
+	_redraw()
+
+
+## A tile wider than TILE is a strip: each cell shows the part of it under the cell, so the
+## pattern runs on without seams.
+func _draw_tile(tile_name: String, at: Vector2) -> void:
+	var texture: Texture2D = _art["tiles"][tile_name]
+	var size := texture.get_size()
+	var x := fposmod(at.x, size.x) if size.x > TILE else 0.0
+	_tiles.draw_texture_rect_region(texture, Rect2(at, Vector2(minf(TILE, size.x), size.y)), Rect2(x, 0, minf(TILE, size.x), size.y))
 
 
 ## Each layer repeats sideways and moves at its own share of the camera's speed; the first one also
@@ -487,14 +517,21 @@ func _draw_art_background(scroll: float) -> void:
 		var layer: Dictionary = _art["background"][i]
 		var texture: Texture2D = layer["texture"]
 		var size := texture.get_size() * art_scale
-		var y: float = layer["top"] if layer["top"] >= 0.0 else SCREEN.y - size.y
+		var y: float = layer["top"] if layer["top"] >= 0.0 else layer["bottom"] - size.y
 		if i == 0:
 			v.draw_rect(Rect2(0, 0, SCREEN.x, y + 1), layer["fill"])
 		var step: float = size.x + layer["gap"]
-		var x := -fposmod(scroll * layer["speed"], step)
+		var offset: float = scroll * layer["speed"]
+		var x := -fposmod(offset, step)
+		var index := floori(offset / step)
 		while x < SCREEN.x:
-			v.draw_texture_rect(texture, Rect2(Vector2(x, y), size), false)
+			# Mirrored every other time, so a picture that does not repeat still joins up.
+			if layer["mirror"] and index % 2 != 0:
+				v.draw_texture_rect(texture, Rect2(Vector2(x + size.x, y), Vector2(-size.x, size.y)), false)
+			else:
+				v.draw_texture_rect(texture, Rect2(Vector2(x, y), size), false)
 			x += step
+			index += 1
 
 
 func _draw_background() -> void:
@@ -531,7 +568,9 @@ func _draw_tiles() -> void:
 				"#":
 					var top := row == 0 or map[row - 1][col] != "#"
 					if not _art.is_empty():
-						v.draw_texture(_art["tiles"]["ground_top" if top else "ground"], at)
+						var under_top := row > 0 and map[row - 1][col] == "#" and (row < 2 or map[row - 2][col] != "#")
+						var fill := "ground" if under_top or not _art["tiles"].has("ground_deep") else "ground_deep"
+						_draw_tile("ground_top" if top else fill, at)
 						continue
 					v.draw_rect(cell, Color("8b5a2b"))
 					if top:
@@ -550,7 +589,7 @@ func _draw_tiles() -> void:
 					v.draw_rect(cell.grow(-3), ink, false, 3.0)
 				"=":
 					if not _art.is_empty():
-						v.draw_texture(_art["tiles"]["plank"], at)
+						_draw_tile("plank", at)
 						continue
 					v.draw_rect(Rect2(at, Vector2(TILE, 16)), Color("a0522d"))
 					v.draw_line(at + Vector2(0, 16), at + Vector2(TILE, 16), ink, 2.0)
@@ -596,6 +635,8 @@ func _draw_hud() -> void:
 	v.draw_string_outline(font, Vector2(170, 50), "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, 6, halo)
 	v.draw_string(font, Vector2(170, 50), "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, ink)
 	var mode := "P: tryb %s" % ("pikselowy" if pixel_mode else "gładki")
+	if not _art_sets.is_empty():
+		mode = "L: grafika     " + mode
 	if _music or not _sounds.is_empty():
 		mode = "M: dźwięk %s     %s" % ["wył." if AudioServer.is_bus_mute(0) else "wł.", mode]
 	v.draw_string_outline(font, Vector2(0, 50), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 24, 6, halo)
