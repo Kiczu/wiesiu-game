@@ -47,6 +47,9 @@ const PIXEL_SCALE := 2
 const LEVEL_ART_SETS := ["res://art/platformer/level_autor/", "res://art/platformer/level/"]
 ## Music (music.ogg, looped) and sound effects (<name>.ogg) for the level, each used when present.
 const AUDIO_DIR := "res://art/platformer/audio/"
+## Drawn pictures for things in the level (<name>.png), each used when present.
+const ITEMS_DIR := "res://art/platformer/items/"
+const ITEMS := ["apple", "crate", "block", "block_used", "thorns", "flag", "flag_on", "drakkar"]
 const SOUNDS := ["jump", "apple", "bump", "stomp", "hurt", "checkpoint", "win", "lose"]
 
 var lives := LIVES
@@ -83,7 +86,8 @@ var _view: SubViewportContainer
 ## Pixel mode: the level is drawn PIXEL_SCALE times smaller (640 x 360) and enlarged without smoothing,
 ## so even turning parts of the puppet snap to a pixel grid. P switches it, to compare with the smooth look.
 var pixel_mode := false
-var _drakkar: Hotspot
+var _drakkar: Node2D
+var _items := {}
 var _coyote := 0.0
 var _buffered := 0.0
 var _jump_was_held := false
@@ -110,6 +114,9 @@ func _ready() -> void:
 	_background.draw.connect(_draw_background)
 	_load_art()
 	_load_audio()
+	for item in ITEMS:
+		if ResourceLoader.exists(ITEMS_DIR + item + ".png"):
+			_items[item] = load(ITEMS_DIR + item + ".png")
 	var front := CanvasLayer.new()
 	front.layer = 2
 	add_child(front)
@@ -155,15 +162,29 @@ func restart() -> void:
 				"V":
 					_add_viking(at)
 				"D":
-					_drakkar = Hotspot.new()
-					_drakkar.art = "drakkar"
-					_drakkar.size = Vector2(320, 230)
-					_drakkar.position = at + Vector2(60, 0)
-					_level.add_child(_drakkar)
+					_add_drakkar(at)
 	_add_player()
 	if _music and not _music.playing:
 		_music.play()
 	set_physics_process(true)
+
+
+func _add_drakkar(at: Vector2) -> void:
+	if _items.has("drakkar"):
+		var sprite := Sprite2D.new()
+		sprite.texture = _items["drakkar"]
+		sprite.centered = false
+		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		sprite.scale = Vector2(1.5, 1.5)
+		sprite.position = at + Vector2(60, 12) - Vector2(sprite.texture.get_width() / 2.0, sprite.texture.get_height()) * sprite.scale
+		_drakkar = sprite
+	else:
+		var hotspot := Hotspot.new()
+		hotspot.art = "drakkar"
+		hotspot.size = Vector2(320, 230)
+		hotspot.position = at + Vector2(60, 0)
+		_drakkar = hotspot
+	_level.add_child(_drakkar)
 
 
 func _add_player() -> void:
@@ -578,6 +599,20 @@ func _draw_tiles() -> void:
 					v.draw_rect(cell, Color("8b5a2b"))
 					if top:
 						v.draw_rect(Rect2(at, Vector2(TILE, 16)), Color("5e9e3f"))
+				"B" when _items.has("crate"):
+					v.draw_texture(_items["crate"], at)
+				"?" when _items.has("block"):
+					v.draw_texture(_items["block"], at + Vector2(0, sin(_anim * 4.0) * 2.0))
+				"X" when _items.has("block_used"):
+					v.draw_texture(_items["block_used"], at)
+				"a" when _items.has("apple"):
+					var texture: Texture2D = _items["apple"]
+					v.draw_texture(texture, at + (Vector2(TILE, TILE) - texture.get_size()) / 2 + Vector2(0, sin(_anim * 3.0 + col) * 4.0))
+				"x" when _items.has("thorns"):
+					v.draw_texture(_items["thorns"], at + Vector2(0, TILE - _items["thorns"].get_height()))
+				"C", "c" when _items.has("flag"):
+					var texture: Texture2D = _items["flag_on" if map[row][col] == "c" else "flag"]
+					v.draw_texture(texture, at + Vector2(8, TILE - texture.get_height()))
 				"B":
 					v.draw_rect(cell, Color("c08a4a"))
 					v.draw_rect(cell.grow(-3), ink, false, 3.0)
@@ -613,7 +648,12 @@ func _draw_tiles() -> void:
 	for effect in _effects:
 		match effect["kind"]:
 			"apple":
-				v.draw_circle(effect["pos"] + Vector2(0, -effect["time"] * 160.0), 14, Color(Color("d62828"), 1.0 - effect["time"] * 2.0))
+				var rise: Vector2 = effect["pos"] + Vector2(0, -effect["time"] * 160.0)
+				if _items.has("apple"):
+					var texture: Texture2D = _items["apple"]
+					v.draw_texture(texture, rise - texture.get_size() / 2, Color(1, 1, 1, 1.0 - effect["time"] * 2.0))
+				else:
+					v.draw_circle(rise, 14, Color(Color("d62828"), 1.0 - effect["time"] * 2.0))
 			"viking":
 				var flat: Vector2 = effect["pos"]
 				v.draw_rect(Rect2(flat + Vector2(-26, -14), Vector2(52, 14)), effect["color"])
