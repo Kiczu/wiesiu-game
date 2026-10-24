@@ -53,14 +53,32 @@ func _show_page(index: int) -> void:
 	for i in panels.size():
 		var rect := _panel_rect(i, panels.size())
 		for spec in panels[i].get("chars", []):
-			var actor := Character.new()
-			for key in spec:
-				if key != "pos":
-					actor.set(key, spec[key])
+			var actor := _drawn_actor(spec) if CutoutCharacter.has_frames() else _placeholder_actor(spec)
 			actor.position = rect.position + spec["pos"]
-			actor.scale = Vector2(1.1, 1.1)
 			_actors.add_child(actor)
 	_view.queue_redraw()
+
+
+func _placeholder_actor(spec: Dictionary) -> Node2D:
+	var actor := Character.new()
+	for key in spec:
+		if key != "pos":
+			actor.set(key, spec[key])
+	actor.scale = Vector2(1.1, 1.1)
+	return actor
+
+
+## With drawn frames for Wiesław, everyone is Wiesław in their own colour until they get their own art.
+func _drawn_actor(spec: Dictionary) -> Node2D:
+	var actor := CutoutCharacter.new()
+	if spec.has("body_color") and spec.get("display_name", "") != "Wiesław":
+		actor.robe_color = spec["body_color"]
+	actor.scale = Vector2(1.1, 1.1)
+	actor.facing = spec.get("facing", 1)
+	if spec.get("asleep", false):
+		# Lying on the ground, head to the left.
+		actor.rotation = -PI / 2
+	return actor
 
 
 func _panel_rect(index: int, count: int) -> Rect2:
