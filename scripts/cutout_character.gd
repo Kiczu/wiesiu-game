@@ -2,9 +2,21 @@ class_name CutoutCharacter
 extends Node2D
 ## A character built from separate parts (cutout animation), like a paper puppet: the author
 ## draws each part once and the poses are made here by turning the parts at their joints.
-## The parts are placeholder shapes for now. The origin is at the feet; drawn facing right.
+## When the author's parts are in one of ART_SETS (PNGs plus rig.json with each part's place and
+## joint), they are used; otherwise placeholder shapes. The origin is at the feet; drawn facing right.
 
 const OUTLINE := Color("2b1d14")
+## Drawn versions of Wiesław: the comic one and the pixel-art one (shown in pixel mode).
+const ART_SETS := {"smooth": "res://art/platformer/wieslaw/", "pixel": "res://art/platformer/wieslaw_pixel/"}
+## Parts drawn behind the body.
+const ART_BEHIND := ["arm_far", "foot_far", "foot_near"]
+## Height of the drawn Wiesław in pixels, before the scale the game gives the puppet.
+const ART_HEIGHT := 150.0
+## Drawn parts follow the joints of the placeholder puppet: [placeholder joint, how much of its turn].
+const ART_JOINTS := {
+	"body": ["torso", 1.0], "head": ["head", 1.0], "arm_near": ["arm_near", 0.5], "arm_far": ["arm_far", 0.5],
+	"foot_near": ["leg_near", 0.6], "foot_far": ["leg_far", 0.6], "hand_far": ["hand_far", 0.5],
+}
 
 ## Part: [parent, joint position in the parent, size, colour, drawn behind the body].
 ## Each part hangs from its joint: limbs point down from it, the torso and head point up.
@@ -32,9 +44,24 @@ var pose := "idle"
 
 var _parts := {}
 var _time := 0.0
+## Drawn sets by name: {"root": Node2D, "parts": {part name: Node2D}}.
+var _art := {}
+var _art_set := ""
+## Pixel mode shows the pixel-art set when there is one.
+var pixel_art := false:
+	set(value):
+		pixel_art = value
+		_show_art()
 
 
 func _ready() -> void:
+	for set_name in ART_SETS:
+		var dir: String = ART_SETS[set_name]
+		if FileAccess.file_exists(dir + "rig.json"):
+			_art[set_name] = _build_art(dir, JSON.parse_string(FileAccess.get_file_as_string(dir + "rig.json")))
+	if not _art.is_empty():
+		_show_art()
+		return
 	for id in PARTS:
 		var spec: Array = PARTS[id]
 		var part := Part.new()
@@ -47,6 +74,56 @@ func _ready() -> void:
 		if spec[4]:
 			part.z_index = -1
 		_parts[id] = part
+
+
+## Every part hangs at its joint: the body from the root, the others from the body (or the part
+## named as their parent). The comic set gets mipmaps so it stays
+## smooth when scaled down, the pixel set keeps hard pixel edges.
+func _build_art(dir: String, rig: Dictionary) -> Dictionary:
+	var feet: float = rig["feet_y"]
+	var pixel: bool = rig.get("pixel", false)
+	var root := Node2D.new()
+	root.scale = Vector2.ONE * ART_HEIGHT / feet
+	add_child(root)
+	var specs: Dictionary = rig["parts"]
+	var nodes := {}
+	for id in rig.get("order", ["body", "foot_far", "foot_near", "arm_far", "head", "arm_near"]):
+		var spec: Dictionary = specs[id]
+		var joint := _vec(spec["joint"])
+		var node := Node2D.new()
+		var sprite := Sprite2D.new()
+		var texture: Texture2D = load(dir + spec["file"])
+		if not pixel:
+			var image := texture.get_image()
+			image.generate_mipmaps()
+			texture = ImageTexture.create_from_image(image)
+		sprite.texture = texture
+		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST if pixel else CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		sprite.centered = false
+		sprite.position = _vec(spec["origin"]) - joint
+		node.add_child(sprite)
+		if id == "body":
+			node.position = joint - Vector2(rig["canvas"][0] / 2.0, feet)
+			root.add_child(node)
+		else:
+			var parent: String = spec.get("parent", "body")
+			node.position = joint - _vec(specs[parent]["joint"])
+			node.show_behind_parent = id in ART_BEHIND
+			nodes[parent].add_child(node)
+		nodes[id] = node
+	return {"root": root, "parts": nodes}
+
+
+func _show_art() -> void:
+	if _art.is_empty():
+		return
+	_art_set = "pixel" if pixel_art and _art.has("pixel") else ("smooth" if _art.has("smooth") else "pixel")
+	for set_name in _art:
+		_art[set_name]["root"].visible = set_name == _art_set
+
+
+static func _vec(value: Array) -> Vector2:
+	return Vector2(value[0], value[1])
 
 
 func _process(delta: float) -> void:
@@ -92,6 +169,12 @@ func _angles(name: String, t: float) -> Dictionary:
 
 
 func _apply(angles: Dictionary) -> void:
+	if _art_set != "":
+		var drawn: Dictionary = _art[_art_set]
+		for id in drawn["parts"]:
+			drawn["parts"][id].rotation = angles.get(ART_JOINTS[id][0], 0.0) * ART_JOINTS[id][1]
+		drawn["root"].position.y = -angles["lift"]
+		return
 	for id in _parts:
 		_parts[id].rotation = angles.get(id, 0.0)
 	_parts["hips"].position.y = PARTS["hips"][1].y - angles["lift"]

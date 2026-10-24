@@ -178,6 +178,8 @@ func set_pixel_mode(on: bool) -> void:
 	_world.snap_2d_transforms_to_pixel = on
 	_world.snap_2d_vertices_to_pixel = on
 	_back.scale = Vector2.ONE / _view.stretch_shrink
+	if _wieslaw:
+		_wieslaw.pixel_art = on
 	if _camera:
 		_camera.zoom = Vector2.ONE / _view.stretch_shrink
 		_camera.reset_smoothing()
