@@ -69,7 +69,7 @@ var _wieslaw: CutoutCharacter
 var _camera: Camera2D
 var _hud: Node2D
 var _background: Node2D
-## The art set in use: {"scale", "tiles": {name: Texture2D}, "background": [{texture, speed, top, bottom, gap, mirror}]}.
+## The art set in use: {"scale", "tiles": {name: Texture2D}, "background": [{texture, mirrored, speed, top, bottom, gap}]}.
 var _art := {}
 var _art_sets: Array[Dictionary] = []
 var _art_index := 0
@@ -484,8 +484,13 @@ func _load_art_set(dir: String) -> Dictionary:
 	var layers := []
 	for layer in spec["background"]:
 		var texture: Texture2D = load(dir + layer["file"])
-		layers.append({"texture": texture, "speed": layer.get("speed", 0.0), "top": layer.get("top", -1.0),
-			"bottom": layer.get("bottom", SCREEN.y), "gap": layer.get("gap", 0.0), "mirror": layer.get("mirror", false),
+		var mirrored: Texture2D = null
+		if layer.get("mirror", false):
+			var image := texture.get_image()
+			image.flip_x()
+			mirrored = ImageTexture.create_from_image(image)
+		layers.append({"texture": texture, "mirrored": mirrored, "speed": layer.get("speed", 0.0), "top": layer.get("top", -1.0),
+			"bottom": layer.get("bottom", SCREEN.y), "gap": layer.get("gap", 0.0),
 			"fill": texture.get_image().get_pixel(0, 0)})
 	return {"scale": spec.get("scale", 1.0), "tiles": tiles, "background": layers}
 
@@ -526,10 +531,8 @@ func _draw_art_background(scroll: float) -> void:
 		var index := floori(offset / step)
 		while x < SCREEN.x:
 			# Mirrored every other time, so a picture that does not repeat still joins up.
-			if layer["mirror"] and index % 2 != 0:
-				v.draw_texture_rect(texture, Rect2(Vector2(x + size.x, y), Vector2(-size.x, size.y)), false)
-			else:
-				v.draw_texture_rect(texture, Rect2(Vector2(x, y), size), false)
+			var flipped: bool = layer["mirrored"] != null and index % 2 != 0
+			v.draw_texture_rect(layer["mirrored"] if flipped else texture, Rect2(Vector2(x, y), size), false)
 			x += step
 			index += 1
 
