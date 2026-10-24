@@ -1,10 +1,12 @@
 shader_type canvas_item;
-// Repaints the purple robe in another hue and leaves the rest (skin, trim, belts) as drawn.
+// Repaints the purple robe in another colour and leaves the rest (skin, trim, belts) as drawn.
 
-uniform float target_hue = 0.3;
+// Hue, saturation and value of the new colour.
+uniform vec3 new_color = vec3(0.3, 0.5, 0.5);
 uniform float robe_hue = 0.72;
 uniform float hue_range = 0.08;
-uniform float saturation = 2.4;
+// Saturation of the drawn robe, so the new colour keeps its light and shade.
+uniform float robe_saturation = 0.3;
 
 vec3 rgb_to_hsv(vec3 c) {
 	vec4 k = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
@@ -23,8 +25,8 @@ void fragment() {
 	vec4 color = texture(TEXTURE, UV);
 	vec3 hsv = rgb_to_hsv(color.rgb);
 	if (abs(hsv.x - robe_hue) < hue_range && hsv.y > 0.12) {
-		hsv.x = target_hue;
-		hsv.y = min(1.0, hsv.y * saturation);
+		hsv.x = new_color.x;
+		hsv.y = min(1.0, hsv.y * new_color.y / robe_saturation);
 		color.rgb = hsv_to_rgb(hsv);
 	}
 	COLOR = color;

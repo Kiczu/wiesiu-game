@@ -191,7 +191,7 @@ func _add_viking(at: Vector2) -> void:
 	# With drawn frames for Wiesław, Vikings are Wiesław in another colour until they get their own.
 	if CutoutCharacter.has_frames():
 		var drawn := CutoutCharacter.new()
-		drawn.robe_hue = color.h
+		drawn.robe_color = color
 		drawn.pose = "run"
 		drawn.scale = Vector2(0.66, 0.66)
 		body = drawn
