@@ -42,6 +42,9 @@ const VIKING_SPEED := 70.0
 const PLAYER_SIZE := Vector2(40, 92)
 ## How many times smaller the level is drawn in pixel mode; bigger gives chunkier pixels.
 const PIXEL_SCALE := 2
+## Ready-made tiles and background layers: level.json names the files and how the layers scroll.
+## Without it the level is drawn from plain shapes.
+const LEVEL_ART := "res://art/platformer/level/"
 
 var lives := LIVES
 var apples := 0
@@ -63,6 +66,8 @@ var _wieslaw: CutoutCharacter
 var _camera: Camera2D
 var _hud: Node2D
 var _background: Node2D
+## Loaded LEVEL_ART: {"scale", "tiles": {name: Texture2D}, "background": [{texture, speed, top, gap}]}.
+var _art := {}
 var _back: CanvasLayer
 ## The level is drawn into its own viewport, so it can be drawn at half resolution (pixel mode).
 var _world: SubViewport
@@ -95,6 +100,7 @@ func _ready() -> void:
 	_background = Node2D.new()
 	_back.add_child(_background)
 	_background.draw.connect(_draw_background)
+	_load_art()
 	var front := CanvasLayer.new()
 	front.layer = 2
 	add_child(front)
@@ -127,6 +133,7 @@ func restart() -> void:
 	_level = Node2D.new()
 	_world.add_child(_level)
 	_tiles = Node2D.new()
+	_tiles.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_tiles.draw.connect(_draw_tiles)
 	_level.add_child(_tiles)
 	_build_collision()
@@ -395,9 +402,47 @@ func _visible_columns() -> Vector2i:
 	return Vector2i(maxi(floori(left / TILE) - 1, 0), floori((left + SCREEN.x) / TILE) + 2)
 
 
+func _load_art() -> void:
+	if not FileAccess.file_exists(LEVEL_ART + "level.json"):
+		return
+	var spec: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(LEVEL_ART + "level.json"))
+	var tiles := {}
+	for tile_name in spec["tiles"]:
+		tiles[tile_name] = load(LEVEL_ART + spec["tiles"][tile_name])
+	var layers := []
+	for layer in spec["background"]:
+		var texture: Texture2D = load(LEVEL_ART + layer["file"])
+		layers.append({"texture": texture, "speed": layer.get("speed", 0.0), "top": layer.get("top", -1.0),
+			"gap": layer.get("gap", 0.0), "fill": texture.get_image().get_pixel(0, 0)})
+	_art = {"scale": spec.get("scale", 1.0), "tiles": tiles, "background": layers}
+	_background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+
+
+## Each layer repeats sideways and moves at its own share of the camera's speed; the first one also
+## fills the sky above it with its top colour.
+func _draw_art_background(scroll: float) -> void:
+	var v := _background
+	var art_scale: float = _art["scale"]
+	for i in _art["background"].size():
+		var layer: Dictionary = _art["background"][i]
+		var texture: Texture2D = layer["texture"]
+		var size := texture.get_size() * art_scale
+		var y: float = layer["top"] if layer["top"] >= 0.0 else SCREEN.y - size.y
+		if i == 0:
+			v.draw_rect(Rect2(0, 0, SCREEN.x, y + 1), layer["fill"])
+		var step: float = size.x + layer["gap"]
+		var x := -fposmod(scroll * layer["speed"], step)
+		while x < SCREEN.x:
+			v.draw_texture_rect(texture, Rect2(Vector2(x, y), size), false)
+			x += step
+
+
 func _draw_background() -> void:
 	var v := _background
 	var scroll := _camera.get_screen_center_position().x if _camera else 0.0
+	if not _art.is_empty():
+		_draw_art_background(scroll)
+		return
 	for i in 12:
 		v.draw_rect(Rect2(0, i * 60, SCREEN.x, 61), Color("8ccbe8").lerp(Color("e8f4fa"), i / 11.0))
 	for i in 7:
@@ -424,8 +469,12 @@ func _draw_tiles() -> void:
 			var cell := Rect2(at, Vector2(TILE, TILE))
 			match map[row][col]:
 				"#":
+					var top := row == 0 or map[row - 1][col] != "#"
+					if not _art.is_empty():
+						v.draw_texture(_art["tiles"]["ground_top" if top else "ground"], at)
+						continue
 					v.draw_rect(cell, Color("8b5a2b"))
-					if row == 0 or map[row - 1][col] != "#":
+					if top:
 						v.draw_rect(Rect2(at, Vector2(TILE, 16)), Color("5e9e3f"))
 				"B":
 					v.draw_rect(cell, Color("c08a4a"))
@@ -440,6 +489,9 @@ func _draw_tiles() -> void:
 					v.draw_rect(cell, Color("a08060"))
 					v.draw_rect(cell.grow(-3), ink, false, 3.0)
 				"=":
+					if not _art.is_empty():
+						v.draw_texture(_art["tiles"]["plank"], at)
+						continue
 					v.draw_rect(Rect2(at, Vector2(TILE, 16)), Color("a0522d"))
 					v.draw_line(at + Vector2(0, 16), at + Vector2(TILE, 16), ink, 2.0)
 				"a":
@@ -479,8 +531,12 @@ func _draw_hud() -> void:
 	var ink := Color("2b1d14")
 	for i in LIVES:
 		v.draw_circle(Vector2(40 + i * 40, 40), 14, Color("d62828") if i < lives else Color(0, 0, 0, 0.25))
+	# A light outline keeps the text readable on a drawn background.
+	var halo := Color(1, 1, 1, 0.85)
+	v.draw_string_outline(font, Vector2(170, 50), "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, 6, halo)
 	v.draw_string(font, Vector2(170, 50), "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, ink)
 	var mode := "P: tryb %s" % ("pikselowy" if pixel_mode else "gładki")
+	v.draw_string_outline(font, Vector2(0, 50), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 24, 6, halo)
 	v.draw_string(font, Vector2(0, 50), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 24, ink)
 	var message := ""
 	if state == "" and player and player.position.x < 900.0:
@@ -490,4 +546,5 @@ func _draw_hud() -> void:
 	elif state == "won":
 		message = "Hop! Wiesław dogonił drakkar!"
 	if message != "":
+		v.draw_multiline_string_outline(font, Vector2(0, 110), message, HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 26, -1, 6, halo)
 		v.draw_multiline_string(font, Vector2(0, 110), message, HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 26, -1, ink)
