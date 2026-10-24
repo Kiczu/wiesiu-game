@@ -21,8 +21,8 @@ const LEVEL := [
 	"         ?B?                     aaa                                      ?B?B?                        =====                        V                                     ",
 	"                                                  #  ===  ===                                                                     ######    ?             ##              ",
 	"    a a        a a              ===              ##                                   a a         ===          ===                                       ###              ",
-	"                            V        a          ###            a                                                           a   a                        ####              ",
-	" P                       ##          #         ####          x     C       V        V                                    B   x   B          a      V   #####        D     ",
+	"                                     a          ###            a                                                           a   a                        ####              ",
+	" P                       ##       V  #         ####          x     C       V        V                                    B   x   B          a      V   #####        D     ",
 	"#############################  ####################       ######################################                  ########################################################",
 	"#############################  ####################       ######################################                  ########################################################",
 ]
@@ -72,7 +72,7 @@ var _wieslaw: CutoutCharacter
 var _camera: Camera2D
 var _hud: Node2D
 var _background: Node2D
-## The art set in use: {"scale", "tiles": {name: Texture2D}, "background": [{texture, mirrored, speed, top, bottom, gap}]}.
+## The art set in use: {"scale", "tiles": {name: Texture2D}, "background": [{texture, mirrored, speed, follow, top, bottom, gap}]}.
 var _art := {}
 var _art_sets: Array[Dictionary] = []
 var _art_index := 0
@@ -394,12 +394,23 @@ func _check_touches() -> void:
 		# Coming down onto the head knocks the Viking out; anything else hurts.
 		if player.velocity.y > 0.0 and me.end.y < them.position.y + 34:
 			vikings.erase(viking)
-			_effects.append({"kind": "viking", "pos": node.position, "time": 0.0, "color": viking["color"]})
-			node.queue_free()
+			_effects.append({"kind": "viking", "pos": node.position, "time": 0.0})
+			_squash(node)
 			player.velocity.y = -STOMP_BOUNCE
 			_play("stomp")
 		else:
 			_hit(false)
+
+
+## A knocked-out Viking is flattened, then fades away.
+func _squash(node: Node2D) -> void:
+	node.set("pose", "hurt")
+	node.set("running", false)
+	var tween := node.create_tween()
+	tween.tween_property(node, "scale:y", node.scale.y * 0.3, 0.08)
+	tween.tween_interval(0.25)
+	tween.tween_property(node, "modulate:a", 0.0, 0.3)
+	tween.tween_callback(node.queue_free)
 
 
 func _hit(fell: bool) -> void:
@@ -512,6 +523,7 @@ func _load_art_set(dir: String) -> Dictionary:
 			mirrored = ImageTexture.create_from_image(image)
 		layers.append({"texture": texture, "mirrored": mirrored, "speed": layer.get("speed", 0.0), "top": layer.get("top", -1.0),
 			"bottom": layer.get("bottom", SCREEN.y), "gap": layer.get("gap", 0.0),
+			"follow": layer.get("follow", layer.get("speed", 0.0)),
 			"fill": texture.get_image().get_pixel(0, 0)})
 	return {"scale": spec.get("scale", 1.0), "tiles": tiles, "background": layers}
 
@@ -535,15 +547,19 @@ func _draw_tile(tile_name: String, at: Vector2) -> void:
 
 
 ## Each layer repeats sideways and moves at its own share of the camera's speed; the first one also
-## fills the sky above it with its top colour.
+## fills the sky above it with its top colour. When the camera goes up, a layer goes down by its
+## "follow" share of that, so the nearest trees stay standing on the ground.
 func _draw_art_background(scroll: float) -> void:
+	var rise := 0.0
+	if _camera:
+		rise = map.size() * TILE - SCREEN.y / 2 - _camera.get_screen_center_position().y
 	var v := _background
 	var art_scale: float = _art["scale"]
 	for i in _art["background"].size():
 		var layer: Dictionary = _art["background"][i]
 		var texture: Texture2D = layer["texture"]
 		var size := texture.get_size() * art_scale
-		var y: float = layer["top"] if layer["top"] >= 0.0 else layer["bottom"] - size.y
+		var y: float = (layer["top"] if layer["top"] >= 0.0 else layer["bottom"] - size.y) + rise * layer["follow"]
 		if i == 0:
 			v.draw_rect(Rect2(0, 0, SCREEN.x, y + 1), layer["fill"])
 		var step: float = size.x + layer["gap"]
@@ -656,7 +672,6 @@ func _draw_tiles() -> void:
 					v.draw_circle(rise, 14, Color(Color("d62828"), 1.0 - effect["time"] * 2.0))
 			"viking":
 				var flat: Vector2 = effect["pos"]
-				v.draw_rect(Rect2(flat + Vector2(-26, -14), Vector2(52, 14)), effect["color"])
 				v.draw_string(ThemeDB.fallback_font, flat + Vector2(-30, -24), "BĘC!", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, ink)
 
 
