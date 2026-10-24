@@ -57,6 +57,9 @@ var _anim := {}
 var _anim_sprite: Sprite2D
 var _anim_pose := ""
 var _anim_time := 0.0
+## Hue (0 to 1) the purple robe is repainted with, to make other people from the same frames;
+## below 0 keeps the robe as drawn.
+var robe_hue := -1.0
 var pixel_art := false:
 	set(value):
 		pixel_art = value
@@ -64,7 +67,7 @@ var pixel_art := false:
 
 
 func _ready() -> void:
-	if FileAccess.file_exists(ANIM_DIR + "frames.json"):
+	if has_frames():
 		_build_anim(JSON.parse_string(FileAccess.get_file_as_string(ANIM_DIR + "frames.json")))
 		return
 	for set_name in ART_SETS:
@@ -126,12 +129,22 @@ func _build_art(dir: String, rig: Dictionary) -> Dictionary:
 	return {"root": root, "parts": nodes}
 
 
+## Whether drawn animation frames are there (other characters can then be made from them).
+static func has_frames() -> bool:
+	return FileAccess.file_exists(ANIM_DIR + "frames.json")
+
+
 func _build_anim(spec: Dictionary) -> void:
 	_anim_sprite = Sprite2D.new()
 	_anim_sprite.centered = false
 	_anim_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_anim_sprite.scale = Vector2.ONE * ART_HEIGHT / spec["height"]
 	add_child(_anim_sprite)
+	if robe_hue >= 0.0:
+		var material := ShaderMaterial.new()
+		material.shader = preload("res://scripts/robe_recolor.gdshader")
+		material.set_shader_parameter("target_hue", robe_hue)
+		_anim_sprite.material = material
 	for pose_name in spec["poses"]:
 		var pose_spec: Dictionary = spec["poses"][pose_name]
 		var frames := []

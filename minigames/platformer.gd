@@ -186,15 +186,26 @@ func set_pixel_mode(on: bool) -> void:
 
 
 func _add_viking(at: Vector2) -> void:
-	var body := Character.new()
-	body.braids = true
-	body.body_color = Color("4f7a3a") if vikings.size() % 2 == 0 else Color("d9692b")
-	body.scale = Vector2(0.6, 0.6)
+	var color := Color("4f7a3a") if vikings.size() % 2 == 0 else Color("d9692b")
+	var body: Node2D
+	# With drawn frames for Wiesław, Vikings are Wiesław in another colour until they get their own.
+	if CutoutCharacter.has_frames():
+		var drawn := CutoutCharacter.new()
+		drawn.robe_hue = color.h
+		drawn.pose = "run"
+		drawn.scale = Vector2(0.66, 0.66)
+		body = drawn
+	else:
+		var placeholder := Character.new()
+		placeholder.braids = true
+		placeholder.body_color = color
+		placeholder.scale = Vector2(0.6, 0.6)
+		placeholder.running = true
+		body = placeholder
 	body.position = at
-	body.running = true
-	body.facing = -1
+	body.set("facing", -1)
 	_level.add_child(body)
-	vikings.append({"node": body, "dir": -1.0})
+	vikings.append({"node": body, "dir": -1.0, "color": color})
 
 
 ## Rows of solid tiles become one static box each; planks become one-way boxes.
@@ -303,14 +314,14 @@ func _bump_block(point: Vector2) -> void:
 ## Vikings walk back and forth and turn at walls and ledges.
 func _move_vikings(delta: float) -> void:
 	for viking in vikings:
-		var node: Character = viking["node"]
+		var node: Node2D = viking["node"]
 		var ahead: Vector2 = node.position + Vector2(viking["dir"] * 26.0, 0)
 		var wall := tile_at(ahead + Vector2(0, -10)) in SOLID
 		var floor_tile := tile_at(ahead + Vector2(0, 10))
 		if wall or not (floor_tile in SOLID or floor_tile == "="):
 			viking["dir"] *= -1.0
 		node.position.x += viking["dir"] * VIKING_SPEED * delta
-		node.facing = int(viking["dir"])
+		node.set("facing", int(viking["dir"]))
 
 
 func _check_touches() -> void:
@@ -330,14 +341,14 @@ func _check_touches() -> void:
 				Game.set_flag("jablka_proba", apples)
 				return
 	for viking in vikings.duplicate():
-		var node: Character = viking["node"]
+		var node: Node2D = viking["node"]
 		var them := Rect2(node.position - Vector2(24, 80), Vector2(48, 80))
 		if not me.intersects(them):
 			continue
 		# Coming down onto the head knocks the Viking out; anything else hurts.
 		if player.velocity.y > 0.0 and me.end.y < them.position.y + 34:
 			vikings.erase(viking)
-			_effects.append({"kind": "viking", "pos": node.position, "time": 0.0, "color": node.body_color})
+			_effects.append({"kind": "viking", "pos": node.position, "time": 0.0, "color": viking["color"]})
 			node.queue_free()
 			player.velocity.y = -STOMP_BOUNCE
 		else:

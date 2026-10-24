@@ -184,7 +184,7 @@ func _check_platformer() -> void:
 	await _physics(30)
 	_check(level.apples == apples + 1 and level.LEVEL[5][9] == "?" and level.map[5][9] == "X", "platformer: bumping a ? block gives an apple")
 	# Land on a Viking's head.
-	var viking: Character = level.vikings[0]["node"]
+	var viking: Node2D = level.vikings[0]["node"]
 	var count := level.vikings.size()
 	player.position = viking.position + Vector2(0, -120)
 	player.velocity = Vector2(0, 300)
