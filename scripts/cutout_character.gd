@@ -3,11 +3,15 @@ extends Node2D
 ## A character built from separate parts (cutout animation), like a paper puppet: the author
 ## draws each part once and the poses are made here by turning the parts at their joints.
 ## When the author's parts are in one of ART_SETS (PNGs plus rig.json with each part's place and
-## joint), they are used; otherwise placeholder shapes. The origin is at the feet; drawn facing right.
+## joint), they are used; otherwise placeholder shapes. Frame-by-frame animations in ANIM_DIR
+## (PNGs plus frames.json) take over from all of them. The origin is at the feet; drawn facing right.
 
 const OUTLINE := Color("2b1d14")
 ## Drawn versions of Wiesław: the comic one and the pixel-art one (shown in pixel mode).
 const ART_SETS := {"smooth": "res://art/platformer/wieslaw/", "pixel": "res://art/platformer/wieslaw_pixel/"}
+## Ready-made animation frames: frames.json lists, for each pose, its fps, whether it loops and
+## its frames, each with the point of the image that stands on the ground.
+const ANIM_DIR := "res://art/platformer/wieslaw_anim/"
 ## Parts drawn behind the body.
 const ART_BEHIND := ["arm_far", "foot_far", "foot_near"]
 ## Height of the drawn Wiesław in pixels, before the scale the game gives the puppet.
@@ -48,6 +52,11 @@ var _time := 0.0
 var _art := {}
 var _art_set := ""
 ## Pixel mode shows the pixel-art set when there is one.
+## Frame animation: {pose: {"fps", "loop", "frames": [{"texture", "anchor"}]}}.
+var _anim := {}
+var _anim_sprite: Sprite2D
+var _anim_pose := ""
+var _anim_time := 0.0
 var pixel_art := false:
 	set(value):
 		pixel_art = value
@@ -55,6 +64,9 @@ var pixel_art := false:
 
 
 func _ready() -> void:
+	if FileAccess.file_exists(ANIM_DIR + "frames.json"):
+		_build_anim(JSON.parse_string(FileAccess.get_file_as_string(ANIM_DIR + "frames.json")))
+		return
 	for set_name in ART_SETS:
 		var dir: String = ART_SETS[set_name]
 		if FileAccess.file_exists(dir + "rig.json"):
@@ -114,6 +126,34 @@ func _build_art(dir: String, rig: Dictionary) -> Dictionary:
 	return {"root": root, "parts": nodes}
 
 
+func _build_anim(spec: Dictionary) -> void:
+	_anim_sprite = Sprite2D.new()
+	_anim_sprite.centered = false
+	_anim_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_anim_sprite.scale = Vector2.ONE * ART_HEIGHT / spec["height"]
+	add_child(_anim_sprite)
+	for pose_name in spec["poses"]:
+		var pose_spec: Dictionary = spec["poses"][pose_name]
+		var frames := []
+		for frame in pose_spec["frames"]:
+			frames.append({"texture": load(ANIM_DIR + frame["file"]), "anchor": _vec(frame["anchor"])})
+		_anim[pose_name] = {"fps": pose_spec["fps"], "loop": pose_spec["loop"], "frames": frames}
+
+
+func _show_frame(delta: float) -> void:
+	var current: Dictionary = _anim.get(pose, _anim["idle"])
+	if pose != _anim_pose:
+		_anim_pose = pose
+		_anim_time = 0.0
+	_anim_time += delta
+	var frames: Array = current["frames"]
+	var index := int(_anim_time * current["fps"])
+	index = index % frames.size() if current["loop"] else mini(index, frames.size() - 1)
+	var frame: Dictionary = frames[index]
+	_anim_sprite.texture = frame["texture"]
+	_anim_sprite.position = -frame["anchor"] * _anim_sprite.scale
+
+
 func _show_art() -> void:
 	if _art.is_empty():
 		return
@@ -128,6 +168,9 @@ static func _vec(value: Array) -> Vector2:
 
 func _process(delta: float) -> void:
 	_time += delta
+	if _anim_sprite:
+		_show_frame(delta)
+		return
 	_apply(_angles(pose, _time))
 
 
