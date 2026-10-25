@@ -51,6 +51,10 @@ const AUDIO_DIR := "res://art/platformer/audio/"
 const ITEMS_DIR := "res://art/platformer/items/"
 const ITEMS := ["apple", "crate", "block", "block_used", "thorns", "flag", "flag_on", "drakkar"]
 const SOUNDS := ["jump", "apple", "bump", "stomp", "hurt", "checkpoint", "win", "lose"]
+## How far the camera looks ahead in the running direction.
+const LOOK_AHEAD := 140.0
+const LEAVES := 26
+const POLLEN := 40
 
 var lives := LIVES
 var apples := 0
@@ -96,6 +100,19 @@ var _end_time := 0.0
 var _anim := 0.0
 ## Short-lived pictures: apples popping out of blocks, knocked-out Vikings.
 var _effects: Array[Dictionary] = []
+## Depth effects: foreground, haze, leaves and pollen, shadows, light, camera, dust (G turns them off).
+var depth_effects := true
+var _front: CanvasLayer
+var _foreground: Node2D
+var _overlay: Node2D
+var _vignette: Texture2D
+var _particles: Array[Dictionary] = []
+var _last_camera := Vector2.ZERO
+var _stretch := Vector2.ONE
+var _fall_speed := 0.0
+var _was_on_floor := true
+var _shake := 0.0
+var _look := 0.0
 
 
 func _ready() -> void:
@@ -112,11 +129,26 @@ func _ready() -> void:
 	_background = Node2D.new()
 	_back.add_child(_background)
 	_background.draw.connect(_draw_background)
+	_front = CanvasLayer.new()
+	_front.layer = 1
+	_world.add_child(_front)
+	_foreground = Node2D.new()
+	_foreground.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_front.add_child(_foreground)
+	_foreground.draw.connect(_draw_foreground)
 	_load_art()
+	_make_particles()
 	_load_audio()
 	for item in ITEMS:
 		if ResourceLoader.exists(ITEMS_DIR + item + ".png"):
 			_items[item] = load(ITEMS_DIR + item + ".png")
+	var light := CanvasLayer.new()
+	light.layer = 1
+	add_child(light)
+	_overlay = Node2D.new()
+	light.add_child(_overlay)
+	_overlay.draw.connect(_draw_overlay)
+	_vignette = _make_vignette()
 	var front := CanvasLayer.new()
 	front.layer = 2
 	add_child(front)
@@ -144,6 +176,9 @@ func restart() -> void:
 	_hurt = 0.0
 	_end_time = 0.0
 	_effects.clear()
+	_stretch = Vector2.ONE
+	_shake = 0.0
+	_look = 0.0
 	vikings.clear()
 	map.assign(LEVEL)
 	_level = Node2D.new()
@@ -217,6 +252,7 @@ func set_pixel_mode(on: bool) -> void:
 	_world.snap_2d_transforms_to_pixel = on
 	_world.snap_2d_vertices_to_pixel = on
 	_back.scale = Vector2.ONE / _view.stretch_shrink
+	_front.scale = _back.scale
 	if _wieslaw:
 		_wieslaw.pixel_art = on
 	if _camera:
@@ -320,12 +356,23 @@ func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 	if _buffered > 0.0 and _coyote > 0.0:
 		v.y = -JUMP_SPEED
 		_play("jump")
+		_stretch = Vector2(0.8, 1.2)
+		_dust(player.position, 3)
 		_buffered = 0.0
 		_coyote = 0.0
 	if not jump_held and v.y < 0.0:
 		v.y = maxf(v.y, -JUMP_SPEED * JUMP_CUT)
 	player.velocity = v
+	_fall_speed = maxf(v.y, 0.0)
 	player.move_and_slide()
+	var on_floor := player.is_on_floor()
+	if on_floor and not _was_on_floor and _fall_speed > 500.0:
+		var hard := clampf((_fall_speed - 500.0) / 900.0, 0.0, 1.0)
+		_stretch = Vector2(1.0 + 0.25 * hard + 0.08, 1.0 - 0.3 * hard - 0.08)
+		_dust(player.position, 4 + roundi(hard * 4))
+	elif on_floor and absf(v.x) > WALK_SPEED * 0.9 and absf(steer) > 0.1 and signf(steer) != signf(v.x):
+		_dust(player.position, 1)
+	_was_on_floor = on_floor
 	if player.is_on_ceiling():
 		_bump_block(player.position + Vector2(0, -PLAYER_SIZE.y - 4))
 		_play("bump")
@@ -337,6 +384,9 @@ func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 		_wieslaw.pose = "jump" if player.velocity.y < 0.0 else "fall"
 	else:
 		_wieslaw.pose = "run" if absf(player.velocity.x) > 20.0 else "idle"
+	_stretch = _stretch.lerp(Vector2.ONE, minf(delta * 12.0, 1.0)) if depth_effects else Vector2.ONE
+	_wieslaw.scale = Vector2(0.84 * _stretch.x * _wieslaw.facing, 0.84 * _stretch.y)
+	_move_camera(delta)
 	# Blinks after the hurt pose, while he cannot be hit again.
 	_wieslaw.visible = _hurt > HURT_TIME - 0.4 or fmod(_hurt, 0.2) < 0.12
 	if player.position.y > map.size() * TILE + 120:
@@ -396,6 +446,8 @@ func _check_touches() -> void:
 			vikings.erase(viking)
 			_effects.append({"kind": "viking", "pos": node.position, "time": 0.0})
 			_squash(node)
+			_shake = maxf(_shake, 0.12)
+			_dust(node.position, 4)
 			player.velocity.y = -STOMP_BOUNCE
 			_play("stomp")
 		else:
@@ -418,6 +470,7 @@ func _hit(fell: bool) -> void:
 		return
 	lives -= 1
 	_hurt = HURT_TIME
+	_shake = 0.35
 	if lives <= 0:
 		state = "lost"
 		_stop_music()
@@ -443,6 +496,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventKey and event.physical_keycode == KEY_L:
 		next_art_set()
 		get_viewport().set_input_as_handled()
+	elif event is InputEventKey and event.physical_keycode == KEY_G:
+		set_depth_effects(not depth_effects)
+		get_viewport().set_input_as_handled()
 	elif event is InputEventKey and event.physical_keycode == KEY_M:
 		AudioServer.set_bus_mute(0, not AudioServer.is_bus_mute(0))
 		_hud.queue_redraw()
@@ -456,6 +512,8 @@ func _redraw() -> void:
 	_tiles.queue_redraw()
 	_hud.queue_redraw()
 	_background.queue_redraw()
+	_foreground.queue_redraw()
+	_overlay.queue_redraw()
 
 
 func _visible_columns() -> Vector2i:
@@ -523,17 +581,31 @@ func _load_art_set(dir: String) -> Dictionary:
 			mirrored = ImageTexture.create_from_image(image)
 		layers.append({"texture": texture, "mirrored": mirrored, "speed": layer.get("speed", 0.0), "top": layer.get("top", -1.0),
 			"bottom": layer.get("bottom", SCREEN.y), "gap": layer.get("gap", 0.0),
-			"follow": layer.get("follow", layer.get("speed", 0.0)),
+			"follow": layer.get("follow", layer.get("speed", 0.0)), "haze": layer.get("haze", 0.0),
 			"fill": texture.get_image().get_pixel(0, 0)})
-	return {"scale": spec.get("scale", 1.0), "tiles": tiles, "background": layers}
+	var front := []
+	for layer in spec.get("foreground", []):
+		front.append({"texture": load(dir + layer["file"]), "mirrored": null, "speed": layer.get("speed", 1.4), "top": -1.0,
+			"bottom": layer.get("bottom", SCREEN.y + 60), "gap": layer.get("gap", 0.0), "follow": layer.get("follow", 1.3), "haze": 0.0,
+			"scale": layer.get("scale", 1.0)})
+	return {"scale": spec.get("scale", 1.0), "tiles": tiles, "background": layers, "foreground": front,
+		"haze_color": Color(spec.get("haze_color", "c9dde6"))}
 
 
-## Next art set; after the last one, plain shapes.
+## Next art set. Without any art the level is drawn with plain shapes.
 func next_art_set() -> void:
 	if _art_sets.is_empty():
 		return
-	_art_index = (_art_index + 1) % (_art_sets.size() + 1)
-	_art = _art_sets[_art_index] if _art_index < _art_sets.size() else {}
+	_art_index = (_art_index + 1) % _art_sets.size()
+	_art = _art_sets[_art_index]
+	_redraw()
+
+
+func set_depth_effects(on: bool) -> void:
+	depth_effects = on
+	_shake = 0.0
+	if _camera:
+		_camera.offset = Vector2(0, -80)
 	_redraw()
 
 
@@ -549,18 +621,26 @@ func _draw_tile(tile_name: String, at: Vector2) -> void:
 ## Each layer repeats sideways and moves at its own share of the camera's speed; the first one also
 ## fills the sky above it with its top colour. When the camera goes up, a layer goes down by its
 ## "follow" share of that, so the nearest trees stay standing on the ground.
+## With depth effects, "haze" lays a veil of the haze colour over a layer and all behind it, so far
+## things fade into the air.
 func _draw_art_background(scroll: float) -> void:
-	var rise := 0.0
-	if _camera:
-		rise = map.size() * TILE - SCREEN.y / 2 - _camera.get_screen_center_position().y
-	var v := _background
-	var art_scale: float = _art["scale"]
-	for i in _art["background"].size():
-		var layer: Dictionary = _art["background"][i]
+	_draw_layers(_background, _art["background"], scroll, true)
+
+
+func _camera_rise() -> float:
+	if not _camera:
+		return 0.0
+	return map.size() * TILE - SCREEN.y / 2 - _camera.get_screen_center_position().y
+
+
+func _draw_layers(v: Node2D, layers: Array, scroll: float, fill_sky: bool) -> void:
+	var rise := _camera_rise()
+	for i in layers.size():
+		var layer: Dictionary = layers[i]
 		var texture: Texture2D = layer["texture"]
-		var size := texture.get_size() * art_scale
+		var size: Vector2 = texture.get_size() * layer.get("scale", _art["scale"])
 		var y: float = (layer["top"] if layer["top"] >= 0.0 else layer["bottom"] - size.y) + rise * layer["follow"]
-		if i == 0:
+		if i == 0 and fill_sky:
 			v.draw_rect(Rect2(0, 0, SCREEN.x, y + 1), layer["fill"])
 		var step: float = size.x + layer["gap"]
 		var offset: float = scroll * layer["speed"]
@@ -572,6 +652,8 @@ func _draw_art_background(scroll: float) -> void:
 			v.draw_texture_rect(layer["mirrored"] if flipped else texture, Rect2(Vector2(x, y), size), false)
 			x += step
 			index += 1
+		if depth_effects and layer["haze"] > 0.0:
+			v.draw_rect(Rect2(Vector2.ZERO, SCREEN), Color(_art["haze_color"], layer["haze"]))
 
 
 func _draw_background() -> void:
@@ -661,6 +743,8 @@ func _draw_tiles() -> void:
 					v.draw_line(pole, pole + Vector2(0, -90), ink, 4.0)
 					var flag := Color("e0a832") if map[row][col] == "c" else Color("9aa3ab")
 					v.draw_colored_polygon(PackedVector2Array([pole + Vector2(0, -90), pole + Vector2(36, -78), pole + Vector2(0, -66)]), flag)
+	if depth_effects:
+		_draw_shadows()
 	for effect in _effects:
 		match effect["kind"]:
 			"apple":
@@ -673,6 +757,10 @@ func _draw_tiles() -> void:
 			"viking":
 				var flat: Vector2 = effect["pos"]
 				v.draw_string(ThemeDB.fallback_font, flat + Vector2(-30, -24), "BĘC!", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, ink)
+			"dust":
+				var t: float = effect["time"] / 0.5
+				var puff: Vector2 = effect["pos"] + effect["vel"] * effect["time"] + Vector2(0, -t * 10.0)
+				v.draw_circle(puff, lerpf(5.0, 14.0, t), Color(0.93, 0.88, 0.78, 0.55 * (1.0 - t)))
 
 
 func _process(delta: float) -> void:
@@ -680,6 +768,125 @@ func _process(delta: float) -> void:
 		effect["time"] += delta
 		if effect["time"] > 0.5:
 			_effects.erase(effect)
+	_move_particles(delta)
+
+
+## A soft round shadow on the ground under a character; smaller and fainter the higher it is.
+func _draw_shadows() -> void:
+	var feet: Array[Vector2] = []
+	if player:
+		feet.append(player.position)
+	for viking in vikings:
+		feet.append(viking["node"].position)
+	for foot in feet:
+		var ground := foot.y
+		while ground < foot.y + 6 * TILE and not (tile_at(Vector2(foot.x, ground + 2)) in SOLID or tile_at(Vector2(foot.x, ground + 2)) == "="):
+			ground = (floori(ground / TILE) + 1) * TILE
+		if ground >= foot.y + 6 * TILE:
+			continue
+		var near := 1.0 - clampf((ground - foot.y) / (4.0 * TILE), 0.0, 1.0)
+		var size := Vector2(30, 7) * lerpf(0.5, 1.0, near)
+		for k in 3:
+			var grow := 1.0 + k * 0.35
+			_tiles.draw_set_transform(Vector2(foot.x, ground - 2), 0.0, Vector2(size.x * grow, size.y * grow) / 10.0)
+			_tiles.draw_circle(Vector2.ZERO, 10.0, Color(0.08, 0.06, 0.04, 0.16 * near))
+		_tiles.draw_set_transform(Vector2.ZERO)
+
+
+func _dust(at: Vector2, count: int) -> void:
+	if not depth_effects:
+		return
+	for i in count:
+		var side := -1.0 if i % 2 == 0 else 1.0
+		_effects.append({"kind": "dust", "pos": at + Vector2(side * randf_range(6, 18), -4),
+			"vel": Vector2(side * randf_range(40, 110), randf_range(-30, -5)), "time": randf_range(0.0, 0.1)})
+
+
+## The camera looks ahead where Wiesław runs and shakes for a moment when he is hit.
+func _move_camera(delta: float) -> void:
+	if not depth_effects or not _camera:
+		return
+	if absf(player.velocity.x) > 40.0:
+		_look = move_toward(_look, signf(player.velocity.x) * LOOK_AHEAD, delta * 260.0)
+	_shake = maxf(_shake - delta, 0.0)
+	var jolt := Vector2(randf_range(-1, 1), randf_range(-1, 1)) * 14.0 * _shake / 0.35 if _shake > 0.0 else Vector2.ZERO
+	_camera.offset = Vector2(_look, -80) + jolt
+
+
+## Leaves and pollen drift through the air in front of and behind the level, at different depths.
+func _make_particles() -> void:
+	_particles.clear()
+	for i in LEAVES + POLLEN:
+		var leaf := i < LEAVES
+		_particles.append({"leaf": leaf, "pos": Vector2(randf() * SCREEN.x, randf() * SCREEN.y),
+			"depth": randf_range(0.5, 1.4), "phase": randf() * TAU,
+			"color": [Color("c98a2b"), Color("a7b23a"), Color("d9a441"), Color("8e9a2e")][i % 4] if leaf else Color(1.0, 0.96, 0.7)})
+
+
+func _move_particles(delta: float) -> void:
+	if not depth_effects:
+		return
+	var center := _camera.get_screen_center_position() if _camera else Vector2.ZERO
+	var moved := center - _last_camera if _last_camera != Vector2.ZERO else Vector2.ZERO
+	_last_camera = center
+	for p in _particles:
+		var depth: float = p["depth"]
+		p["phase"] += delta * (1.6 if p["leaf"] else 0.7)
+		var drift := Vector2(-28.0 + sin(p["phase"]) * 30.0, 38.0) if p["leaf"] else Vector2(sin(p["phase"]) * 10.0, -6.0 + cos(p["phase"] * 1.3) * 8.0)
+		p["pos"] += drift * depth * delta - moved * depth
+		p["pos"] = Vector2(fposmod(p["pos"].x, SCREEN.x + 40.0), fposmod(p["pos"].y, SCREEN.y + 40.0))
+
+
+func _draw_foreground() -> void:
+	if not depth_effects:
+		return
+	var scroll := _camera.get_screen_center_position().x if _camera else 0.0
+	if not _art.is_empty():
+		_draw_layers(_foreground, _art["foreground"], scroll, false)
+	for p in _particles:
+		var at: Vector2 = p["pos"] - Vector2(20, 20)
+		var depth: float = p["depth"]
+		if p["leaf"]:
+			var turn: float = p["phase"] * 1.3
+			_foreground.draw_set_transform(at, turn, Vector2(1.0, absf(sin(turn)) * 0.8 + 0.2) * depth)
+			_foreground.draw_colored_polygon(PackedVector2Array([Vector2(-6, 0), Vector2(0, -3), Vector2(6, 0), Vector2(0, 3)]), p["color"])
+		else:
+			var glow: float = 0.45 + 0.35 * sin(p["phase"] * 3.0)
+			_foreground.draw_circle(at, 3.0 * depth, Color(p["color"], 0.18 * glow))
+			_foreground.draw_circle(at, 1.2 * depth, Color(p["color"], 0.8 * glow))
+	_foreground.draw_set_transform(Vector2.ZERO)
+
+
+## Light over the whole picture: slow sunbeams from the top left and a darker edge.
+func _draw_overlay() -> void:
+	if not depth_effects:
+		return
+	var sway := sin(_anim * 0.3) * 30.0
+	var beams := [[180.0, 90.0, 0.10], [360.0, 50.0, 0.07], [520.0, 120.0, 0.06], [760.0, 60.0, 0.05]]
+	for beam in beams:
+		var top := Vector2(beam[0] + sway, -20)
+		var spread: float = beam[1]
+		var bottom := top + Vector2(340, SCREEN.y + 40)
+		var warm := Color(1.0, 0.93, 0.7, beam[2])
+		var clear := Color(1.0, 0.93, 0.7, 0.0)
+		_overlay.draw_polygon(PackedVector2Array([top, top + Vector2(spread, 0), bottom + Vector2(spread * 2.2, 0), bottom]),
+			PackedColorArray([warm, warm, clear, clear]))
+	_overlay.draw_texture_rect(_vignette, Rect2(Vector2.ZERO, SCREEN), false)
+
+
+func _make_vignette() -> Texture2D:
+	var gradient := Gradient.new()
+	gradient.set_color(0, Color(0.05, 0.04, 0.03, 0.0))
+	gradient.set_color(1, Color(0.05, 0.04, 0.03, 0.55))
+	gradient.add_point(0.55, Color(0.05, 0.04, 0.03, 0.0))
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill = GradientTexture2D.FILL_RADIAL
+	texture.fill_from = Vector2(0.5, 0.5)
+	texture.fill_to = Vector2(1.05, 1.05)
+	texture.width = 256
+	texture.height = 144
+	return texture
 
 
 func _draw_hud() -> void:
@@ -693,7 +900,8 @@ func _draw_hud() -> void:
 	v.draw_string_outline(font, Vector2(170, 50), "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, 6, halo)
 	v.draw_string(font, Vector2(170, 50), "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, ink)
 	var mode := "P: tryb %s" % ("pikselowy" if pixel_mode else "gładki")
-	if not _art_sets.is_empty():
+	mode = "G: efekty %s     %s" % ["wł." if depth_effects else "wył.", mode]
+	if _art_sets.size() > 1:
 		mode = "L: grafika     " + mode
 	if _music or not _sounds.is_empty():
 		mode = "M: dźwięk %s     %s" % ["wył." if AudioServer.is_bus_mute(0) else "wł.", mode]
