@@ -212,7 +212,7 @@ func _angles(name: String, t: float) -> Dictionary:
 			var flap := sin(t * 18.0) * 0.15
 			a = {"torso": -0.05, "leg_near": -0.35, "shin_near": 0.4, "leg_far": 0.35, "shin_far": 0.3,
 				"arm_near": -1.9 + flap, "hand_near": -0.4, "arm_far": 1.9 - flap, "hand_far": 0.4}
-		"hurt":
+		"hurt", "death":
 			a = {"torso": -0.35, "head": 0.25, "leg_near": -0.5, "shin_near": 0.5, "leg_far": 0.3,
 				"arm_near": -2.2, "hand_near": 0.5, "arm_far": 2.2, "hand_far": -0.5}
 		"win":

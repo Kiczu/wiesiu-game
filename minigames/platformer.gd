@@ -454,13 +454,17 @@ func _check_touches() -> void:
 			_hit(false)
 
 
-## A knocked-out Viking is flattened, then fades away.
+## A knocked-out Viking falls over backwards (or, as a placeholder, is flattened), then fades away.
 func _squash(node: Node2D) -> void:
-	node.set("pose", "hurt")
 	node.set("running", false)
 	var tween := node.create_tween()
-	tween.tween_property(node, "scale:y", node.scale.y * 0.3, 0.08)
-	tween.tween_interval(0.25)
+	if node is CutoutCharacter:
+		node.pose = "death"
+		tween.tween_interval(1.0)
+	else:
+		node.set("pose", "hurt")
+		tween.tween_property(node, "scale:y", node.scale.y * 0.3, 0.08)
+		tween.tween_interval(0.25)
 	tween.tween_property(node, "modulate:a", 0.0, 0.3)
 	tween.tween_callback(node.queue_free)
 
@@ -473,6 +477,8 @@ func _hit(fell: bool) -> void:
 	_shake = 0.35
 	if lives <= 0:
 		state = "lost"
+		_wieslaw.pose = "death"
+		_wieslaw.visible = true
 		_stop_music()
 		_play("lose")
 		return
