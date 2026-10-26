@@ -19,7 +19,6 @@ const KEYS := {
 	"move_up": [KEY_W, KEY_UP],
 	"move_down": [KEY_S, KEY_DOWN],
 	"interact": [KEY_E, KEY_SPACE, KEY_ENTER],
-	"attack": [KEY_J, KEY_X],
 	"look": [KEY_Q],
 	"inventory": [KEY_I, KEY_TAB],
 	"cancel": [KEY_ESCAPE],

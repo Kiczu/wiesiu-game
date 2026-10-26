@@ -183,13 +183,22 @@ func _check_platformer() -> void:
 	level.input_jump = false
 	await _physics(30)
 	_check(level.apples == apples + 1 and level.LEVEL[5][9] == "?" and level.map[5][9] == "X", "platformer: bumping a ? block gives an apple")
-	# Land on a Viking's head.
+	# Throw two apples at a Viking.
 	var viking: Node2D = level.vikings[0]["node"]
+	for other in level.vikings:
+		if other["node"].position.x < viking.position.x:
+			viking = other["node"]
 	var count := level.vikings.size()
-	player.position = viking.position + Vector2(0, -120)
-	player.velocity = Vector2(0, 300)
-	await _physics(10)
-	_check(level.vikings.size() == count - 1 and level.lives == PlatformerGame.LIVES, "platformer: jumping on a Viking knocks him out")
+	level.apples = 2
+	for throw in 2:
+		player.position = viking.position + Vector2(-260, 0)
+		player.velocity = Vector2.ZERO
+		level._wieslaw.facing = 1
+		await _physics(2)
+		level.throw_apple()
+		await _physics(40)
+	_check(level.vikings.size() == count - 1 and level.apples == 0 and level.lives == PlatformerGame.LIVES, "platformer: two thrown apples knock a Viking out")
+	await _physics(60)
 	# Two sword hits knock a Viking out.
 	viking = level.vikings[0]["node"]
 	count = level.vikings.size()

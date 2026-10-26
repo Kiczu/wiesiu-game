@@ -37,7 +37,6 @@ const JUMP_CUT := 0.45
 const COYOTE_TIME := 0.1
 const JUMP_BUFFER := 0.12
 const HURT_TIME := 1.5
-const STOMP_BOUNCE := 650.0
 const VIKING_SPEED := 70.0
 const PLAYER_SIZE := Vector2(40, 92)
 ## How many times smaller the level is drawn in pixel mode; bigger gives chunkier pixels.
@@ -59,6 +58,11 @@ const ATTACK_COOLDOWN := 0.35
 const ATTACK_REACH := 84.0
 ## Sword hits a Viking takes before he falls over.
 const VIKING_HEALTH := 2
+## A thrown apple: speed, how much it drops, how long it flies, and the wait before the next throw.
+const APPLE_SPEED := 760.0
+const APPLE_GRAVITY := 900.0
+const APPLE_FLIGHT := 1.2
+const THROW_COOLDOWN := 0.3
 const LEAVES := 26
 const POLLEN := 40
 
@@ -71,6 +75,7 @@ var auto_input := false
 var input_x := 0.0
 var input_jump := false
 var input_attack := false
+var input_throw := false
 
 var player: CharacterBody2D
 var vikings: Array[Dictionary] = []
@@ -122,6 +127,9 @@ var _shake := 0.0
 var _attack := 0.0
 var _attack_cooldown := 0.0
 var _struck: Array[Node2D] = []
+var _throw_cooldown := 0.0
+## Apples in flight: position, velocity, time in the air.
+var _thrown: Array[Dictionary] = []
 var _look := 0.0
 
 
@@ -191,6 +199,8 @@ func restart() -> void:
 	_look = 0.0
 	_attack = 0.0
 	_attack_cooldown = 0.0
+	_throw_cooldown = 0.0
+	_thrown.clear()
 	vikings.clear()
 	map.assign(LEVEL)
 	_level = Node2D.new()
@@ -350,14 +360,17 @@ func _physics_process(delta: float) -> void:
 		_redraw()
 		return
 	var steer := input_x if auto_input else Input.get_axis("move_left", "move_right")
-	var jump_held := input_jump if auto_input else (Input.is_action_pressed("move_up") or Input.is_action_pressed("interact"))
+	var jump_held := input_jump if auto_input else Input.is_action_pressed("move_up")
 	if jump_held and not _jump_was_held:
 		_buffered = JUMP_BUFFER
 	_move_player(delta, steer, jump_held)
 	_jump_was_held = jump_held
 	if auto_input and input_attack:
 		attack()
+	if auto_input and input_throw:
+		throw_apple()
 	_swing(delta)
+	_fly_apples(delta)
 	_move_vikings(delta)
 	_check_touches()
 	_redraw()
@@ -447,21 +460,66 @@ func _swing(delta: float) -> void:
 		if node in _struck or not blade.intersects(Rect2(node.position - Vector2(24, 80), Vector2(48, 80))):
 			continue
 		_struck.append(node)
-		viking["health"] -= 1
-		_shake = maxf(_shake, 0.1)
-		_play("stomp")
-		node.modulate = Color(3, 3, 3)
-		node.create_tween().tween_property(node, "modulate", Color.WHITE, 0.2)
-		if viking["health"] <= 0:
-			vikings.erase(viking)
-			_effects.append({"kind": "viking", "pos": node.position, "time": 0.0})
-			_squash(node)
-		else:
-			viking["stun"] = 0.4
-			viking["push"] = facing * 420.0
-			viking["dir"] = -facing
+		_strike(viking, facing)
 	for point in [blade.position + blade.size * Vector2(0.75, 0.2), blade.position + blade.size * Vector2(0.75, 0.6)]:
 		_bump_block(point)
+
+
+## A Viking hit by the sword or an apple flashes and slides back; out of health, he falls over.
+func _strike(viking: Dictionary, from_dir: float) -> void:
+	var node: Node2D = viking["node"]
+	viking["health"] -= 1
+	_shake = maxf(_shake, 0.1)
+	_play("stomp")
+	node.modulate = Color(3, 3, 3)
+	node.create_tween().tween_property(node, "modulate", Color.WHITE, 0.2)
+	if viking["health"] <= 0:
+		vikings.erase(viking)
+		_effects.append({"kind": "viking", "pos": node.position, "time": 0.0})
+		_squash(node)
+	else:
+		viking["stun"] = 0.4
+		viking["push"] = from_dir * 420.0
+		viking["dir"] = -from_dir
+
+
+## Throws one of the gathered apples forward in a low arc.
+func throw_apple() -> void:
+	if state != "" or _throw_cooldown > 0.0:
+		return
+	if apples <= 0:
+		_play("bump")
+		return
+	apples -= 1
+	_throw_cooldown = THROW_COOLDOWN
+	_stretch = Vector2(1.08, 0.95)
+	_play("jump")
+	var facing := float(_wieslaw.facing)
+	_thrown.append({"pos": player.position + Vector2(facing * 26.0, -62), "vel": Vector2(facing * APPLE_SPEED, -220.0), "time": 0.0})
+
+
+## An apple flies until it hits a Viking, a wall or a ? block, or until it has flown too long.
+func _fly_apples(delta: float) -> void:
+	_throw_cooldown = maxf(_throw_cooldown - delta, 0.0)
+	for apple in _thrown.duplicate():
+		apple["time"] += delta
+		apple["vel"].y += APPLE_GRAVITY * delta
+		apple["pos"] += apple["vel"] * delta
+		var at: Vector2 = apple["pos"]
+		var spent: bool = apple["time"] > APPLE_FLIGHT
+		for viking in vikings.duplicate():
+			if not spent and Rect2(viking["node"].position - Vector2(24, 80), Vector2(48, 80)).grow(10).has_point(at):
+				_strike(viking, signf(apple["vel"].x))
+				spent = true
+		var tile := tile_at(at)
+		if not spent and tile in SOLID:
+			if tile == "?":
+				_bump_block(at)
+			spent = true
+		if spent:
+			_thrown.erase(apple)
+			_dust(at, 3)
+			_effects.append({"kind": "splat", "pos": at, "time": 0.0})
 
 
 ## Vikings walk back and forth and turn at walls and ledges; a hit Viking slides back for a moment.
@@ -509,17 +567,7 @@ func _check_touches() -> void:
 		var them := Rect2(node.position - Vector2(24, 80), Vector2(48, 80))
 		if not me.intersects(them) or viking["stun"] > 0.0:
 			continue
-		# Coming down onto the head knocks the Viking out; anything else hurts.
-		if player.velocity.y > 0.0 and me.end.y < them.position.y + 34:
-			vikings.erase(viking)
-			_effects.append({"kind": "viking", "pos": node.position, "time": 0.0})
-			_squash(node)
-			_shake = maxf(_shake, 0.12)
-			_dust(node.position, 4)
-			player.velocity.y = -STOMP_BOUNCE
-			_play("stomp")
-		else:
-			_hit(false)
+		_hit(false)
 
 
 ## A knocked-out Viking falls over backwards (or, as a placeholder, is flattened), then fades away.
@@ -570,8 +618,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventKey and event.physical_keycode == KEY_L:
 		next_art_set()
 		get_viewport().set_input_as_handled()
-	elif event.is_action("attack") or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and state == ""):
+	elif state == "" and ((event is InputEventKey and event.physical_keycode == KEY_SPACE) or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT)):
 		attack()
+		get_viewport().set_input_as_handled()
+	elif state == "" and ((event is InputEventKey and event.physical_keycode == KEY_E) or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT)):
+		throw_apple()
 		get_viewport().set_input_as_handled()
 	elif event is InputEventKey and event.physical_keycode == KEY_G:
 		set_depth_effects(not depth_effects)
@@ -822,6 +873,15 @@ func _draw_tiles() -> void:
 					v.draw_colored_polygon(PackedVector2Array([pole + Vector2(0, -90), pole + Vector2(36, -78), pole + Vector2(0, -66)]), flag)
 	if depth_effects:
 		_draw_shadows()
+	for apple in _thrown:
+		var spin: float = apple["time"] * 14.0 * signf(apple["vel"].x)
+		v.draw_set_transform(apple["pos"], spin, Vector2(0.7, 0.7))
+		if _items.has("apple"):
+			var texture: Texture2D = _items["apple"]
+			v.draw_texture(texture, -texture.get_size() / 2)
+		else:
+			v.draw_circle(Vector2.ZERO, 15, Color("d62828"))
+		v.draw_set_transform(Vector2.ZERO)
 	for effect in _effects:
 		match effect["kind"]:
 			"apple":
@@ -844,6 +904,11 @@ func _draw_tiles() -> void:
 					var center := player.position + Vector2(dir * 24.0, -48)
 					v.draw_arc(center, 62.0, arc_from, arc_from + PI * 0.6, 20, Color(1, 1, 1, 0.95 * (1.0 - t)), 14.0)
 					v.draw_arc(center, 74.0, arc_from + 0.1, arc_from + PI * 0.6, 20, Color(1, 0.93, 0.6, 0.6 * (1.0 - t)), 5.0)
+			"splat":
+				var t: float = effect["time"] / 0.5
+				for k in 6:
+					var bit: Vector2 = effect["pos"] + Vector2.from_angle(k * TAU / 6.0 + 0.3) * (8.0 + t * 30.0) + Vector2(0, t * t * 30.0)
+					v.draw_circle(bit, 4.0 * (1.0 - t), Color(Color("d62828") if k % 2 == 0 else Color("f3e6b3"), 1.0 - t))
 			"dust":
 				var t: float = effect["time"] / 0.5
 				var puff: Vector2 = effect["pos"] + effect["vel"] * effect["time"] + Vector2(0, -t * 10.0)
@@ -996,7 +1061,7 @@ func _draw_hud() -> void:
 	v.draw_string(font, Vector2(0, 50), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 24, ink)
 	var message := ""
 	if state == "" and player and player.position.x < 900.0:
-		message = "A/D albo strzałki: chodzenie. Spacja albo W: skok (przytrzymaj, a skoczysz wyżej).\nJ, X albo klik: cios mieczem. Skacz Wikingom na głowy albo tnij ich i rozbijaj skrzynki ze znakiem zapytania!"
+		message = "A/D albo strzałki: chodzenie. W albo strzałka w górę: skok (przytrzymaj, a skoczysz wyżej).\nSpacja albo klik: cios mieczem. E albo prawy klik: rzut jabłkiem."
 	elif state == "lost":
 		message = "Ojej, Wiesław stracił wszystkie serduszka!\nSpacja albo klik: jeszcze raz"
 	elif state == "won":
