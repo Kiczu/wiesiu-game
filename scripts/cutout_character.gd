@@ -129,6 +129,11 @@ func _build_art(dir: String, rig: Dictionary) -> Dictionary:
 	return {"root": root, "parts": nodes}
 
 
+## Whether this puppet can show the pose: drawn frames may not have every pose yet.
+func has_pose(pose_name: String) -> bool:
+	return _anim.has(pose_name) if _anim_sprite else true
+
+
 ## Whether drawn animation frames are there (other characters can then be made from them).
 static func has_frames() -> bool:
 	return FileAccess.file_exists(ANIM_DIR + "frames.json")
@@ -215,6 +220,9 @@ func _angles(name: String, t: float) -> Dictionary:
 		"hurt", "death":
 			a = {"torso": -0.35, "head": 0.25, "leg_near": -0.5, "shin_near": 0.5, "leg_far": 0.3,
 				"arm_near": -2.2, "hand_near": 0.5, "arm_far": 2.2, "hand_far": -0.5}
+		"attack":
+			a = {"torso": 0.2, "head": -0.1, "leg_near": -0.5, "shin_near": 0.3, "leg_far": 0.4,
+				"arm_near": -1.5, "hand_near": -0.2, "arm_far": 0.5, "hand_far": -0.5}
 		"win":
 			var cheer := sin(t * 8.0) * 0.2
 			a = {"head": -0.15, "arm_near": -2.9 + cheer, "hand_near": 0.2, "arm_far": 2.9 - cheer, "hand_far": -0.2,

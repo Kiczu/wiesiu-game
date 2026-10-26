@@ -53,6 +53,12 @@ const ITEMS := ["apple", "crate", "block", "block_used", "thorns", "flag", "flag
 const SOUNDS := ["jump", "apple", "bump", "stomp", "hurt", "checkpoint", "win", "lose"]
 ## How far the camera looks ahead in the running direction.
 const LOOK_AHEAD := 140.0
+## Sword: how long a swing lasts, how soon the next one can start, how far it reaches.
+const ATTACK_TIME := 0.25
+const ATTACK_COOLDOWN := 0.35
+const ATTACK_REACH := 84.0
+## Sword hits a Viking takes before he falls over.
+const VIKING_HEALTH := 2
 const LEAVES := 26
 const POLLEN := 40
 
@@ -64,6 +70,7 @@ var state := ""
 var auto_input := false
 var input_x := 0.0
 var input_jump := false
+var input_attack := false
 
 var player: CharacterBody2D
 var vikings: Array[Dictionary] = []
@@ -112,6 +119,9 @@ var _stretch := Vector2.ONE
 var _fall_speed := 0.0
 var _was_on_floor := true
 var _shake := 0.0
+var _attack := 0.0
+var _attack_cooldown := 0.0
+var _struck: Array[Node2D] = []
 var _look := 0.0
 
 
@@ -179,6 +189,8 @@ func restart() -> void:
 	_stretch = Vector2.ONE
 	_shake = 0.0
 	_look = 0.0
+	_attack = 0.0
+	_attack_cooldown = 0.0
 	vikings.clear()
 	map.assign(LEVEL)
 	_level = Node2D.new()
@@ -280,7 +292,7 @@ func _add_viking(at: Vector2) -> void:
 	body.position = at
 	body.set("facing", -1)
 	_level.add_child(body)
-	vikings.append({"node": body, "dir": -1.0, "color": color})
+	vikings.append({"node": body, "dir": -1.0, "color": color, "health": VIKING_HEALTH, "stun": 0.0, "push": 0.0})
 
 
 ## Rows of solid tiles become one static box each; planks become one-way boxes.
@@ -343,6 +355,9 @@ func _physics_process(delta: float) -> void:
 		_buffered = JUMP_BUFFER
 	_move_player(delta, steer, jump_held)
 	_jump_was_held = jump_held
+	if auto_input and input_attack:
+		attack()
+	_swing(delta)
 	_move_vikings(delta)
 	_check_touches()
 	_redraw()
@@ -380,12 +395,16 @@ func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 		_wieslaw.facing = 1 if steer > 0 else -1
 	if _hurt > HURT_TIME - 0.4:
 		_wieslaw.pose = "hurt"
+	elif _attack > 0.0 and _wieslaw.has_pose("attack"):
+		_wieslaw.pose = "attack"
 	elif not player.is_on_floor():
 		_wieslaw.pose = "jump" if player.velocity.y < 0.0 else "fall"
 	else:
 		_wieslaw.pose = "run" if absf(player.velocity.x) > 20.0 else "idle"
 	_stretch = _stretch.lerp(Vector2.ONE, minf(delta * 12.0, 1.0)) if depth_effects else Vector2.ONE
 	_wieslaw.scale = Vector2(0.84 * _stretch.x * _wieslaw.facing, 0.84 * _stretch.y)
+	# Without a drawn swing, he leans into the blow.
+	_wieslaw.rotation = _wieslaw.facing * 0.18 * sin(_attack / ATTACK_TIME * PI) if not _wieslaw.has_pose("attack") else 0.0
 	_move_camera(delta)
 	# Blinks after the hurt pose, while he cannot be hit again.
 	_wieslaw.visible = _hurt > HURT_TIME - 0.4 or fmod(_hurt, 0.2) < 0.12
@@ -403,10 +422,59 @@ func _bump_block(point: Vector2) -> void:
 	_effects.append({"kind": "apple", "pos": center, "time": 0.0})
 
 
-## Vikings walk back and forth and turn at walls and ledges.
+## Starts a sword swing in front of Wiesław.
+func attack() -> void:
+	if state != "" or _attack_cooldown > 0.0:
+		return
+	_attack = ATTACK_TIME
+	_attack_cooldown = ATTACK_COOLDOWN
+	_struck.clear()
+	_stretch = Vector2(1.12, 0.92)
+	_play("jump")
+	_effects.append({"kind": "slash", "dir": _wieslaw.facing, "time": 0.0})
+
+
+## While the swing lasts, the blade hits Vikings and ? blocks in front of Wiesław, each once.
+func _swing(delta: float) -> void:
+	_attack_cooldown = maxf(_attack_cooldown - delta, 0.0)
+	if _attack <= 0.0:
+		return
+	_attack = maxf(_attack - delta, 0.0)
+	var facing := float(_wieslaw.facing)
+	var blade := Rect2(player.position + Vector2(-20.0 if facing > 0 else 20.0 - ATTACK_REACH - 20.0, -PLAYER_SIZE.y), Vector2(ATTACK_REACH + 20.0, PLAYER_SIZE.y - 6))
+	for viking in vikings.duplicate():
+		var node: Node2D = viking["node"]
+		if node in _struck or not blade.intersects(Rect2(node.position - Vector2(24, 80), Vector2(48, 80))):
+			continue
+		_struck.append(node)
+		viking["health"] -= 1
+		_shake = maxf(_shake, 0.1)
+		_play("stomp")
+		node.modulate = Color(3, 3, 3)
+		node.create_tween().tween_property(node, "modulate", Color.WHITE, 0.2)
+		if viking["health"] <= 0:
+			vikings.erase(viking)
+			_effects.append({"kind": "viking", "pos": node.position, "time": 0.0})
+			_squash(node)
+		else:
+			viking["stun"] = 0.4
+			viking["push"] = facing * 420.0
+			viking["dir"] = -facing
+	for point in [blade.position + blade.size * Vector2(0.75, 0.2), blade.position + blade.size * Vector2(0.75, 0.6)]:
+		_bump_block(point)
+
+
+## Vikings walk back and forth and turn at walls and ledges; a hit Viking slides back for a moment.
 func _move_vikings(delta: float) -> void:
 	for viking in vikings:
 		var node: Node2D = viking["node"]
+		if viking["stun"] > 0.0:
+			viking["stun"] -= delta
+			var back := node.position + Vector2(viking["push"] * delta, 0)
+			if not tile_at(back + Vector2(signf(viking["push"]) * 24.0, -10)) in SOLID and tile_at(back + Vector2(0, 10)) in SOLID + "=":
+				node.position = back
+			viking["push"] *= 0.85
+			continue
 		var ahead: Vector2 = node.position + Vector2(viking["dir"] * 26.0, 0)
 		var wall := tile_at(ahead + Vector2(0, -10)) in SOLID
 		var floor_tile := tile_at(ahead + Vector2(0, 10))
@@ -439,7 +507,7 @@ func _check_touches() -> void:
 	for viking in vikings.duplicate():
 		var node: Node2D = viking["node"]
 		var them := Rect2(node.position - Vector2(24, 80), Vector2(48, 80))
-		if not me.intersects(them):
+		if not me.intersects(them) or viking["stun"] > 0.0:
 			continue
 		# Coming down onto the head knocks the Viking out; anything else hurts.
 		if player.velocity.y > 0.0 and me.end.y < them.position.y + 34:
@@ -501,6 +569,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif event is InputEventKey and event.physical_keycode == KEY_L:
 		next_art_set()
+		get_viewport().set_input_as_handled()
+	elif event.is_action("attack") or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and state == ""):
+		attack()
 		get_viewport().set_input_as_handled()
 	elif event is InputEventKey and event.physical_keycode == KEY_G:
 		set_depth_effects(not depth_effects)
@@ -763,6 +834,16 @@ func _draw_tiles() -> void:
 			"viking":
 				var flat: Vector2 = effect["pos"]
 				v.draw_string(ThemeDB.fallback_font, flat + Vector2(-30, -24), "BĘC!", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, ink)
+			"slash":
+				# A stand-in for a drawn sword swing: a white arc sweeping down in front of Wiesław.
+				var t: float = effect["time"] / ATTACK_TIME
+				if t < 1.0:
+					var dir: float = effect["dir"]
+					var start := -PI * 0.55 + t * PI * 0.5
+					var arc_from := start if dir > 0 else PI - start - PI * 0.6
+					var center := player.position + Vector2(dir * 24.0, -48)
+					v.draw_arc(center, 62.0, arc_from, arc_from + PI * 0.6, 20, Color(1, 1, 1, 0.95 * (1.0 - t)), 14.0)
+					v.draw_arc(center, 74.0, arc_from + 0.1, arc_from + PI * 0.6, 20, Color(1, 0.93, 0.6, 0.6 * (1.0 - t)), 5.0)
 			"dust":
 				var t: float = effect["time"] / 0.5
 				var puff: Vector2 = effect["pos"] + effect["vel"] * effect["time"] + Vector2(0, -t * 10.0)
@@ -915,7 +996,7 @@ func _draw_hud() -> void:
 	v.draw_string(font, Vector2(0, 50), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 24, ink)
 	var message := ""
 	if state == "" and player and player.position.x < 900.0:
-		message = "A/D albo strzałki: chodzenie. Spacja albo W: skok (przytrzymaj, a skoczysz wyżej).\nSkacz Wikingom na głowy i rozbijaj skrzynki ze znakiem zapytania!"
+		message = "A/D albo strzałki: chodzenie. Spacja albo W: skok (przytrzymaj, a skoczysz wyżej).\nJ, X albo klik: cios mieczem. Skacz Wikingom na głowy albo tnij ich i rozbijaj skrzynki ze znakiem zapytania!"
 	elif state == "lost":
 		message = "Ojej, Wiesław stracił wszystkie serduszka!\nSpacja albo klik: jeszcze raz"
 	elif state == "won":

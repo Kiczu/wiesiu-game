@@ -190,6 +190,23 @@ func _check_platformer() -> void:
 	player.velocity = Vector2(0, 300)
 	await _physics(10)
 	_check(level.vikings.size() == count - 1 and level.lives == PlatformerGame.LIVES, "platformer: jumping on a Viking knocks him out")
+	# Two sword hits knock a Viking out.
+	viking = level.vikings[0]["node"]
+	count = level.vikings.size()
+	player.position = viking.position + Vector2(-70, 0)
+	player.velocity = Vector2.ZERO
+	level._wieslaw.facing = 1
+	await _physics(2)
+	level.attack()
+	await _physics(3)
+	var hit_once: bool = level.vikings.size() == count and level.vikings[0]["health"] == PlatformerGame.VIKING_HEALTH - 1
+	await _physics(30)
+	player.position = viking.position + Vector2(-70, 0)
+	level._wieslaw.facing = 1
+	level.attack()
+	await _physics(3)
+	_check(hit_once and level.vikings.size() == count - 1, "platformer: two sword hits knock a Viking out")
+	await _physics(60)
 	# Walk into a Viking.
 	viking = level.vikings[0]["node"]
 	player.position = viking.position + Vector2(-10, 0)
