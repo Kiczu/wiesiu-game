@@ -174,6 +174,20 @@ func _check_platformer() -> void:
 	await _physics(30)
 	var rise := 640.0 - top
 	_check(rise > 3.0 * PlatformerGame.TILE and rise < 4.0 * PlatformerGame.TILE, "platformer: a full jump clears three tiles (%d px)" % rise)
+	# A second press in the air jumps again.
+	player.position = Vector2(5.5 * PlatformerGame.TILE, 640.0)
+	player.velocity = Vector2.ZERO
+	await _physics(5)
+	level.input_jump = true
+	await _physics(20)
+	level.input_jump = false
+	await _physics(2)
+	var falling_from := player.position.y
+	level.input_jump = true
+	await _physics(25)
+	level.input_jump = false
+	_check(player.position.y < falling_from - PlatformerGame.TILE, "platformer: a second press in the air jumps again")
+	await _physics(80)
 	# Bump the first ? block from below.
 	player.position = Vector2(9.5 * PlatformerGame.TILE, 640.0)
 	await _physics(5)
@@ -191,7 +205,9 @@ func _check_platformer() -> void:
 	var count := level.vikings.size()
 	level.apples = 2
 	for throw in 2:
-		player.position = viking.position + Vector2(-260, 0)
+		# Clear of the pit before him.
+		viking.position.x = 34.5 * PlatformerGame.TILE
+		player.position = viking.position + Vector2(-180, 0)
 		player.velocity = Vector2.ZERO
 		level._wieslaw.facing = 1
 		await _physics(2)

@@ -34,6 +34,9 @@ const GRAVITY := 2400.0
 const JUMP_SPEED := 1050.0
 ## Letting go of jump early cuts the jump short, so small hops are possible.
 const JUMP_CUT := 0.45
+## A second jump in the air, a little lower than the first.
+const AIR_JUMPS := 1
+const AIR_JUMP_SPEED := 900.0
 const COYOTE_TIME := 0.1
 const JUMP_BUFFER := 0.12
 const HURT_TIME := 1.5
@@ -105,6 +108,7 @@ var pixel_mode := false
 var _drakkar: Node2D
 var _items := {}
 var _coyote := 0.0
+var _air_jumps := 0
 var _buffered := 0.0
 var _jump_was_held := false
 var _hurt := 0.0
@@ -381,6 +385,8 @@ func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 	v.x = move_toward(v.x, steer * WALK_SPEED, ACCELERATION * delta)
 	v.y += GRAVITY * delta
 	_coyote = COYOTE_TIME if player.is_on_floor() else maxf(_coyote - delta, 0.0)
+	if player.is_on_floor():
+		_air_jumps = AIR_JUMPS
 	if _buffered > 0.0 and _coyote > 0.0:
 		v.y = -JUMP_SPEED
 		_play("jump")
@@ -388,6 +394,13 @@ func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 		_dust(player.position, 3)
 		_buffered = 0.0
 		_coyote = 0.0
+	elif _buffered > 0.0 and _air_jumps > 0 and jump_held and not _jump_was_held:
+		v.y = -AIR_JUMP_SPEED
+		_air_jumps -= 1
+		_play("jump")
+		_stretch = Vector2(0.85, 1.15)
+		_buffered = 0.0
+		_effects.append({"kind": "puff", "pos": player.position, "time": 0.0})
 	if not jump_held and v.y < 0.0:
 		v.y = maxf(v.y, -JUMP_SPEED * JUMP_CUT)
 	player.velocity = v
@@ -904,6 +917,12 @@ func _draw_tiles() -> void:
 					var center := player.position + Vector2(dir * 24.0, -48)
 					v.draw_arc(center, 62.0, arc_from, arc_from + PI * 0.6, 20, Color(1, 1, 1, 0.95 * (1.0 - t)), 14.0)
 					v.draw_arc(center, 74.0, arc_from + 0.1, arc_from + PI * 0.6, 20, Color(1, 0.93, 0.6, 0.6 * (1.0 - t)), 5.0)
+			"puff":
+				# A ring of air under his feet for the jump in mid-air.
+				var t: float = effect["time"] / 0.5
+				v.draw_set_transform(effect["pos"], 0.0, Vector2(1.0, 0.35))
+				v.draw_arc(Vector2.ZERO, 14.0 + t * 40.0, 0.0, TAU, 24, Color(1, 1, 1, 0.7 * (1.0 - t)), 5.0)
+				v.draw_set_transform(Vector2.ZERO)
 			"splat":
 				var t: float = effect["time"] / 0.5
 				for k in 6:
@@ -1061,7 +1080,7 @@ func _draw_hud() -> void:
 	v.draw_string(font, Vector2(0, 50), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 24, ink)
 	var message := ""
 	if state == "" and player and player.position.x < 900.0:
-		message = "A/D albo strzałki: chodzenie. W albo strzałka w górę: skok (przytrzymaj, a skoczysz wyżej).\nSpacja albo klik: cios mieczem. E albo prawy klik: rzut jabłkiem."
+		message = "A/D albo strzałki: chodzenie. W albo strzałka w górę: skok (przytrzymaj, a skoczysz wyżej; w powietrzu jeszcze raz).\nSpacja albo klik: cios mieczem. E albo prawy klik: rzut jabłkiem."
 	elif state == "lost":
 		message = "Ojej, Wiesław stracił wszystkie serduszka!\nSpacja albo klik: jeszcze raz"
 	elif state == "won":
