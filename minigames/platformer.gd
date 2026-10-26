@@ -34,10 +34,12 @@ const GRAVITY := 2400.0
 const JUMP_SPEED := 1050.0
 ## Letting go of jump early cuts the jump short, so small hops are possible.
 const JUMP_CUT := 0.45
+## A second jump in the air, a little lower than the first.
+const AIR_JUMPS := 1
+const AIR_JUMP_SPEED := 900.0
 const COYOTE_TIME := 0.1
 const JUMP_BUFFER := 0.12
 const HURT_TIME := 1.5
-const STOMP_BOUNCE := 650.0
 const VIKING_SPEED := 70.0
 const PLAYER_SIZE := Vector2(40, 92)
 ## How many times smaller the level is drawn in pixel mode; bigger gives chunkier pixels.
@@ -51,6 +53,21 @@ const AUDIO_DIR := "res://art/platformer/audio/"
 const ITEMS_DIR := "res://art/platformer/items/"
 const ITEMS := ["apple", "crate", "block", "block_used", "thorns", "flag", "flag_on", "drakkar"]
 const SOUNDS := ["jump", "apple", "bump", "stomp", "hurt", "checkpoint", "win", "lose"]
+## How far the camera looks ahead in the running direction.
+const LOOK_AHEAD := 140.0
+## Sword: how long a swing lasts, how soon the next one can start, how far it reaches.
+const ATTACK_TIME := 0.3
+const ATTACK_COOLDOWN := 0.35
+const ATTACK_REACH := 84.0
+## Sword hits a Viking takes before he falls over.
+const VIKING_HEALTH := 2
+## A thrown apple: speed, how much it drops, how long it flies, and the wait before the next throw.
+const APPLE_SPEED := 760.0
+const APPLE_GRAVITY := 900.0
+const APPLE_FLIGHT := 1.2
+const THROW_COOLDOWN := 0.3
+const LEAVES := 26
+const POLLEN := 40
 
 var lives := LIVES
 var apples := 0
@@ -60,6 +77,8 @@ var state := ""
 var auto_input := false
 var input_x := 0.0
 var input_jump := false
+var input_attack := false
+var input_throw := false
 
 var player: CharacterBody2D
 var vikings: Array[Dictionary] = []
@@ -89,6 +108,7 @@ var pixel_mode := false
 var _drakkar: Node2D
 var _items := {}
 var _coyote := 0.0
+var _air_jumps := 0
 var _buffered := 0.0
 var _jump_was_held := false
 var _hurt := 0.0
@@ -96,6 +116,25 @@ var _end_time := 0.0
 var _anim := 0.0
 ## Short-lived pictures: apples popping out of blocks, knocked-out Vikings.
 var _effects: Array[Dictionary] = []
+## Depth effects: foreground, haze, leaves and pollen, shadows, light, camera, dust (G turns them off).
+var depth_effects := true
+var _front: CanvasLayer
+var _foreground: Node2D
+var _overlay: Node2D
+var _vignette: Texture2D
+var _particles: Array[Dictionary] = []
+var _last_camera := Vector2.ZERO
+var _stretch := Vector2.ONE
+var _fall_speed := 0.0
+var _was_on_floor := true
+var _shake := 0.0
+var _attack := 0.0
+var _attack_cooldown := 0.0
+var _struck: Array[Node2D] = []
+var _throw_cooldown := 0.0
+## Apples in flight: position, velocity, time in the air.
+var _thrown: Array[Dictionary] = []
+var _look := 0.0
 
 
 func _ready() -> void:
@@ -112,11 +151,26 @@ func _ready() -> void:
 	_background = Node2D.new()
 	_back.add_child(_background)
 	_background.draw.connect(_draw_background)
+	_front = CanvasLayer.new()
+	_front.layer = 1
+	_world.add_child(_front)
+	_foreground = Node2D.new()
+	_foreground.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_front.add_child(_foreground)
+	_foreground.draw.connect(_draw_foreground)
 	_load_art()
+	_make_particles()
 	_load_audio()
 	for item in ITEMS:
 		if ResourceLoader.exists(ITEMS_DIR + item + ".png"):
 			_items[item] = load(ITEMS_DIR + item + ".png")
+	var light := CanvasLayer.new()
+	light.layer = 1
+	add_child(light)
+	_overlay = Node2D.new()
+	light.add_child(_overlay)
+	_overlay.draw.connect(_draw_overlay)
+	_vignette = _make_vignette()
 	var front := CanvasLayer.new()
 	front.layer = 2
 	add_child(front)
@@ -144,6 +198,13 @@ func restart() -> void:
 	_hurt = 0.0
 	_end_time = 0.0
 	_effects.clear()
+	_stretch = Vector2.ONE
+	_shake = 0.0
+	_look = 0.0
+	_attack = 0.0
+	_attack_cooldown = 0.0
+	_throw_cooldown = 0.0
+	_thrown.clear()
 	vikings.clear()
 	map.assign(LEVEL)
 	_level = Node2D.new()
@@ -217,6 +278,7 @@ func set_pixel_mode(on: bool) -> void:
 	_world.snap_2d_transforms_to_pixel = on
 	_world.snap_2d_vertices_to_pixel = on
 	_back.scale = Vector2.ONE / _view.stretch_shrink
+	_front.scale = _back.scale
 	if _wieslaw:
 		_wieslaw.pixel_art = on
 	if _camera:
@@ -244,7 +306,7 @@ func _add_viking(at: Vector2) -> void:
 	body.position = at
 	body.set("facing", -1)
 	_level.add_child(body)
-	vikings.append({"node": body, "dir": -1.0, "color": color})
+	vikings.append({"node": body, "dir": -1.0, "color": color, "health": VIKING_HEALTH, "stun": 0.0, "push": 0.0})
 
 
 ## Rows of solid tiles become one static box each; planks become one-way boxes.
@@ -302,11 +364,17 @@ func _physics_process(delta: float) -> void:
 		_redraw()
 		return
 	var steer := input_x if auto_input else Input.get_axis("move_left", "move_right")
-	var jump_held := input_jump if auto_input else (Input.is_action_pressed("move_up") or Input.is_action_pressed("interact"))
+	var jump_held := input_jump if auto_input else Input.is_action_pressed("move_up")
 	if jump_held and not _jump_was_held:
 		_buffered = JUMP_BUFFER
 	_move_player(delta, steer, jump_held)
 	_jump_was_held = jump_held
+	if auto_input and input_attack:
+		attack()
+	if auto_input and input_throw:
+		throw_apple()
+	_swing(delta)
+	_fly_apples(delta)
 	_move_vikings(delta)
 	_check_touches()
 	_redraw()
@@ -317,15 +385,35 @@ func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 	v.x = move_toward(v.x, steer * WALK_SPEED, ACCELERATION * delta)
 	v.y += GRAVITY * delta
 	_coyote = COYOTE_TIME if player.is_on_floor() else maxf(_coyote - delta, 0.0)
+	if player.is_on_floor():
+		_air_jumps = AIR_JUMPS
 	if _buffered > 0.0 and _coyote > 0.0:
 		v.y = -JUMP_SPEED
 		_play("jump")
+		_stretch = Vector2(0.8, 1.2)
+		_dust(player.position, 3)
 		_buffered = 0.0
 		_coyote = 0.0
+	elif _buffered > 0.0 and _air_jumps > 0 and jump_held and not _jump_was_held:
+		v.y = -AIR_JUMP_SPEED
+		_air_jumps -= 1
+		_play("jump")
+		_stretch = Vector2(0.85, 1.15)
+		_buffered = 0.0
+		_effects.append({"kind": "puff", "pos": player.position, "time": 0.0})
 	if not jump_held and v.y < 0.0:
 		v.y = maxf(v.y, -JUMP_SPEED * JUMP_CUT)
 	player.velocity = v
+	_fall_speed = maxf(v.y, 0.0)
 	player.move_and_slide()
+	var on_floor := player.is_on_floor()
+	if on_floor and not _was_on_floor and _fall_speed > 500.0:
+		var hard := clampf((_fall_speed - 500.0) / 900.0, 0.0, 1.0)
+		_stretch = Vector2(1.0 + 0.25 * hard + 0.08, 1.0 - 0.3 * hard - 0.08)
+		_dust(player.position, 4 + roundi(hard * 4))
+	elif on_floor and absf(v.x) > WALK_SPEED * 0.9 and absf(steer) > 0.1 and signf(steer) != signf(v.x):
+		_dust(player.position, 1)
+	_was_on_floor = on_floor
 	if player.is_on_ceiling():
 		_bump_block(player.position + Vector2(0, -PLAYER_SIZE.y - 4))
 		_play("bump")
@@ -333,10 +421,17 @@ func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 		_wieslaw.facing = 1 if steer > 0 else -1
 	if _hurt > HURT_TIME - 0.4:
 		_wieslaw.pose = "hurt"
+	elif _attack > 0.0 and _wieslaw.has_pose("attack"):
+		_wieslaw.pose = "attack"
 	elif not player.is_on_floor():
 		_wieslaw.pose = "jump" if player.velocity.y < 0.0 else "fall"
 	else:
 		_wieslaw.pose = "run" if absf(player.velocity.x) > 20.0 else "idle"
+	_stretch = _stretch.lerp(Vector2.ONE, minf(delta * 12.0, 1.0)) if depth_effects else Vector2.ONE
+	_wieslaw.scale = Vector2(0.84 * _stretch.x * _wieslaw.facing, 0.84 * _stretch.y)
+	# Without a drawn swing, he leans into the blow.
+	_wieslaw.rotation = _wieslaw.facing * 0.18 * sin(_attack / ATTACK_TIME * PI) if not _wieslaw.has_pose("attack") else 0.0
+	_move_camera(delta)
 	# Blinks after the hurt pose, while he cannot be hit again.
 	_wieslaw.visible = _hurt > HURT_TIME - 0.4 or fmod(_hurt, 0.2) < 0.12
 	if player.position.y > map.size() * TILE + 120:
@@ -353,10 +448,104 @@ func _bump_block(point: Vector2) -> void:
 	_effects.append({"kind": "apple", "pos": center, "time": 0.0})
 
 
-## Vikings walk back and forth and turn at walls and ledges.
+## Starts a sword swing in front of Wiesław.
+func attack() -> void:
+	if state != "" or _attack_cooldown > 0.0:
+		return
+	_attack = ATTACK_TIME
+	_attack_cooldown = ATTACK_COOLDOWN
+	_struck.clear()
+	_stretch = Vector2(1.12, 0.92)
+	_play("jump")
+	_effects.append({"kind": "slash", "dir": _wieslaw.facing, "time": 0.0})
+
+
+## While the swing lasts, the blade hits Vikings and ? blocks in front of Wiesław, each once.
+func _swing(delta: float) -> void:
+	_attack_cooldown = maxf(_attack_cooldown - delta, 0.0)
+	if _attack <= 0.0:
+		return
+	_attack = maxf(_attack - delta, 0.0)
+	var facing := float(_wieslaw.facing)
+	var blade := Rect2(player.position + Vector2(-20.0 if facing > 0 else 20.0 - ATTACK_REACH - 20.0, -PLAYER_SIZE.y), Vector2(ATTACK_REACH + 20.0, PLAYER_SIZE.y - 6))
+	for viking in vikings.duplicate():
+		var node: Node2D = viking["node"]
+		if node in _struck or not blade.intersects(Rect2(node.position - Vector2(24, 80), Vector2(48, 80))):
+			continue
+		_struck.append(node)
+		_strike(viking, facing)
+	for point in [blade.position + blade.size * Vector2(0.75, 0.2), blade.position + blade.size * Vector2(0.75, 0.6)]:
+		_bump_block(point)
+
+
+## A Viking hit by the sword or an apple flashes and slides back; out of health, he falls over.
+func _strike(viking: Dictionary, from_dir: float) -> void:
+	var node: Node2D = viking["node"]
+	viking["health"] -= 1
+	_shake = maxf(_shake, 0.1)
+	_play("stomp")
+	node.modulate = Color(3, 3, 3)
+	node.create_tween().tween_property(node, "modulate", Color.WHITE, 0.2)
+	if viking["health"] <= 0:
+		vikings.erase(viking)
+		_effects.append({"kind": "viking", "pos": node.position, "time": 0.0})
+		_squash(node)
+	else:
+		viking["stun"] = 0.4
+		viking["push"] = from_dir * 420.0
+		viking["dir"] = -from_dir
+
+
+## Throws one of the gathered apples forward in a low arc.
+func throw_apple() -> void:
+	if state != "" or _throw_cooldown > 0.0:
+		return
+	if apples <= 0:
+		_play("bump")
+		return
+	apples -= 1
+	_throw_cooldown = THROW_COOLDOWN
+	_stretch = Vector2(1.08, 0.95)
+	_play("jump")
+	var facing := float(_wieslaw.facing)
+	_thrown.append({"pos": player.position + Vector2(facing * 26.0, -62), "vel": Vector2(facing * APPLE_SPEED, -220.0), "time": 0.0})
+
+
+## An apple flies until it hits a Viking, a wall or a ? block, or until it has flown too long.
+func _fly_apples(delta: float) -> void:
+	_throw_cooldown = maxf(_throw_cooldown - delta, 0.0)
+	for apple in _thrown.duplicate():
+		apple["time"] += delta
+		apple["vel"].y += APPLE_GRAVITY * delta
+		apple["pos"] += apple["vel"] * delta
+		var at: Vector2 = apple["pos"]
+		var spent: bool = apple["time"] > APPLE_FLIGHT
+		for viking in vikings.duplicate():
+			if not spent and Rect2(viking["node"].position - Vector2(24, 80), Vector2(48, 80)).grow(10).has_point(at):
+				_strike(viking, signf(apple["vel"].x))
+				spent = true
+		var tile := tile_at(at)
+		if not spent and tile in SOLID:
+			if tile == "?":
+				_bump_block(at)
+			spent = true
+		if spent:
+			_thrown.erase(apple)
+			_dust(at, 3)
+			_effects.append({"kind": "splat", "pos": at, "time": 0.0})
+
+
+## Vikings walk back and forth and turn at walls and ledges; a hit Viking slides back for a moment.
 func _move_vikings(delta: float) -> void:
 	for viking in vikings:
 		var node: Node2D = viking["node"]
+		if viking["stun"] > 0.0:
+			viking["stun"] -= delta
+			var back := node.position + Vector2(viking["push"] * delta, 0)
+			if not tile_at(back + Vector2(signf(viking["push"]) * 24.0, -10)) in SOLID and tile_at(back + Vector2(0, 10)) in SOLID + "=":
+				node.position = back
+			viking["push"] *= 0.85
+			continue
 		var ahead: Vector2 = node.position + Vector2(viking["dir"] * 26.0, 0)
 		var wall := tile_at(ahead + Vector2(0, -10)) in SOLID
 		var floor_tile := tile_at(ahead + Vector2(0, 10))
@@ -389,26 +578,22 @@ func _check_touches() -> void:
 	for viking in vikings.duplicate():
 		var node: Node2D = viking["node"]
 		var them := Rect2(node.position - Vector2(24, 80), Vector2(48, 80))
-		if not me.intersects(them):
+		if not me.intersects(them) or viking["stun"] > 0.0:
 			continue
-		# Coming down onto the head knocks the Viking out; anything else hurts.
-		if player.velocity.y > 0.0 and me.end.y < them.position.y + 34:
-			vikings.erase(viking)
-			_effects.append({"kind": "viking", "pos": node.position, "time": 0.0})
-			_squash(node)
-			player.velocity.y = -STOMP_BOUNCE
-			_play("stomp")
-		else:
-			_hit(false)
+		_hit(false)
 
 
-## A knocked-out Viking is flattened, then fades away.
+## A knocked-out Viking falls over backwards (or, as a placeholder, is flattened), then fades away.
 func _squash(node: Node2D) -> void:
-	node.set("pose", "hurt")
 	node.set("running", false)
 	var tween := node.create_tween()
-	tween.tween_property(node, "scale:y", node.scale.y * 0.3, 0.08)
-	tween.tween_interval(0.25)
+	if node is CutoutCharacter:
+		node.pose = "death"
+		tween.tween_interval(1.0)
+	else:
+		node.set("pose", "hurt")
+		tween.tween_property(node, "scale:y", node.scale.y * 0.3, 0.08)
+		tween.tween_interval(0.25)
 	tween.tween_property(node, "modulate:a", 0.0, 0.3)
 	tween.tween_callback(node.queue_free)
 
@@ -418,8 +603,11 @@ func _hit(fell: bool) -> void:
 		return
 	lives -= 1
 	_hurt = HURT_TIME
+	_shake = 0.35
 	if lives <= 0:
 		state = "lost"
+		_wieslaw.pose = "death"
+		_wieslaw.visible = true
 		_stop_music()
 		_play("lose")
 		return
@@ -443,6 +631,15 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventKey and event.physical_keycode == KEY_L:
 		next_art_set()
 		get_viewport().set_input_as_handled()
+	elif state == "" and ((event is InputEventKey and event.physical_keycode == KEY_SPACE) or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT)):
+		attack()
+		get_viewport().set_input_as_handled()
+	elif state == "" and ((event is InputEventKey and event.physical_keycode == KEY_E) or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT)):
+		throw_apple()
+		get_viewport().set_input_as_handled()
+	elif event is InputEventKey and event.physical_keycode == KEY_G:
+		set_depth_effects(not depth_effects)
+		get_viewport().set_input_as_handled()
 	elif event is InputEventKey and event.physical_keycode == KEY_M:
 		AudioServer.set_bus_mute(0, not AudioServer.is_bus_mute(0))
 		_hud.queue_redraw()
@@ -456,6 +653,8 @@ func _redraw() -> void:
 	_tiles.queue_redraw()
 	_hud.queue_redraw()
 	_background.queue_redraw()
+	_foreground.queue_redraw()
+	_overlay.queue_redraw()
 
 
 func _visible_columns() -> Vector2i:
@@ -523,17 +722,31 @@ func _load_art_set(dir: String) -> Dictionary:
 			mirrored = ImageTexture.create_from_image(image)
 		layers.append({"texture": texture, "mirrored": mirrored, "speed": layer.get("speed", 0.0), "top": layer.get("top", -1.0),
 			"bottom": layer.get("bottom", SCREEN.y), "gap": layer.get("gap", 0.0),
-			"follow": layer.get("follow", layer.get("speed", 0.0)),
+			"follow": layer.get("follow", layer.get("speed", 0.0)), "haze": layer.get("haze", 0.0),
 			"fill": texture.get_image().get_pixel(0, 0)})
-	return {"scale": spec.get("scale", 1.0), "tiles": tiles, "background": layers}
+	var front := []
+	for layer in spec.get("foreground", []):
+		front.append({"texture": load(dir + layer["file"]), "mirrored": null, "speed": layer.get("speed", 1.4), "top": -1.0,
+			"bottom": layer.get("bottom", SCREEN.y + 60), "gap": layer.get("gap", 0.0), "follow": layer.get("follow", 1.3), "haze": 0.0,
+			"scale": layer.get("scale", 1.0)})
+	return {"scale": spec.get("scale", 1.0), "tiles": tiles, "background": layers, "foreground": front,
+		"haze_color": Color(spec.get("haze_color", "c9dde6"))}
 
 
-## Next art set; after the last one, plain shapes.
+## Next art set. Without any art the level is drawn with plain shapes.
 func next_art_set() -> void:
 	if _art_sets.is_empty():
 		return
-	_art_index = (_art_index + 1) % (_art_sets.size() + 1)
-	_art = _art_sets[_art_index] if _art_index < _art_sets.size() else {}
+	_art_index = (_art_index + 1) % _art_sets.size()
+	_art = _art_sets[_art_index]
+	_redraw()
+
+
+func set_depth_effects(on: bool) -> void:
+	depth_effects = on
+	_shake = 0.0
+	if _camera:
+		_camera.offset = Vector2(0, -80)
 	_redraw()
 
 
@@ -549,18 +762,26 @@ func _draw_tile(tile_name: String, at: Vector2) -> void:
 ## Each layer repeats sideways and moves at its own share of the camera's speed; the first one also
 ## fills the sky above it with its top colour. When the camera goes up, a layer goes down by its
 ## "follow" share of that, so the nearest trees stay standing on the ground.
+## With depth effects, "haze" lays a veil of the haze colour over a layer and all behind it, so far
+## things fade into the air.
 func _draw_art_background(scroll: float) -> void:
-	var rise := 0.0
-	if _camera:
-		rise = map.size() * TILE - SCREEN.y / 2 - _camera.get_screen_center_position().y
-	var v := _background
-	var art_scale: float = _art["scale"]
-	for i in _art["background"].size():
-		var layer: Dictionary = _art["background"][i]
+	_draw_layers(_background, _art["background"], scroll, true)
+
+
+func _camera_rise() -> float:
+	if not _camera:
+		return 0.0
+	return map.size() * TILE - SCREEN.y / 2 - _camera.get_screen_center_position().y
+
+
+func _draw_layers(v: Node2D, layers: Array, scroll: float, fill_sky: bool) -> void:
+	var rise := _camera_rise()
+	for i in layers.size():
+		var layer: Dictionary = layers[i]
 		var texture: Texture2D = layer["texture"]
-		var size := texture.get_size() * art_scale
+		var size: Vector2 = texture.get_size() * layer.get("scale", _art["scale"])
 		var y: float = (layer["top"] if layer["top"] >= 0.0 else layer["bottom"] - size.y) + rise * layer["follow"]
-		if i == 0:
+		if i == 0 and fill_sky:
 			v.draw_rect(Rect2(0, 0, SCREEN.x, y + 1), layer["fill"])
 		var step: float = size.x + layer["gap"]
 		var offset: float = scroll * layer["speed"]
@@ -572,6 +793,8 @@ func _draw_art_background(scroll: float) -> void:
 			v.draw_texture_rect(layer["mirrored"] if flipped else texture, Rect2(Vector2(x, y), size), false)
 			x += step
 			index += 1
+		if depth_effects and layer["haze"] > 0.0:
+			v.draw_rect(Rect2(Vector2.ZERO, SCREEN), Color(_art["haze_color"], layer["haze"]))
 
 
 func _draw_background() -> void:
@@ -661,6 +884,17 @@ func _draw_tiles() -> void:
 					v.draw_line(pole, pole + Vector2(0, -90), ink, 4.0)
 					var flag := Color("e0a832") if map[row][col] == "c" else Color("9aa3ab")
 					v.draw_colored_polygon(PackedVector2Array([pole + Vector2(0, -90), pole + Vector2(36, -78), pole + Vector2(0, -66)]), flag)
+	if depth_effects:
+		_draw_shadows()
+	for apple in _thrown:
+		var spin: float = apple["time"] * 14.0 * signf(apple["vel"].x)
+		v.draw_set_transform(apple["pos"], spin, Vector2(0.7, 0.7))
+		if _items.has("apple"):
+			var texture: Texture2D = _items["apple"]
+			v.draw_texture(texture, -texture.get_size() / 2)
+		else:
+			v.draw_circle(Vector2.ZERO, 15, Color("d62828"))
+		v.draw_set_transform(Vector2.ZERO)
 	for effect in _effects:
 		match effect["kind"]:
 			"apple":
@@ -673,6 +907,34 @@ func _draw_tiles() -> void:
 			"viking":
 				var flat: Vector2 = effect["pos"]
 				v.draw_string(ThemeDB.fallback_font, flat + Vector2(-30, -24), "BĘC!", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, ink)
+			"slash":
+				# A stand-in for a drawn sword swing: a white arc sweeping down in front of Wiesław.
+				var t: float = effect["time"] / ATTACK_TIME
+				# With a drawn swing, the arc only trails the blade as it comes down.
+				if _wieslaw.has_drawn_pose("attack"):
+					t = (t - 0.5) * 2.0
+				if t >= 0.0 and t < 1.0:
+					var dir: float = effect["dir"]
+					var start := -PI * 0.55 + t * PI * 0.5
+					var arc_from := start if dir > 0 else PI - start - PI * 0.6
+					var center := player.position + Vector2(dir * 24.0, -48)
+					v.draw_arc(center, 62.0, arc_from, arc_from + PI * 0.6, 20, Color(1, 1, 1, 0.95 * (1.0 - t)), 14.0)
+					v.draw_arc(center, 74.0, arc_from + 0.1, arc_from + PI * 0.6, 20, Color(1, 0.93, 0.6, 0.6 * (1.0 - t)), 5.0)
+			"puff":
+				# A ring of air under his feet for the jump in mid-air.
+				var t: float = effect["time"] / 0.5
+				v.draw_set_transform(effect["pos"], 0.0, Vector2(1.0, 0.35))
+				v.draw_arc(Vector2.ZERO, 14.0 + t * 40.0, 0.0, TAU, 24, Color(1, 1, 1, 0.7 * (1.0 - t)), 5.0)
+				v.draw_set_transform(Vector2.ZERO)
+			"splat":
+				var t: float = effect["time"] / 0.5
+				for k in 6:
+					var bit: Vector2 = effect["pos"] + Vector2.from_angle(k * TAU / 6.0 + 0.3) * (8.0 + t * 30.0) + Vector2(0, t * t * 30.0)
+					v.draw_circle(bit, 4.0 * (1.0 - t), Color(Color("d62828") if k % 2 == 0 else Color("f3e6b3"), 1.0 - t))
+			"dust":
+				var t: float = effect["time"] / 0.5
+				var puff: Vector2 = effect["pos"] + effect["vel"] * effect["time"] + Vector2(0, -t * 10.0)
+				v.draw_circle(puff, lerpf(5.0, 14.0, t), Color(0.93, 0.88, 0.78, 0.55 * (1.0 - t)))
 
 
 func _process(delta: float) -> void:
@@ -680,6 +942,125 @@ func _process(delta: float) -> void:
 		effect["time"] += delta
 		if effect["time"] > 0.5:
 			_effects.erase(effect)
+	_move_particles(delta)
+
+
+## A soft round shadow on the ground under a character; smaller and fainter the higher it is.
+func _draw_shadows() -> void:
+	var feet: Array[Vector2] = []
+	if player:
+		feet.append(player.position)
+	for viking in vikings:
+		feet.append(viking["node"].position)
+	for foot in feet:
+		var ground := foot.y
+		while ground < foot.y + 6 * TILE and not (tile_at(Vector2(foot.x, ground + 2)) in SOLID or tile_at(Vector2(foot.x, ground + 2)) == "="):
+			ground = (floori(ground / TILE) + 1) * TILE
+		if ground >= foot.y + 6 * TILE:
+			continue
+		var near := 1.0 - clampf((ground - foot.y) / (4.0 * TILE), 0.0, 1.0)
+		var size := Vector2(30, 7) * lerpf(0.5, 1.0, near)
+		for k in 3:
+			var grow := 1.0 + k * 0.35
+			_tiles.draw_set_transform(Vector2(foot.x, ground - 2), 0.0, Vector2(size.x * grow, size.y * grow) / 10.0)
+			_tiles.draw_circle(Vector2.ZERO, 10.0, Color(0.08, 0.06, 0.04, 0.16 * near))
+		_tiles.draw_set_transform(Vector2.ZERO)
+
+
+func _dust(at: Vector2, count: int) -> void:
+	if not depth_effects:
+		return
+	for i in count:
+		var side := -1.0 if i % 2 == 0 else 1.0
+		_effects.append({"kind": "dust", "pos": at + Vector2(side * randf_range(6, 18), -4),
+			"vel": Vector2(side * randf_range(40, 110), randf_range(-30, -5)), "time": randf_range(0.0, 0.1)})
+
+
+## The camera looks ahead where Wiesław runs and shakes for a moment when he is hit.
+func _move_camera(delta: float) -> void:
+	if not depth_effects or not _camera:
+		return
+	if absf(player.velocity.x) > 40.0:
+		_look = move_toward(_look, signf(player.velocity.x) * LOOK_AHEAD, delta * 260.0)
+	_shake = maxf(_shake - delta, 0.0)
+	var jolt := Vector2(randf_range(-1, 1), randf_range(-1, 1)) * 14.0 * _shake / 0.35 if _shake > 0.0 else Vector2.ZERO
+	_camera.offset = Vector2(_look, -80) + jolt
+
+
+## Leaves and pollen drift through the air in front of and behind the level, at different depths.
+func _make_particles() -> void:
+	_particles.clear()
+	for i in LEAVES + POLLEN:
+		var leaf := i < LEAVES
+		_particles.append({"leaf": leaf, "pos": Vector2(randf() * SCREEN.x, randf() * SCREEN.y),
+			"depth": randf_range(0.5, 1.4), "phase": randf() * TAU,
+			"color": [Color("c98a2b"), Color("a7b23a"), Color("d9a441"), Color("8e9a2e")][i % 4] if leaf else Color(1.0, 0.96, 0.7)})
+
+
+func _move_particles(delta: float) -> void:
+	if not depth_effects:
+		return
+	var center := _camera.get_screen_center_position() if _camera else Vector2.ZERO
+	var moved := center - _last_camera if _last_camera != Vector2.ZERO else Vector2.ZERO
+	_last_camera = center
+	for p in _particles:
+		var depth: float = p["depth"]
+		p["phase"] += delta * (1.6 if p["leaf"] else 0.7)
+		var drift := Vector2(-28.0 + sin(p["phase"]) * 30.0, 38.0) if p["leaf"] else Vector2(sin(p["phase"]) * 10.0, -6.0 + cos(p["phase"] * 1.3) * 8.0)
+		p["pos"] += drift * depth * delta - moved * depth
+		p["pos"] = Vector2(fposmod(p["pos"].x, SCREEN.x + 40.0), fposmod(p["pos"].y, SCREEN.y + 40.0))
+
+
+func _draw_foreground() -> void:
+	if not depth_effects:
+		return
+	var scroll := _camera.get_screen_center_position().x if _camera else 0.0
+	if not _art.is_empty():
+		_draw_layers(_foreground, _art["foreground"], scroll, false)
+	for p in _particles:
+		var at: Vector2 = p["pos"] - Vector2(20, 20)
+		var depth: float = p["depth"]
+		if p["leaf"]:
+			var turn: float = p["phase"] * 1.3
+			_foreground.draw_set_transform(at, turn, Vector2(1.0, absf(sin(turn)) * 0.8 + 0.2) * depth)
+			_foreground.draw_colored_polygon(PackedVector2Array([Vector2(-6, 0), Vector2(0, -3), Vector2(6, 0), Vector2(0, 3)]), p["color"])
+		else:
+			var glow: float = 0.45 + 0.35 * sin(p["phase"] * 3.0)
+			_foreground.draw_circle(at, 3.0 * depth, Color(p["color"], 0.18 * glow))
+			_foreground.draw_circle(at, 1.2 * depth, Color(p["color"], 0.8 * glow))
+	_foreground.draw_set_transform(Vector2.ZERO)
+
+
+## Light over the whole picture: slow sunbeams from the top left and a darker edge.
+func _draw_overlay() -> void:
+	if not depth_effects:
+		return
+	var sway := sin(_anim * 0.3) * 30.0
+	var beams := [[180.0, 90.0, 0.10], [360.0, 50.0, 0.07], [520.0, 120.0, 0.06], [760.0, 60.0, 0.05]]
+	for beam in beams:
+		var top := Vector2(beam[0] + sway, -20)
+		var spread: float = beam[1]
+		var bottom := top + Vector2(340, SCREEN.y + 40)
+		var warm := Color(1.0, 0.93, 0.7, beam[2])
+		var clear := Color(1.0, 0.93, 0.7, 0.0)
+		_overlay.draw_polygon(PackedVector2Array([top, top + Vector2(spread, 0), bottom + Vector2(spread * 2.2, 0), bottom]),
+			PackedColorArray([warm, warm, clear, clear]))
+	_overlay.draw_texture_rect(_vignette, Rect2(Vector2.ZERO, SCREEN), false)
+
+
+func _make_vignette() -> Texture2D:
+	var gradient := Gradient.new()
+	gradient.set_color(0, Color(0.05, 0.04, 0.03, 0.0))
+	gradient.set_color(1, Color(0.05, 0.04, 0.03, 0.55))
+	gradient.add_point(0.55, Color(0.05, 0.04, 0.03, 0.0))
+	var texture := GradientTexture2D.new()
+	texture.gradient = gradient
+	texture.fill = GradientTexture2D.FILL_RADIAL
+	texture.fill_from = Vector2(0.5, 0.5)
+	texture.fill_to = Vector2(1.05, 1.05)
+	texture.width = 256
+	texture.height = 144
+	return texture
 
 
 func _draw_hud() -> void:
@@ -693,7 +1074,8 @@ func _draw_hud() -> void:
 	v.draw_string_outline(font, Vector2(170, 50), "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, 6, halo)
 	v.draw_string(font, Vector2(170, 50), "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, ink)
 	var mode := "P: tryb %s" % ("pikselowy" if pixel_mode else "gładki")
-	if not _art_sets.is_empty():
+	mode = "G: efekty %s     %s" % ["wł." if depth_effects else "wył.", mode]
+	if _art_sets.size() > 1:
 		mode = "L: grafika     " + mode
 	if _music or not _sounds.is_empty():
 		mode = "M: dźwięk %s     %s" % ["wył." if AudioServer.is_bus_mute(0) else "wł.", mode]
@@ -701,7 +1083,7 @@ func _draw_hud() -> void:
 	v.draw_string(font, Vector2(0, 50), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 24, ink)
 	var message := ""
 	if state == "" and player and player.position.x < 900.0:
-		message = "A/D albo strzałki: chodzenie. Spacja albo W: skok (przytrzymaj, a skoczysz wyżej).\nSkacz Wikingom na głowy i rozbijaj skrzynki ze znakiem zapytania!"
+		message = "A/D albo strzałki: chodzenie. W albo strzałka w górę: skok (przytrzymaj, a skoczysz wyżej; w powietrzu jeszcze raz).\nSpacja albo klik: cios mieczem. E albo prawy klik: rzut jabłkiem."
 	elif state == "lost":
 		message = "Ojej, Wiesław stracił wszystkie serduszka!\nSpacja albo klik: jeszcze raz"
 	elif state == "won":

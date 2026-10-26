@@ -129,6 +129,16 @@ func _build_art(dir: String, rig: Dictionary) -> Dictionary:
 	return {"root": root, "parts": nodes}
 
 
+## Whether this puppet can show the pose: drawn frames may not have every pose yet.
+func has_pose(pose_name: String) -> bool:
+	return _anim.has(pose_name) if _anim_sprite else true
+
+
+## Whether the pose comes from drawn frames rather than the puppet.
+func has_drawn_pose(pose_name: String) -> bool:
+	return _anim_sprite != null and _anim.has(pose_name)
+
+
 ## Whether drawn animation frames are there (other characters can then be made from them).
 static func has_frames() -> bool:
 	return FileAccess.file_exists(ANIM_DIR + "frames.json")
@@ -150,7 +160,9 @@ func _build_anim(spec: Dictionary) -> void:
 		var frames := []
 		for frame in pose_spec["frames"]:
 			frames.append({"texture": load(ANIM_DIR + frame["file"]), "anchor": _vec(frame["anchor"])})
-		_anim[pose_name] = {"fps": pose_spec["fps"], "loop": pose_spec["loop"], "frames": frames}
+		# A pose drawn at another size gives its own height, so it shows at the same size as the rest.
+		var pose_scale: float = ART_HEIGHT / pose_spec.get("height", spec["height"])
+		_anim[pose_name] = {"fps": pose_spec["fps"], "loop": pose_spec["loop"], "frames": frames, "scale": pose_scale}
 
 
 func _show_frame(delta: float) -> void:
@@ -164,6 +176,7 @@ func _show_frame(delta: float) -> void:
 	index = index % frames.size() if current["loop"] else mini(index, frames.size() - 1)
 	var frame: Dictionary = frames[index]
 	_anim_sprite.texture = frame["texture"]
+	_anim_sprite.scale = Vector2.ONE * current["scale"]
 	_anim_sprite.position = -frame["anchor"] * _anim_sprite.scale
 
 
@@ -212,9 +225,12 @@ func _angles(name: String, t: float) -> Dictionary:
 			var flap := sin(t * 18.0) * 0.15
 			a = {"torso": -0.05, "leg_near": -0.35, "shin_near": 0.4, "leg_far": 0.35, "shin_far": 0.3,
 				"arm_near": -1.9 + flap, "hand_near": -0.4, "arm_far": 1.9 - flap, "hand_far": 0.4}
-		"hurt":
+		"hurt", "death":
 			a = {"torso": -0.35, "head": 0.25, "leg_near": -0.5, "shin_near": 0.5, "leg_far": 0.3,
 				"arm_near": -2.2, "hand_near": 0.5, "arm_far": 2.2, "hand_far": -0.5}
+		"attack":
+			a = {"torso": 0.2, "head": -0.1, "leg_near": -0.5, "shin_near": 0.3, "leg_far": 0.4,
+				"arm_near": -1.5, "hand_near": -0.2, "arm_far": 0.5, "hand_far": -0.5}
 		"win":
 			var cheer := sin(t * 8.0) * 0.2
 			a = {"head": -0.15, "arm_near": -2.9 + cheer, "hand_near": 0.2, "arm_far": 2.9 - cheer, "hand_far": -0.2,
