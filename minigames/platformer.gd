@@ -56,7 +56,7 @@ const SOUNDS := ["jump", "apple", "bump", "stomp", "hurt", "checkpoint", "win", 
 ## How far the camera looks ahead in the running direction.
 const LOOK_AHEAD := 140.0
 ## Sword: how long a swing lasts, how soon the next one can start, how far it reaches.
-const ATTACK_TIME := 0.25
+const ATTACK_TIME := 0.3
 const ATTACK_COOLDOWN := 0.35
 const ATTACK_REACH := 84.0
 ## Sword hits a Viking takes before he falls over.
@@ -910,7 +910,10 @@ func _draw_tiles() -> void:
 			"slash":
 				# A stand-in for a drawn sword swing: a white arc sweeping down in front of Wiesław.
 				var t: float = effect["time"] / ATTACK_TIME
-				if t < 1.0:
+				# With a drawn swing, the arc only trails the blade as it comes down.
+				if _wieslaw.has_drawn_pose("attack"):
+					t = (t - 0.5) * 2.0
+				if t >= 0.0 and t < 1.0:
 					var dir: float = effect["dir"]
 					var start := -PI * 0.55 + t * PI * 0.5
 					var arc_from := start if dir > 0 else PI - start - PI * 0.6

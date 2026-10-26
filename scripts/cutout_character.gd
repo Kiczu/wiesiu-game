@@ -134,6 +134,11 @@ func has_pose(pose_name: String) -> bool:
 	return _anim.has(pose_name) if _anim_sprite else true
 
 
+## Whether the pose comes from drawn frames rather than the puppet.
+func has_drawn_pose(pose_name: String) -> bool:
+	return _anim_sprite != null and _anim.has(pose_name)
+
+
 ## Whether drawn animation frames are there (other characters can then be made from them).
 static func has_frames() -> bool:
 	return FileAccess.file_exists(ANIM_DIR + "frames.json")
@@ -155,7 +160,9 @@ func _build_anim(spec: Dictionary) -> void:
 		var frames := []
 		for frame in pose_spec["frames"]:
 			frames.append({"texture": load(ANIM_DIR + frame["file"]), "anchor": _vec(frame["anchor"])})
-		_anim[pose_name] = {"fps": pose_spec["fps"], "loop": pose_spec["loop"], "frames": frames}
+		# A pose drawn at another size gives its own height, so it shows at the same size as the rest.
+		var pose_scale: float = ART_HEIGHT / pose_spec.get("height", spec["height"])
+		_anim[pose_name] = {"fps": pose_spec["fps"], "loop": pose_spec["loop"], "frames": frames, "scale": pose_scale}
 
 
 func _show_frame(delta: float) -> void:
@@ -169,6 +176,7 @@ func _show_frame(delta: float) -> void:
 	index = index % frames.size() if current["loop"] else mini(index, frames.size() - 1)
 	var frame: Dictionary = frames[index]
 	_anim_sprite.texture = frame["texture"]
+	_anim_sprite.scale = Vector2.ONE * current["scale"]
 	_anim_sprite.position = -frame["anchor"] * _anim_sprite.scale
 
 
