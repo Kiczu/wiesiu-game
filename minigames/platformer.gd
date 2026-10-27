@@ -12,6 +12,7 @@ const SCREEN := Vector2(1280, 720)
 ## One character per tile:
 ## # ground   B crate   ? apple block (bump it from below)   = plank (jump through from below)
 ## a apple   x thorns   V Viking   C checkpoint   P start   D the drakkar (finish)
+## Crates break under the sword or a thrown apple and give apples.
 const LEVEL := [
 	"                                                                                                                                                                          ",
 	"                                                                                                                                                                          ",
@@ -26,7 +27,25 @@ const LEVEL := [
 	"#############################  ####################       ######################################                  ########################################################",
 	"#############################  ####################       ######################################                  ########################################################",
 ]
+## A level in the style of Apple Knight: ground at many heights, walls to climb with the double
+## jump, spike pits, crates to break with the sword, Vikings on ledges.
+const LEVEL_KNIGHT := [
+	"                                                                                                                                ",
+	"                                                                                                                                ",
+	"                                                                                                                                ",
+	"                                                                 aaaa                                                           ",
+	"                                                   a            ######             a                                            ",
+	"                                       aaaB       ===           ######            ===     V   B                                 ",
+	"                  aa      a          ######   a                                       ##########                                ",
+	"                     V B ===         ######  ===                              ===     ##########  a  a             B V          ",
+	"      a a a      #######         B V ######                                           ##########  #  #           #####          ",
+	"  P           ##########     ##############             C    VBB      V   ===         ##########  #  #      V    #####   C  D   ",
+	"########################xxxxx##############            ##################             ##########xx#xx#xxx#######################",
+	"###########################################            ##################             ##########################################",
+]
 const SOLID := "#B?X"
+## Apples inside a broken crate.
+const CRATE_APPLES := 2
 const LIVES := 3
 const WALK_SPEED := 330.0
 const ACCELERATION := 2400.0
@@ -79,6 +98,8 @@ var input_x := 0.0
 var input_jump := false
 var input_attack := false
 var input_throw := false
+## Which map to play: "knight" (LEVEL_KNIGHT) or "mario" (LEVEL); N switches.
+var layout := "knight"
 
 var player: CharacterBody2D
 var vikings: Array[Dictionary] = []
@@ -132,6 +153,7 @@ var _attack := 0.0
 var _attack_cooldown := 0.0
 var _struck: Array[Node2D] = []
 var _throw_cooldown := 0.0
+var _solid: StaticBody2D
 ## Apples in flight: position, velocity, time in the air.
 var _thrown: Array[Dictionary] = []
 var _look := 0.0
@@ -206,7 +228,7 @@ func restart() -> void:
 	_throw_cooldown = 0.0
 	_thrown.clear()
 	vikings.clear()
-	map.assign(LEVEL)
+	map.assign(LEVEL_KNIGHT if layout == "knight" else LEVEL)
 	_level = Node2D.new()
 	_world.add_child(_level)
 	_tiles = Node2D.new()
@@ -311,7 +333,10 @@ func _add_viking(at: Vector2) -> void:
 
 ## Rows of solid tiles become one static box each; planks become one-way boxes.
 func _build_collision() -> void:
+	if is_instance_valid(_solid):
+		_solid.queue_free()
 	var body := StaticBody2D.new()
+	_solid = body
 	_level.add_child(body)
 	for row in map.size():
 		var col := 0
@@ -448,6 +473,21 @@ func _bump_block(point: Vector2) -> void:
 	_effects.append({"kind": "apple", "pos": center, "time": 0.0})
 
 
+## A crate hit by the sword or an apple breaks and lets its apples out.
+func _break_crate(point: Vector2) -> void:
+	if tile_at(point) != "B":
+		return
+	_set_tile(point, " ")
+	_build_collision()
+	apples += CRATE_APPLES
+	_play("apple")
+	_shake = maxf(_shake, 0.08)
+	var center := Vector2((floori(point.x / TILE) + 0.5) * TILE, (floori(point.y / TILE) + 0.5) * TILE)
+	_dust(center + Vector2(0, TILE / 2.0), 5)
+	for i in CRATE_APPLES:
+		_effects.append({"kind": "apple", "pos": center + Vector2((i - 0.5) * 24.0, 0), "time": 0.0})
+
+
 ## Starts a sword swing in front of Wiesław.
 func attack() -> void:
 	if state != "" or _attack_cooldown > 0.0:
@@ -476,6 +516,7 @@ func _swing(delta: float) -> void:
 		_strike(viking, facing)
 	for point in [blade.position + blade.size * Vector2(0.75, 0.2), blade.position + blade.size * Vector2(0.75, 0.6)]:
 		_bump_block(point)
+		_break_crate(point)
 
 
 ## A Viking hit by the sword or an apple flashes and slides back; out of health, he falls over.
@@ -528,6 +569,7 @@ func _fly_apples(delta: float) -> void:
 		if not spent and tile in SOLID:
 			if tile == "?":
 				_bump_block(at)
+			_break_crate(at)
 			spent = true
 		if spent:
 			_thrown.erase(apple)
@@ -636,6 +678,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif state == "" and ((event is InputEventKey and event.physical_keycode == KEY_E) or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT)):
 		throw_apple()
+		get_viewport().set_input_as_handled()
+	elif event is InputEventKey and event.physical_keycode == KEY_N:
+		layout = "mario" if layout == "knight" else "knight"
+		restart()
 		get_viewport().set_input_as_handled()
 	elif event is InputEventKey and event.physical_keycode == KEY_G:
 		set_depth_effects(not depth_effects)
@@ -1077,13 +1123,14 @@ func _draw_hud() -> void:
 	mode = "G: efekty %s     %s" % ["wł." if depth_effects else "wył.", mode]
 	if _art_sets.size() > 1:
 		mode = "L: grafika     " + mode
+	mode = "N: plansza %s     %s" % ["rycerska" if layout == "knight" else "mario", mode]
 	if _music or not _sounds.is_empty():
 		mode = "M: dźwięk %s     %s" % ["wył." if AudioServer.is_bus_mute(0) else "wł.", mode]
 	v.draw_string_outline(font, Vector2(0, 50), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 24, 6, halo)
 	v.draw_string(font, Vector2(0, 50), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 24, ink)
 	var message := ""
 	if state == "" and player and player.position.x < 900.0:
-		message = "A/D albo strzałki: chodzenie. W albo strzałka w górę: skok (przytrzymaj, a skoczysz wyżej; w powietrzu jeszcze raz).\nSpacja albo klik: cios mieczem. E albo prawy klik: rzut jabłkiem."
+		message = "A/D: chodzenie     W: skok, w powietrzu jeszcze raz\nSpacja albo klik: miecz     E albo prawy klik: rzut jabłkiem"
 	elif state == "lost":
 		message = "Ojej, Wiesław stracił wszystkie serduszka!\nSpacja albo klik: jeszcze raz"
 	elif state == "won":

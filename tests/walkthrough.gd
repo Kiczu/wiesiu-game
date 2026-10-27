@@ -155,6 +155,7 @@ func _check_flight_game() -> void:
 
 func _check_platformer() -> void:
 	var level := PlatformerGame.new()
+	level.layout = "mario"
 	level.auto_input = true
 	add_child(level)
 	await _physics(20)
@@ -255,6 +256,22 @@ func _check_platformer() -> void:
 	player.position = Vector2((level.LEVEL[9].find("D") + 0.5) * PlatformerGame.TILE, 640.0)
 	await _physics(3)
 	_check(level.state == "won", "platformer: reaching the drakkar wins")
+	# The Apple Knight style map: same width in every row, a start and a drakkar, crates break.
+	level.layout = "knight"
+	level.restart()
+	await _physics(5)
+	var widths := {}
+	for row in PlatformerGame.LEVEL_KNIGHT:
+		widths[row.length()] = true
+	var crate_row := -1
+	for row in PlatformerGame.LEVEL_KNIGHT.size():
+		if PlatformerGame.LEVEL_KNIGHT[row].contains("B"):
+			crate_row = row
+			break
+	var crate := Vector2((PlatformerGame.LEVEL_KNIGHT[crate_row].find("B") + 0.5) * PlatformerGame.TILE, (crate_row + 0.5) * PlatformerGame.TILE)
+	var before_apples := level.apples
+	level._break_crate(crate)
+	_check(widths.size() == 1 and level.player.is_on_floor() and level.tile_at(crate) == " " and level.apples == before_apples + PlatformerGame.CRATE_APPLES, "platformer: the knight map loads and its crates break into apples")
 	level.queue_free()
 
 
