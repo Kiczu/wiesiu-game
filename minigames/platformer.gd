@@ -311,8 +311,12 @@ func set_pixel_mode(on: bool) -> void:
 func _add_viking(at: Vector2) -> void:
 	var color := Color("4f7a3a") if vikings.size() % 2 == 0 else Color("d9692b")
 	var body: Node2D
+	if PixelViking.has_art():
+		var pixel := PixelViking.new()
+		pixel.colour = PixelViking.COLOURS[vikings.size() % PixelViking.COLOURS.size()]
+		body = pixel
 	# With drawn frames for Wiesław, Vikings are Wiesław in another colour until they get their own.
-	if CutoutCharacter.has_frames():
+	elif CutoutCharacter.has_frames():
 		var drawn := CutoutCharacter.new()
 		drawn.robe_color = color
 		drawn.pose = "run"
