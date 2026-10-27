@@ -3,7 +3,7 @@ extends Node2D
 ## A character built from separate parts (cutout animation), like a paper puppet: the author
 ## draws each part once and the poses are made here by turning the parts at their joints.
 ## When the author's parts are in one of ART_SETS (PNGs plus rig.json with each part's place and
-## joint), they are used; otherwise placeholder shapes. Frame-by-frame animations in ANIM_DIR
+## joint), they are used; otherwise placeholder shapes. Frame-by-frame animations in ANIM_DIRS
 ## (PNGs plus frames.json) take over from all of them. The origin is at the feet; drawn facing right.
 
 const OUTLINE := Color("2b1d14")
@@ -11,7 +11,8 @@ const OUTLINE := Color("2b1d14")
 const ART_SETS := {"smooth": "res://art/platformer/wieslaw/", "pixel": "res://art/platformer/wieslaw_pixel/"}
 ## Ready-made animation frames: frames.json lists, for each pose, its fps, whether it loops and
 ## its frames, each with the point of the image that stands on the ground.
-const ANIM_DIR := "res://art/platformer/wieslaw_anim/"
+## The first set that is there is used; next_anim_dir() switches to the next one.
+const ANIM_DIRS := ["res://art/platformer/wieslaw_chibi/", "res://art/platformer/wieslaw_anim/"]
 ## Parts drawn behind the body.
 const ART_BEHIND := ["arm_far", "foot_far", "foot_near"]
 ## Height of the drawn Wiesław in pixels, before the scale the game gives the puppet.
@@ -46,6 +47,8 @@ var facing := 1:
 ## idle, run, jump, fall, hurt, win
 var pose := "idle"
 
+static var _anim_dir := ""
+
 var _parts := {}
 var _time := 0.0
 ## Drawn sets by name: {"root": Node2D, "parts": {part name: Node2D}}.
@@ -68,7 +71,7 @@ var pixel_art := false:
 
 func _ready() -> void:
 	if has_frames():
-		_build_anim(JSON.parse_string(FileAccess.get_file_as_string(ANIM_DIR + "frames.json")))
+		_build_anim(JSON.parse_string(FileAccess.get_file_as_string(anim_dir() + "frames.json")))
 		return
 	for set_name in ART_SETS:
 		var dir: String = ART_SETS[set_name]
@@ -141,7 +144,27 @@ func has_drawn_pose(pose_name: String) -> bool:
 
 ## Whether drawn animation frames are there (other characters can then be made from them).
 static func has_frames() -> bool:
-	return FileAccess.file_exists(ANIM_DIR + "frames.json")
+	return anim_dir() != ""
+
+
+## The animation set in use, or "" when there is none.
+static func anim_dir() -> String:
+	var dirs := anim_dirs()
+	if not _anim_dir in dirs:
+		_anim_dir = dirs[0] if not dirs.is_empty() else ""
+	return _anim_dir
+
+
+## The animation sets that are there.
+static func anim_dirs() -> Array:
+	return ANIM_DIRS.filter(func(dir: String) -> bool: return FileAccess.file_exists(dir + "frames.json"))
+
+
+## Switches characters made from now on to the next animation set.
+static func next_anim_dir() -> void:
+	var dirs := anim_dirs()
+	if not dirs.is_empty():
+		_anim_dir = dirs[(dirs.find(anim_dir()) + 1) % dirs.size()]
 
 
 func _build_anim(spec: Dictionary) -> void:
@@ -159,7 +182,7 @@ func _build_anim(spec: Dictionary) -> void:
 		var pose_spec: Dictionary = spec["poses"][pose_name]
 		var frames := []
 		for frame in pose_spec["frames"]:
-			frames.append({"texture": load(ANIM_DIR + frame["file"]), "anchor": _vec(frame["anchor"])})
+			frames.append({"texture": load(anim_dir() + frame["file"]), "anchor": _vec(frame["anchor"])})
 		# A pose drawn at another size gives its own height, so it shows at the same size as the rest.
 		var pose_scale: float = ART_HEIGHT / pose_spec.get("height", spec["height"])
 		_anim[pose_name] = {"fps": pose_spec["fps"], "loop": pose_spec["loop"], "frames": frames, "scale": pose_scale}

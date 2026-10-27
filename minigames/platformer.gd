@@ -683,6 +683,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif state == "" and ((event is InputEventKey and event.physical_keycode == KEY_E) or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT)):
 		throw_apple()
 		get_viewport().set_input_as_handled()
+	elif event is InputEventKey and event.physical_keycode == KEY_K and CutoutCharacter.anim_dirs().size() > 1:
+		CutoutCharacter.next_anim_dir()
+		restart()
+		get_viewport().set_input_as_handled()
 	elif event is InputEventKey and event.physical_keycode == KEY_N:
 		layout = "mario" if layout == "knight" else "knight"
 		restart()
@@ -1128,10 +1132,12 @@ func _draw_hud() -> void:
 	if _art_sets.size() > 1:
 		mode = "L: grafika     " + mode
 	mode = "N: plansza %s     %s" % ["rycerska" if layout == "knight" else "mario", mode]
+	if CutoutCharacter.anim_dirs().size() > 1:
+		mode = "K: Wiesiek     " + mode
 	if _music or not _sounds.is_empty():
 		mode = "M: dźwięk %s     %s" % ["wył." if AudioServer.is_bus_mute(0) else "wł.", mode]
-	v.draw_string_outline(font, Vector2(0, 50), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 24, 6, halo)
-	v.draw_string(font, Vector2(0, 50), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 24, ink)
+	v.draw_string_outline(font, Vector2(0, 48), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 20, 6, halo)
+	v.draw_string(font, Vector2(0, 48), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 20, ink)
 	var message := ""
 	if state == "" and player and player.position.x < 900.0:
 		message = "A/D: chodzenie     W: skok, w powietrzu jeszcze raz\nSpacja albo klik: miecz     E albo prawy klik: rzut jabłkiem"
