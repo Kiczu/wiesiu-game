@@ -70,7 +70,9 @@ const LEVEL_ART_SETS := ["res://art/platformer/level_autor/", "res://art/platfor
 const AUDIO_DIR := "res://art/platformer/audio/"
 ## Drawn pictures for things in the level (<name>.png), each used when present.
 const ITEMS_DIR := "res://art/platformer/items/"
-const ITEMS := ["apple", "crate", "block", "block_used", "thorns", "flag", "flag_on", "drakkar"]
+const ITEMS := ["apple", "crate", "block", "block_used", "thorns", "flag", "flag_on", "drakkar", "heart", "heart_empty"]
+## Drawn hearts are small pixel art, shown this many times bigger.
+const HEART_SCALE := 3.0
 const SOUNDS := ["jump", "apple", "bump", "stomp", "hurt", "checkpoint", "win", "lose"]
 ## How far the camera looks ahead in the running direction.
 const LOOK_AHEAD := 140.0
@@ -197,6 +199,7 @@ func _ready() -> void:
 	front.layer = 2
 	add_child(front)
 	_hud = Node2D.new()
+	_hud.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	front.add_child(_hud)
 	_hud.draw.connect(_draw_hud)
 	if Game.fast and not auto_input:
@@ -1122,11 +1125,20 @@ func _draw_hud() -> void:
 	var font := ThemeDB.fallback_font
 	var ink := Color("2b1d14")
 	for i in LIVES:
-		v.draw_circle(Vector2(40 + i * 40, 40), 14, Color("d62828") if i < lives else Color(0, 0, 0, 0.25))
+		if _items.has("heart"):
+			# A lost life shows the empty heart, or the full one darkened when there is none.
+			var lost := i >= lives
+			var texture: Texture2D = _items["heart_empty"] if lost and _items.has("heart_empty") else _items["heart"]
+			var size := texture.get_size() * HEART_SCALE
+			var tint := Color(0.2, 0.2, 0.2, 0.6) if lost and not _items.has("heart_empty") else Color.WHITE
+			v.draw_texture_rect(texture, Rect2(Vector2(22 + i * (size.x + 6), 40 - size.y / 2), size), false, tint)
+		else:
+			v.draw_circle(Vector2(40 + i * 40, 40), 14, Color("d62828") if i < lives else Color(0, 0, 0, 0.25))
 	# A light outline keeps the text readable on a drawn background.
 	var halo := Color(1, 1, 1, 0.85)
-	v.draw_string_outline(font, Vector2(170, 50), "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, 6, halo)
-	v.draw_string(font, Vector2(170, 50), "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, ink)
+	var apples_at := Vector2(40 + LIVES * 54, 50) if _items.has("heart") else Vector2(170, 50)
+	v.draw_string_outline(font, apples_at, "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, 6, halo)
+	v.draw_string(font, apples_at, "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, ink)
 	var mode := "P: tryb %s" % ("pikselowy" if pixel_mode else "gładki")
 	mode = "G: efekty %s     %s" % ["wł." if depth_effects else "wył.", mode]
 	if _art_sets.size() > 1:
