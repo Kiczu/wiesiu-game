@@ -12,7 +12,7 @@ const SCREEN := Vector2(1280, 720)
 ## One character per tile:
 ## # ground   B crate   ? apple block (bump it from below)   = plank (jump through from below)
 ## a apple   x thorns   V Viking   C checkpoint   P start   D the drakkar (finish)
-## T treasure chest (open it with the sword)
+## T treasure chest (open it with the sword)   S royal chest, two tiles wide (leave the tile on its right empty)
 ## Crates break under the sword or a thrown apple and give apples.
 const LEVEL := [
 	"                                                                                                                                                                          ",
@@ -34,7 +34,7 @@ const LEVEL_KNIGHT := [
 	"                                                                                                                                ",
 	"                                                                                                                                ",
 	"                                                                                                                                ",
-	"                                                                 aaaaT                                                          ",
+	"                                                                 aaaS                                                           ",
 	"                                                   a            ######             a                                            ",
 	"                                      TaaaB       ===           ######            ===     V   B                                 ",
 	"                  aa      a          ######   a                                       ##########                                ",
@@ -49,6 +49,8 @@ const SOLID := "#B?X"
 const CRATE_APPLES := 2
 ## Apples in a treasure chest; it also gives back a lost heart.
 const CHEST_APPLES := 5
+## Apples in the royal chest; it also fills every heart.
+const ROYAL_APPLES := 15
 const LIVES := 3
 const WALK_SPEED := 330.0
 const ACCELERATION := 2400.0
@@ -73,7 +75,7 @@ const LEVEL_ART_SETS := ["res://art/platformer/level_autor/", "res://art/platfor
 const AUDIO_DIR := "res://art/platformer/audio/"
 ## Drawn pictures for things in the level (<name>.png), each used when present.
 const ITEMS_DIR := "res://art/platformer/items/"
-const ITEMS := ["apple", "crate", "block", "block_used", "thorns", "flag", "flag_on", "drakkar", "heart", "heart_empty", "chest", "chest_open"]
+const ITEMS := ["apple", "crate", "block", "block_used", "thorns", "flag", "flag_on", "drakkar", "heart", "heart_empty", "chest", "chest_open", "chest_royal", "chest_royal_open"]
 ## Drawn hearts are small pixel art, shown this many times bigger.
 const HEART_SCALE := 3.0
 const SOUNDS := ["jump", "apple", "bump", "stomp", "hurt", "checkpoint", "win", "lose"]
@@ -498,17 +500,41 @@ func _break_crate(point: Vector2) -> void:
 		_effects.append({"kind": "apple", "pos": center + Vector2((i - 0.5) * 24.0, 0), "time": 0.0})
 
 
-## A chest hit by the sword opens (it stays as an open chest) and gives apples and a heart.
-func _open_chest(point: Vector2) -> void:
-	if tile_at(point) != "T":
+## A small four-pointed star that blinks now and then somewhere on a closed royal chest.
+func _draw_glint(v: Node2D, at: Vector2, size: Vector2, phase: int) -> void:
+	var t := fmod(_anim * 0.8 + phase * 0.37, 1.0)
+	if t > 0.35:
 		return
-	_set_tile(point, "t")
-	apples += CHEST_APPLES
-	lives = mini(lives + 1, LIVES)
-	_play("checkpoint")
-	var center := Vector2((floori(point.x / TILE) + 0.5) * TILE, floori(point.y / TILE) * TILE)
-	for i in CHEST_APPLES:
-		_effects.append({"kind": "apple", "pos": center + Vector2((i - 2) * 18.0, (i % 2) * -12.0), "time": 0.0})
+	var spot := floori(_anim * 0.8 + phase * 0.37)
+	var pos := at + size * Vector2(0.2 + 0.6 * fposmod(spot * 0.618, 1.0), 0.15 + 0.5 * fposmod(spot * 0.382, 1.0))
+	var r := sin(t / 0.35 * PI) * 10.0
+	var shine := Color(1, 1, 0.85, 0.95)
+	v.draw_line(pos - Vector2(r, 0), pos + Vector2(r, 0), shine, 3.0)
+	v.draw_line(pos - Vector2(0, r), pos + Vector2(0, r), shine, 3.0)
+	v.draw_circle(pos, r * 0.25, Color.WHITE)
+
+
+## A chest hit by the sword opens (it stays as an open chest) and gives apples and a heart.
+## The royal chest does the same with more apples and every heart, and shakes the screen.
+func _open_chest(point: Vector2) -> void:
+	# The royal chest covers two tiles; a hit on its right half counts too.
+	if tile_at(point) == " " and tile_at(point - Vector2(TILE, 0)) == "S":
+		point -= Vector2(TILE, 0)
+	var kind := tile_at(point)
+	if kind != "T" and kind != "S":
+		return
+	var royal := kind == "S"
+	_set_tile(point, kind.to_lower())
+	var count := ROYAL_APPLES if royal else CHEST_APPLES
+	apples += count
+	lives = LIVES if royal else mini(lives + 1, LIVES)
+	_play("win" if royal and _sounds.has("win") else "checkpoint")
+	if royal:
+		_shake = maxf(_shake, 0.3)
+	var center := Vector2((floori(point.x / TILE) + (1.0 if royal else 0.5)) * TILE, floori(point.y / TILE) * TILE)
+	for i in count:
+		var spread := Vector2((i - (count - 1) / 2.0) * (10.0 if royal else 18.0), (i % 3) * -14.0)
+		_effects.append({"kind": "apple", "pos": center + spread, "time": 0.0})
 	_hud.queue_redraw()
 
 
@@ -917,6 +943,17 @@ func _draw_tiles() -> void:
 					v.draw_texture(_items["crate"], at)
 				"?" when _items.has("block"):
 					v.draw_texture(_items["block"], at + Vector2(0, sin(_anim * 4.0) * 2.0))
+				"S", "s" when _items.has("chest_royal"):
+					var texture: Texture2D = _items["chest_royal_open" if map[row][col] == "s" and _items.has("chest_royal_open") else "chest_royal"]
+					v.draw_texture(texture, at + Vector2(0, TILE - texture.get_height()))
+					if map[row][col] == "S":
+						_draw_glint(v, at + Vector2(0, TILE - texture.get_height()), texture.get_size(), col)
+				"S", "s":
+					var box := Rect2(at + Vector2(4, 16), Vector2(TILE * 2 - 8, TILE - 16))
+					v.draw_rect(box, Color("8a2630"))
+					v.draw_rect(box, Color("f2c14e"), false, 4.0)
+					if map[row][col] == "S":
+						_draw_glint(v, box.position, box.size, col)
 				"T", "t" when _items.has("chest"):
 					var texture: Texture2D = _items["chest_open" if map[row][col] == "t" and _items.has("chest_open") else "chest"]
 					v.draw_texture(texture, at + Vector2(0, TILE - texture.get_height()))

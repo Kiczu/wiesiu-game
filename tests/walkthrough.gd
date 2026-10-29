@@ -282,6 +282,13 @@ func _check_platformer() -> void:
 	level.attack()
 	await _physics(10)
 	_check(level.tile_at(chest) == "t" and level.apples == before_apples + PlatformerGame.CHEST_APPLES and level.lives == PlatformerGame.LIVES, "platformer: the sword opens a treasure chest for apples and a heart")
+	# The royal chest is two tiles wide; a hit on its right half opens it and fills every heart.
+	var royal_row := 3
+	var royal := Vector2((PlatformerGame.LEVEL_KNIGHT[royal_row].find("S") + 1.5) * PlatformerGame.TILE, (royal_row + 0.5) * PlatformerGame.TILE)
+	level.lives = 1
+	before_apples = level.apples
+	level._open_chest(royal)
+	_check(level.tile_at(royal - Vector2(PlatformerGame.TILE, 0)) == "s" and level.apples == before_apples + PlatformerGame.ROYAL_APPLES and level.lives == PlatformerGame.LIVES, "platformer: the royal chest opens from either half for many apples and all hearts")
 	level.queue_free()
 
 
