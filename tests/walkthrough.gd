@@ -296,7 +296,7 @@ func _check_platformer() -> void:
 		add_child(stage)
 		await _physics(5)
 		_check(same_width and joined.count("P") == 1 and joined.contains("D") and stage.player.is_on_floor(), "platformer: campaign level %s loads" % spec["name"])
-		if spec["map"] == PlatformerCampaign.ORCHARD_AT_NIGHT:
+		if spec["name"] == "Sad nocą":
 			await _climb_to_chest(stage)
 		stage.queue_free()
 
@@ -304,7 +304,7 @@ func _check_platformer() -> void:
 ## In the orchard a ladder leads up to a plank with a chest: W grabs it and climbs, and at the top
 ## Wiesław hops onto the plank, where F opens the chest.
 func _climb_to_chest(stage: PlatformerGame) -> void:
-	var rows: Array = PlatformerCampaign.ORCHARD_AT_NIGHT
+	var rows: Array = stage.level_map
 	var col: int = rows[9].find("H", 20)
 	stage.player.position = Vector2((col + 0.5) * PlatformerGame.TILE, 10 * PlatformerGame.TILE)
 	await _physics(2)

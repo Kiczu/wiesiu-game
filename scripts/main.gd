@@ -81,7 +81,11 @@ func _play_trial() -> void:
 		stage.level_map = spec["map"]
 		stage.night = spec["night"]
 		stage.level_name = spec["name"]
-		for part: Node in [ComicStrip.new(spec["pages"]), stage]:
+		var parts: Array[Node] = [stage]
+		# A level added without comic pages starts straight away.
+		if not spec["pages"].is_empty():
+			parts.push_front(ComicStrip.new(spec["pages"]))
+		for part: Node in parts:
 			part.pause_requested.connect(menu.show_pause)
 			add_child(part)
 			await part.finished
