@@ -188,6 +188,9 @@ func _ready() -> void:
 	_view.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	add_child(_view)
 	_world = SubViewport.new()
+	# Whole pixels only: with the camera between pixels, tiles could show thin gaps between them.
+	_world.snap_2d_transforms_to_pixel = true
+	_world.snap_2d_vertices_to_pixel = true
 	_view.add_child(_world)
 	_back = CanvasLayer.new()
 	_back.layer = -1
@@ -991,8 +994,10 @@ func _draw_tiles() -> void:
 				"#":
 					var top := row == 0 or map[row - 1][col] != "#"
 					if not _art.is_empty():
-						var under_top := row > 0 and map[row - 1][col] == "#" and (row < 2 or map[row - 2][col] != "#")
-						var fill := "ground" if under_top or not _art["tiles"].has("ground_deep") else "ground_deep"
+						# The deeper tile only from the third row down, where it is mostly off screen,
+						# so it does not show as a dark band in a cliff.
+						var deep := row >= 3 and map[row - 1][col] == "#" and map[row - 2][col] == "#" and map[row - 3][col] == "#"
+						var fill := "ground_deep" if deep and _art["tiles"].has("ground_deep") else "ground"
 						_draw_tile("ground_top" if top else fill, at)
 						continue
 					v.draw_rect(cell, Color("8b5a2b"))
