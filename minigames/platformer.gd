@@ -10,10 +10,10 @@ signal pause_requested
 const TILE := 64
 const SCREEN := Vector2(1280, 720)
 ## One character per tile:
-## # ground   B crate   ? apple block (bump it from below)   = plank (jump through from below)
+## # ground   B crate   = plank (jump through from below)
 ## a apple   x thorns   V Viking   C checkpoint   P start   D the drakkar (finish)
 ## T treasure chest (open it with F)   S royal chest, two tiles wide (leave the tile on its right empty)
-## H ladder (Q grabs it, W and S climb, Q lets go)
+## H ladder (W and S climb it, A or D steps off)
 ## Crates break under the sword or a thrown apple and give apples.
 const LEVEL := [
 	"                                                                                                                                                                          ",
@@ -21,8 +21,8 @@ const LEVEL := [
 	"                                                                                                                                                                          ",
 	"                                                                                                        a a a                                                             ",
 	"                                                     a  a  a                                                                                                              ",
-	"         ?B?                     aaa                                      ?B?B?                        =====                        V                                     ",
-	"                                                  #  ===  ===                                                                     ######    ?             ##              ",
+	"         BBB                     aaa                                      BBBBB                        =====                        V                                     ",
+	"                                                  #  ===  ===                                                                     ######    B             ##              ",
 	"    a a        a a              ===              ##                                   a a         ===          ===                                       ###              ",
 	"                                     a          ###            a                                                           a   a                        ####              ",
 	" P                       ##       V  #         ####          x     C       V        V                                    B   x   B          a      V   #####        D     ",
@@ -45,7 +45,7 @@ const LEVEL_KNIGHT := [
 	"########################xxxxx##############            ##################             ##########xx#xx#xxx#######################",
 	"###########################################            ##################             ##########################################",
 ]
-const SOLID := "#B?X"
+const SOLID := "#B"
 ## Apples inside a broken crate.
 const CRATE_APPLES := 2
 const NIGHT_TINT := Color(0.5, 0.56, 0.86)
@@ -76,7 +76,7 @@ const LEVEL_ART_SETS := ["res://art/platformer/level_kreskowka/", "res://art/pla
 const AUDIO_DIR := "res://art/platformer/audio/"
 ## Drawn pictures for things in the level (<name>.png), each used when present.
 const ITEMS_DIR := "res://art/platformer/items/"
-const ITEMS := ["apple", "crate", "block", "block_used", "thorns", "flag", "flag_on", "drakkar", "heart", "heart_empty", "chest", "chest_open", "chest_royal", "chest_royal_open", "ladder"]
+const ITEMS := ["apple", "crate", "thorns", "flag", "flag_on", "drakkar", "heart", "heart_empty", "chest", "chest_open", "chest_royal", "chest_royal_open", "ladder"]
 ## Drawn hearts are small pixel art, shown this many times bigger.
 const HEART_SCALE := 3.0
 const SOUNDS := ["jump", "apple", "bump", "stomp", "hurt", "checkpoint", "win", "lose"]
@@ -110,7 +110,7 @@ var input_x := 0.0
 var input_jump := false
 var input_attack := false
 var input_throw := false
-## -1 up, 1 down, while on a ladder.
+## -1 up, 1 down: climbs a ladder Wiesław is at.
 var input_climb := 0.0
 ## Which map to play: "knight" (LEVEL_KNIGHT) or "mario" (LEVEL); N switches.
 var layout := "knight"
@@ -412,9 +412,16 @@ func _physics_process(delta: float) -> void:
 	var jump_held := input_jump if auto_input else Input.is_action_pressed("move_up")
 	if jump_held and not _jump_was_held:
 		_buffered = JUMP_BUFFER
+	var up_down := input_climb if auto_input else Input.get_axis("move_up", "move_down")
+	if not _climbing and _ladder_ahead(up_down):
+		_climbing = true
+		player.velocity = Vector2.ZERO
+		player.position.x = (floori(player.position.x / TILE) + 0.5) * TILE
+		_buffered = 0.0
 	if _climbing:
-		_climb(delta, steer, input_climb if auto_input else Input.get_axis("move_up", "move_down"))
+		_climb(delta, steer, up_down)
 	else:
+		_wieslaw.paused = false
 		_move_player(delta, steer, jump_held)
 	_jump_was_held = jump_held
 	if auto_input and input_attack:
@@ -463,7 +470,6 @@ func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 		_dust(player.position, 1)
 	_was_on_floor = on_floor
 	if player.is_on_ceiling():
-		_bump_block(player.position + Vector2(0, -PLAYER_SIZE.y - 4))
 		_play("bump")
 	if absf(steer) > 0.1:
 		_wieslaw.facing = 1 if steer > 0 else -1
@@ -494,21 +500,17 @@ func _ladder_here() -> bool:
 	return false
 
 
-## Grabs the ladder Wiesław stands at, or lets go of it.
-func climb() -> void:
-	if state != "":
-		return
-	if _climbing:
-		_climbing = false
-	elif _ladder_here():
-		_climbing = true
-		player.velocity = Vector2.ZERO
-		player.position.x = (floori(player.position.x / TILE) + 0.5) * TILE
-	_hud.queue_redraw()
+## W at a ladder (or S on top of one) grabs it instead of jumping.
+func _ladder_ahead(up_down: float) -> bool:
+	if up_down < -0.5:
+		return tile_at(player.position + Vector2(0, -PLAYER_SIZE.y / 2)) == "H" or tile_at(player.position + Vector2(0, -8)) == "H"
+	if up_down > 0.5:
+		return tile_at(player.position + Vector2(0, 8)) == "H"
+	return false
 
 
 ## On a ladder he goes up and down without gravity, through planks but not through ground. At the
-## bottom he steps off; past the top he hops onto the ledge; off the side he falls.
+## bottom he steps off; past the top he hops onto the ledge; A or D takes him off the side.
 func _climb(delta: float, steer: float, up_down: float) -> void:
 	var step := Vector2(steer * CLIMB_SIDE, up_down * CLIMB_SPEED) * delta
 	var feet := player.position + step
@@ -524,7 +526,8 @@ func _climb(delta: float, steer: float, up_down: float) -> void:
 	player.velocity = Vector2.ZERO
 	if absf(steer) > 0.1:
 		_wieslaw.facing = 1 if steer > 0 else -1
-	_wieslaw.pose = "run" if step != Vector2.ZERO else "idle"
+	_wieslaw.pose = "climb" if _wieslaw.has_drawn_pose("climb") else ("run" if step != Vector2.ZERO else "idle")
+	_wieslaw.paused = _wieslaw.pose == "climb" and step.y == 0.0
 	_wieslaw.scale = Vector2(0.84 * _wieslaw.facing, 0.84)
 	_wieslaw.rotation = 0.0
 	_wieslaw.visible = _hurt > HURT_TIME - 0.4 or fmod(_hurt, 0.2) < 0.12
@@ -553,16 +556,6 @@ func use() -> void:
 	var chest := _chest_near()
 	if chest != Vector2.INF:
 		_open_chest(chest)
-
-
-func _bump_block(point: Vector2) -> void:
-	if tile_at(point) != "?":
-		return
-	_set_tile(point, "X")
-	apples += 1
-	_play("apple")
-	var center := Vector2((floori(point.x / TILE) + 0.5) * TILE, floori(point.y / TILE) * TILE)
-	_effects.append({"kind": "apple", "pos": center, "time": 0.0})
 
 
 ## A crate hit by the sword or an apple breaks and lets its apples out.
@@ -645,7 +638,6 @@ func _swing(delta: float) -> void:
 		_struck.append(node)
 		_strike(viking, facing)
 	for point in [blade.position + blade.size * Vector2(0.75, 0.2), blade.position + blade.size * Vector2(0.75, 0.6)]:
-		_bump_block(point)
 		_break_crate(point)
 
 
@@ -697,8 +689,6 @@ func _fly_apples(delta: float) -> void:
 				spent = true
 		var tile := tile_at(at)
 		if not spent and tile in SOLID:
-			if tile == "?":
-				_bump_block(at)
 			_break_crate(at)
 			spent = true
 		if spent:
@@ -808,9 +798,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif state == "" and event is InputEventKey and event.physical_keycode == KEY_F:
 		use()
-		get_viewport().set_input_as_handled()
-	elif state == "" and event is InputEventKey and event.physical_keycode == KEY_Q:
-		climb()
 		get_viewport().set_input_as_handled()
 	elif event is InputEventKey and event.physical_keycode == KEY_N and level_map.is_empty():
 		layout = "mario" if layout == "knight" else "knight"
@@ -1013,8 +1000,6 @@ func _draw_tiles() -> void:
 						v.draw_rect(Rect2(at, Vector2(TILE, 16)), Color("5e9e3f"))
 				"B" when _items.has("crate"):
 					v.draw_texture(_items["crate"], at)
-				"?" when _items.has("block"):
-					v.draw_texture(_items["block"], at + Vector2(0, sin(_anim * 4.0) * 2.0))
 				"S", "s" when _items.has("chest_royal"):
 					var texture: Texture2D = _items["chest_royal_open" if map[row][col] == "s" and _items.has("chest_royal_open") else "chest_royal"]
 					v.draw_texture(texture, at + Vector2(0, TILE - texture.get_height()))
@@ -1036,8 +1021,6 @@ func _draw_tiles() -> void:
 					v.draw_rect(Rect2(at + Vector2(6, 30), Vector2(52, 34)), Color("9a5a2e"))
 					v.draw_rect(lid, Color("c08a4a"))
 					v.draw_rect(Rect2(at + Vector2(27, 28), Vector2(10, 12)), Color("f2c14e"))
-				"X" when _items.has("block_used"):
-					v.draw_texture(_items["block_used"], at)
 				"a" when _items.has("apple"):
 					var texture: Texture2D = _items["apple"]
 					v.draw_texture(texture, at + (Vector2(TILE, TILE) - texture.get_size()) / 2 + Vector2(0, sin(_anim * 3.0 + col) * 4.0))
@@ -1057,14 +1040,6 @@ func _draw_tiles() -> void:
 					v.draw_rect(cell, Color("c08a4a"))
 					v.draw_rect(cell.grow(-3), ink, false, 3.0)
 					v.draw_line(at + Vector2(6, 6), at + Vector2(58, 58), ink, 3.0)
-				"?":
-					var bob := sin(_anim * 4.0) * 2.0
-					v.draw_rect(cell, Color("f2c14e"))
-					v.draw_rect(cell.grow(-3), ink, false, 3.0)
-					v.draw_string(ThemeDB.fallback_font, at + Vector2(0, 46 + bob), "?", HORIZONTAL_ALIGNMENT_CENTER, TILE, 40, ink)
-				"X":
-					v.draw_rect(cell, Color("a08060"))
-					v.draw_rect(cell.grow(-3), ink, false, 3.0)
 				"=":
 					if not _art.is_empty():
 						_draw_tile("plank", at)
@@ -1145,7 +1120,7 @@ func _process(delta: float) -> void:
 	_move_particles(delta)
 
 
-## A small key in a bubble over a chest Wiesław can open (F) or a ladder he can grab (Q).
+## A small key in a bubble over a chest Wiesław can open with F.
 func _draw_key_hints() -> void:
 	if state != "" or not player:
 		return
@@ -1154,8 +1129,6 @@ func _draw_key_hints() -> void:
 	if chest != Vector2.INF:
 		# Over the chest, or over Wiesław's head when he stands in front of it.
 		hints.append(["F", Vector2((floori(chest.x / TILE) + 0.5) * TILE, minf(floori(chest.y / TILE) * TILE - 20, player.position.y - 150))])
-	if not _climbing and _ladder_here():
-		hints.append(["Q", player.position + Vector2(0, -150)])
 	for hint in hints:
 		var at: Vector2 = hint[1] + Vector2(0, sin(_anim * 5.0) * 3.0)
 		_hints.draw_circle(at, 17, Color(1, 1, 1, 0.9))
@@ -1311,7 +1284,7 @@ func _draw_hud() -> void:
 		v.draw_string(font, Vector2(0, 300), level_name, HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 56, Color(ink, fade))
 	var message := ""
 	if state == "" and player and player.position.x < 900.0:
-		message = "A/D: chodzenie     W: skok, w powietrzu jeszcze raz     Q: drabina, W/S: wspinanie\nSpacja albo klik: miecz     E albo prawy klik: rzut jabłkiem     F: otwieranie skrzyń"
+		message = "A/D: chodzenie     W: skok, w powietrzu jeszcze raz     W/S przy drabinie: wspinanie\nSpacja albo klik: miecz     E albo prawy klik: rzut jabłkiem     F: otwieranie skrzyń"
 	elif state == "lost":
 		message = "Ojej, Wiesław stracił wszystkie serduszka!\nSpacja albo klik: jeszcze raz"
 	elif state == "won":

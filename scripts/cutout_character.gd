@@ -43,7 +43,7 @@ var facing := 1:
 	set(value):
 		facing = value
 		scale.x = absf(scale.x) * value
-## idle, run, jump, fall, hurt, win
+## idle, run, jump, fall, hurt, win, and climb when drawn
 var pose := "idle"
 
 var _parts := {}
@@ -59,6 +59,8 @@ var _anim_time := 0.0
 ## Colour the purple robe is repainted with, to make other people from the same frames;
 ## fully transparent keeps the robe as drawn.
 var robe_color := Color.TRANSPARENT
+## Holds the current frame (Wiesław resting on the ladder).
+var paused := false
 
 
 func _ready() -> void:
@@ -170,7 +172,8 @@ func _show_frame(delta: float) -> void:
 	if pose != _anim_pose:
 		_anim_pose = pose
 		_anim_time = 0.0
-	_anim_time += delta
+	if not paused:
+		_anim_time += delta
 	var frames: Array = current["frames"]
 	var index := int(_anim_time * current["fps"])
 	index = index % frames.size() if current["loop"] else mini(index, frames.size() - 1)

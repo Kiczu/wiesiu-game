@@ -189,15 +189,6 @@ func _check_platformer() -> void:
 	level.input_jump = false
 	_check(player.position.y < falling_from - PlatformerGame.TILE, "platformer: a second press in the air jumps again")
 	await _physics(80)
-	# Bump the first ? block from below.
-	player.position = Vector2(9.5 * PlatformerGame.TILE, 640.0)
-	await _physics(5)
-	var apples := level.apples
-	level.input_jump = true
-	await _physics(40)
-	level.input_jump = false
-	await _physics(30)
-	_check(level.apples == apples + 1 and level.LEVEL[5][9] == "?" and level.map[5][9] == "X", "platformer: bumping a ? block gives an apple")
 	# Throw two apples at a Viking.
 	var viking: Node2D = level.vikings[0]["node"]
 	for other in level.vikings:
@@ -310,17 +301,17 @@ func _check_platformer() -> void:
 		stage.queue_free()
 
 
-## In the orchard a ladder leads up to a plank with a chest: Q grabs it, W climbs, and at the top
+## In the orchard a ladder leads up to a plank with a chest: W grabs it and climbs, and at the top
 ## Wiesław hops onto the plank, where F opens the chest.
 func _climb_to_chest(stage: PlatformerGame) -> void:
 	var rows: Array = PlatformerCampaign.ORCHARD_AT_NIGHT
 	var col: int = rows[9].find("H", 20)
 	stage.player.position = Vector2((col + 0.5) * PlatformerGame.TILE, 10 * PlatformerGame.TILE)
 	await _physics(2)
-	stage.climb()
-	var grabbed := stage._climbing
 	stage.input_climb = -1.0
 	stage.input_jump = true
+	await _physics(2)
+	var grabbed := stage._climbing
 	await _physics(90)
 	stage.input_climb = 0.0
 	stage.input_jump = false
@@ -328,7 +319,7 @@ func _climb_to_chest(stage: PlatformerGame) -> void:
 	var top := stage.player.position.y
 	stage.use()
 	var chest := Vector2((col + 0.5) * PlatformerGame.TILE, 4.5 * PlatformerGame.TILE)
-	_check(grabbed and not stage._climbing and stage.player.is_on_floor() and top <= 5 * PlatformerGame.TILE + 1 and stage.tile_at(chest) == "t", "platformer: Q and W climb a ladder up to a chest that F opens (%d)" % top)
+	_check(grabbed and not stage._climbing and stage.player.is_on_floor() and top <= 5 * PlatformerGame.TILE + 1 and stage.tile_at(chest) == "t", "platformer: W climbs a ladder up to a chest that F opens (%d)" % top)
 
 
 func _physics(frames: int) -> void:
