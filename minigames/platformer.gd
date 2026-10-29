@@ -12,6 +12,8 @@ const SCREEN := Vector2(1280, 720)
 ## One character per tile:
 ## # ground   B crate   ? apple block (bump it from below)   = plank (jump through from below)
 ## a apple   x thorns   V Viking   C checkpoint   P start   D the drakkar (finish)
+## T treasure chest (open it with the sword)   S royal chest, two tiles wide (leave the tile on its right empty)
+## Crates break under the sword or a thrown apple and give apples.
 const LEVEL := [
 	"                                                                                                                                                                          ",
 	"                                                                                                                                                                          ",
@@ -26,7 +28,29 @@ const LEVEL := [
 	"#############################  ####################       ######################################                  ########################################################",
 	"#############################  ####################       ######################################                  ########################################################",
 ]
+## A level in the style of Apple Knight: ground at many heights, walls to climb with the double
+## jump, spike pits, crates to break with the sword, Vikings on ledges.
+const LEVEL_KNIGHT := [
+	"                                                                                                                                ",
+	"                                                                                                                                ",
+	"                                                                                                                                ",
+	"                                                                 aaaS                                                           ",
+	"                                                   a            ######             a                                            ",
+	"                                      TaaaB       ===           ######            ===     V   B                                 ",
+	"                  aa      a          ######   a                                       ##########                                ",
+	"                     V B ===         ######  ===                              ===     ##########  a  a             B V          ",
+	"      a a a      #######         B V ######                                           ##########  #  #           #####          ",
+	"  P           ##########     ##############             C    VBB      V   ===         ##########  #  #      V  T #####   C  D   ",
+	"########################xxxxx##############            ##################             ##########xx#xx#xxx#######################",
+	"###########################################            ##################             ##########################################",
+]
 const SOLID := "#B?X"
+## Apples inside a broken crate.
+const CRATE_APPLES := 2
+## Apples in a treasure chest; it also gives back a lost heart.
+const CHEST_APPLES := 5
+## Apples in the royal chest; it also fills every heart.
+const ROYAL_APPLES := 15
 const LIVES := 3
 const WALK_SPEED := 330.0
 const ACCELERATION := 2400.0
@@ -51,7 +75,9 @@ const LEVEL_ART_SETS := ["res://art/platformer/level_autor/", "res://art/platfor
 const AUDIO_DIR := "res://art/platformer/audio/"
 ## Drawn pictures for things in the level (<name>.png), each used when present.
 const ITEMS_DIR := "res://art/platformer/items/"
-const ITEMS := ["apple", "crate", "block", "block_used", "thorns", "flag", "flag_on", "drakkar"]
+const ITEMS := ["apple", "crate", "block", "block_used", "thorns", "flag", "flag_on", "drakkar", "heart", "heart_empty", "chest", "chest_open", "chest_royal", "chest_royal_open"]
+## Drawn hearts are small pixel art, shown this many times bigger.
+const HEART_SCALE := 3.0
 const SOUNDS := ["jump", "apple", "bump", "stomp", "hurt", "checkpoint", "win", "lose"]
 ## How far the camera looks ahead in the running direction.
 const LOOK_AHEAD := 140.0
@@ -79,6 +105,8 @@ var input_x := 0.0
 var input_jump := false
 var input_attack := false
 var input_throw := false
+## Which map to play: "knight" (LEVEL_KNIGHT) or "mario" (LEVEL); N switches.
+var layout := "knight"
 
 var player: CharacterBody2D
 var vikings: Array[Dictionary] = []
@@ -132,6 +160,7 @@ var _attack := 0.0
 var _attack_cooldown := 0.0
 var _struck: Array[Node2D] = []
 var _throw_cooldown := 0.0
+var _solid: StaticBody2D
 ## Apples in flight: position, velocity, time in the air.
 var _thrown: Array[Dictionary] = []
 var _look := 0.0
@@ -175,6 +204,7 @@ func _ready() -> void:
 	front.layer = 2
 	add_child(front)
 	_hud = Node2D.new()
+	_hud.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	front.add_child(_hud)
 	_hud.draw.connect(_draw_hud)
 	if Game.fast and not auto_input:
@@ -206,7 +236,7 @@ func restart() -> void:
 	_throw_cooldown = 0.0
 	_thrown.clear()
 	vikings.clear()
-	map.assign(LEVEL)
+	map.assign(LEVEL_KNIGHT if layout == "knight" else LEVEL)
 	_level = Node2D.new()
 	_world.add_child(_level)
 	_tiles = Node2D.new()
@@ -289,8 +319,12 @@ func set_pixel_mode(on: bool) -> void:
 func _add_viking(at: Vector2) -> void:
 	var color := Color("4f7a3a") if vikings.size() % 2 == 0 else Color("d9692b")
 	var body: Node2D
+	if PixelViking.has_art():
+		var pixel := PixelViking.new()
+		pixel.colour = PixelViking.COLOURS[vikings.size() % PixelViking.COLOURS.size()]
+		body = pixel
 	# With drawn frames for Wiesław, Vikings are Wiesław in another colour until they get their own.
-	if CutoutCharacter.has_frames():
+	elif CutoutCharacter.has_frames():
 		var drawn := CutoutCharacter.new()
 		drawn.robe_color = color
 		drawn.pose = "run"
@@ -311,7 +345,10 @@ func _add_viking(at: Vector2) -> void:
 
 ## Rows of solid tiles become one static box each; planks become one-way boxes.
 func _build_collision() -> void:
+	if is_instance_valid(_solid):
+		_solid.queue_free()
 	var body := StaticBody2D.new()
+	_solid = body
 	_level.add_child(body)
 	for row in map.size():
 		var col := 0
@@ -448,6 +485,59 @@ func _bump_block(point: Vector2) -> void:
 	_effects.append({"kind": "apple", "pos": center, "time": 0.0})
 
 
+## A crate hit by the sword or an apple breaks and lets its apples out.
+func _break_crate(point: Vector2) -> void:
+	if tile_at(point) != "B":
+		return
+	_set_tile(point, " ")
+	_build_collision()
+	apples += CRATE_APPLES
+	_play("apple")
+	_shake = maxf(_shake, 0.08)
+	var center := Vector2((floori(point.x / TILE) + 0.5) * TILE, (floori(point.y / TILE) + 0.5) * TILE)
+	_dust(center + Vector2(0, TILE / 2.0), 5)
+	for i in CRATE_APPLES:
+		_effects.append({"kind": "apple", "pos": center + Vector2((i - 0.5) * 24.0, 0), "time": 0.0})
+
+
+## A small four-pointed star that blinks now and then somewhere on a closed royal chest.
+func _draw_glint(v: Node2D, at: Vector2, size: Vector2, phase: int) -> void:
+	var t := fmod(_anim * 0.8 + phase * 0.37, 1.0)
+	if t > 0.35:
+		return
+	var spot := floori(_anim * 0.8 + phase * 0.37)
+	var pos := at + size * Vector2(0.2 + 0.6 * fposmod(spot * 0.618, 1.0), 0.15 + 0.5 * fposmod(spot * 0.382, 1.0))
+	var r := sin(t / 0.35 * PI) * 10.0
+	var shine := Color(1, 1, 0.85, 0.95)
+	v.draw_line(pos - Vector2(r, 0), pos + Vector2(r, 0), shine, 3.0)
+	v.draw_line(pos - Vector2(0, r), pos + Vector2(0, r), shine, 3.0)
+	v.draw_circle(pos, r * 0.25, Color.WHITE)
+
+
+## A chest hit by the sword opens (it stays as an open chest) and gives apples and a heart.
+## The royal chest does the same with more apples and every heart, and shakes the screen.
+func _open_chest(point: Vector2) -> void:
+	# The royal chest covers two tiles; a hit on its right half counts too.
+	if tile_at(point) == " " and tile_at(point - Vector2(TILE, 0)) == "S":
+		point -= Vector2(TILE, 0)
+	var kind := tile_at(point)
+	if kind != "T" and kind != "S":
+		return
+	var royal := kind == "S"
+	_set_tile(point, kind.to_lower())
+	var count := ROYAL_APPLES if royal else CHEST_APPLES
+	apples += count
+	lives = LIVES if royal else mini(lives + 1, LIVES)
+	_play("win" if royal and _sounds.has("win") else "checkpoint")
+	if royal:
+		_shake = maxf(_shake, 0.3)
+	var center := Vector2((floori(point.x / TILE) + (1.0 if royal else 0.5)) * TILE, floori(point.y / TILE) * TILE)
+	for i in count:
+		var spread := Vector2((i - (count - 1) / 2.0) * (10.0 if royal else 18.0), (i % 3) * -14.0)
+		_effects.append({"kind": "apple", "pos": center + spread, "time": 0.0})
+	_hud.queue_redraw()
+
+
 ## Starts a sword swing in front of Wiesław.
 func attack() -> void:
 	if state != "" or _attack_cooldown > 0.0:
@@ -476,6 +566,8 @@ func _swing(delta: float) -> void:
 		_strike(viking, facing)
 	for point in [blade.position + blade.size * Vector2(0.75, 0.2), blade.position + blade.size * Vector2(0.75, 0.6)]:
 		_bump_block(point)
+		_break_crate(point)
+		_open_chest(point)
 
 
 ## A Viking hit by the sword or an apple flashes and slides back; out of health, he falls over.
@@ -528,6 +620,7 @@ func _fly_apples(delta: float) -> void:
 		if not spent and tile in SOLID:
 			if tile == "?":
 				_bump_block(at)
+			_break_crate(at)
 			spent = true
 		if spent:
 			_thrown.erase(apple)
@@ -636,6 +729,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif state == "" and ((event is InputEventKey and event.physical_keycode == KEY_E) or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT)):
 		throw_apple()
+		get_viewport().set_input_as_handled()
+	elif event is InputEventKey and event.physical_keycode == KEY_K and CutoutCharacter.anim_dirs().size() > 1:
+		CutoutCharacter.next_anim_dir()
+		restart()
+		get_viewport().set_input_as_handled()
+	elif event is InputEventKey and event.physical_keycode == KEY_N:
+		layout = "mario" if layout == "knight" else "knight"
+		restart()
 		get_viewport().set_input_as_handled()
 	elif event is InputEventKey and event.physical_keycode == KEY_G:
 		set_depth_effects(not depth_effects)
@@ -842,6 +943,27 @@ func _draw_tiles() -> void:
 					v.draw_texture(_items["crate"], at)
 				"?" when _items.has("block"):
 					v.draw_texture(_items["block"], at + Vector2(0, sin(_anim * 4.0) * 2.0))
+				"S", "s" when _items.has("chest_royal"):
+					var texture: Texture2D = _items["chest_royal_open" if map[row][col] == "s" and _items.has("chest_royal_open") else "chest_royal"]
+					v.draw_texture(texture, at + Vector2(0, TILE - texture.get_height()))
+					if map[row][col] == "S":
+						_draw_glint(v, at + Vector2(0, TILE - texture.get_height()), texture.get_size(), col)
+				"S", "s":
+					var box := Rect2(at + Vector2(4, 16), Vector2(TILE * 2 - 8, TILE - 16))
+					v.draw_rect(box, Color("8a2630"))
+					v.draw_rect(box, Color("f2c14e"), false, 4.0)
+					if map[row][col] == "S":
+						_draw_glint(v, box.position, box.size, col)
+				"T", "t" when _items.has("chest"):
+					var texture: Texture2D = _items["chest_open" if map[row][col] == "t" and _items.has("chest_open") else "chest"]
+					v.draw_texture(texture, at + Vector2(0, TILE - texture.get_height()))
+				"T", "t":
+					var lid := Rect2(at + Vector2(6, 14), Vector2(52, 16))
+					if map[row][col] == "t":
+						lid.position.y -= 14
+					v.draw_rect(Rect2(at + Vector2(6, 30), Vector2(52, 34)), Color("9a5a2e"))
+					v.draw_rect(lid, Color("c08a4a"))
+					v.draw_rect(Rect2(at + Vector2(27, 28), Vector2(10, 12)), Color("f2c14e"))
 				"X" when _items.has("block_used"):
 					v.draw_texture(_items["block_used"], at)
 				"a" when _items.has("apple"):
@@ -1068,22 +1190,34 @@ func _draw_hud() -> void:
 	var font := ThemeDB.fallback_font
 	var ink := Color("2b1d14")
 	for i in LIVES:
-		v.draw_circle(Vector2(40 + i * 40, 40), 14, Color("d62828") if i < lives else Color(0, 0, 0, 0.25))
+		if _items.has("heart"):
+			# A lost life shows the empty heart, or the full one darkened when there is none.
+			var lost := i >= lives
+			var texture: Texture2D = _items["heart_empty"] if lost and _items.has("heart_empty") else _items["heart"]
+			var size := texture.get_size() * HEART_SCALE
+			var tint := Color(0.2, 0.2, 0.2, 0.6) if lost and not _items.has("heart_empty") else Color.WHITE
+			v.draw_texture_rect(texture, Rect2(Vector2(22 + i * (size.x + 6), 40 - size.y / 2), size), false, tint)
+		else:
+			v.draw_circle(Vector2(40 + i * 40, 40), 14, Color("d62828") if i < lives else Color(0, 0, 0, 0.25))
 	# A light outline keeps the text readable on a drawn background.
 	var halo := Color(1, 1, 1, 0.85)
-	v.draw_string_outline(font, Vector2(170, 50), "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, 6, halo)
-	v.draw_string(font, Vector2(170, 50), "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, ink)
+	var apples_at := Vector2(40 + LIVES * 54, 50) if _items.has("heart") else Vector2(170, 50)
+	v.draw_string_outline(font, apples_at, "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, 6, halo)
+	v.draw_string(font, apples_at, "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, ink)
 	var mode := "P: tryb %s" % ("pikselowy" if pixel_mode else "gładki")
 	mode = "G: efekty %s     %s" % ["wł." if depth_effects else "wył.", mode]
 	if _art_sets.size() > 1:
 		mode = "L: grafika     " + mode
+	mode = "N: plansza %s     %s" % ["rycerska" if layout == "knight" else "mario", mode]
+	if CutoutCharacter.anim_dirs().size() > 1:
+		mode = "K: Wiesiek     " + mode
 	if _music or not _sounds.is_empty():
 		mode = "M: dźwięk %s     %s" % ["wył." if AudioServer.is_bus_mute(0) else "wł.", mode]
-	v.draw_string_outline(font, Vector2(0, 50), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 24, 6, halo)
-	v.draw_string(font, Vector2(0, 50), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 24, ink)
+	v.draw_string_outline(font, Vector2(0, 48), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 20, 6, halo)
+	v.draw_string(font, Vector2(0, 48), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 20, ink)
 	var message := ""
 	if state == "" and player and player.position.x < 900.0:
-		message = "A/D albo strzałki: chodzenie. W albo strzałka w górę: skok (przytrzymaj, a skoczysz wyżej; w powietrzu jeszcze raz).\nSpacja albo klik: cios mieczem. E albo prawy klik: rzut jabłkiem."
+		message = "A/D: chodzenie     W: skok, w powietrzu jeszcze raz\nSpacja albo klik: miecz     E albo prawy klik: rzut jabłkiem"
 	elif state == "lost":
 		message = "Ojej, Wiesław stracił wszystkie serduszka!\nSpacja albo klik: jeszcze raz"
 	elif state == "won":
