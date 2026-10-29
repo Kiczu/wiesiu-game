@@ -3,16 +3,15 @@ extends Node2D
 ## A character built from separate parts (cutout animation), like a paper puppet: the author
 ## draws each part once and the poses are made here by turning the parts at their joints.
 ## When the author's parts are in one of ART_SETS (PNGs plus rig.json with each part's place and
-## joint), they are used; otherwise placeholder shapes. Frame-by-frame animations in ANIM_DIRS
+## joint), they are used; otherwise placeholder shapes. Frame-by-frame animations in ANIM_DIR
 ## (PNGs plus frames.json) take over from all of them. The origin is at the feet; drawn facing right.
 
 const OUTLINE := Color("2b1d14")
-## Drawn versions of Wiesław: the comic one and the pixel-art one (shown in pixel mode).
-const ART_SETS := {"smooth": "res://art/platformer/wieslaw/", "pixel": "res://art/platformer/wieslaw_pixel/"}
+## Drawn versions of Wiesław made of parts.
+const ART_SETS := {"smooth": "res://art/platformer/wieslaw/"}
 ## Ready-made animation frames: frames.json lists, for each pose, its fps, whether it loops and
 ## its frames, each with the point of the image that stands on the ground.
-## The first set that is there is used; next_anim_dir() switches to the next one.
-const ANIM_DIRS := ["res://art/platformer/wieslaw_chibi/", "res://art/platformer/wieslaw_anim/"]
+const ANIM_DIR := "res://art/platformer/wieslaw_chibi/"
 ## Parts drawn behind the body.
 const ART_BEHIND := ["arm_far", "foot_far", "foot_near"]
 ## Height of the drawn Wiesław in pixels, before the scale the game gives the puppet.
@@ -47,14 +46,11 @@ var facing := 1:
 ## idle, run, jump, fall, hurt, win
 var pose := "idle"
 
-static var _anim_dir := ""
-
 var _parts := {}
 var _time := 0.0
 ## Drawn sets by name: {"root": Node2D, "parts": {part name: Node2D}}.
 var _art := {}
 var _art_set := ""
-## Pixel mode shows the pixel-art set when there is one.
 ## Frame animation: {pose: {"fps", "loop", "frames": [{"texture", "anchor"}]}}.
 var _anim := {}
 var _anim_sprite: Sprite2D
@@ -63,10 +59,6 @@ var _anim_time := 0.0
 ## Colour the purple robe is repainted with, to make other people from the same frames;
 ## fully transparent keeps the robe as drawn.
 var robe_color := Color.TRANSPARENT
-var pixel_art := false:
-	set(value):
-		pixel_art = value
-		_show_art()
 
 
 func _ready() -> void:
@@ -149,22 +141,7 @@ static func has_frames() -> bool:
 
 ## The animation set in use, or "" when there is none.
 static func anim_dir() -> String:
-	var dirs := anim_dirs()
-	if not _anim_dir in dirs:
-		_anim_dir = dirs[0] if not dirs.is_empty() else ""
-	return _anim_dir
-
-
-## The animation sets that are there.
-static func anim_dirs() -> Array:
-	return ANIM_DIRS.filter(func(dir: String) -> bool: return FileAccess.file_exists(dir + "frames.json"))
-
-
-## Switches characters made from now on to the next animation set.
-static func next_anim_dir() -> void:
-	var dirs := anim_dirs()
-	if not dirs.is_empty():
-		_anim_dir = dirs[(dirs.find(anim_dir()) + 1) % dirs.size()]
+	return ANIM_DIR if FileAccess.file_exists(ANIM_DIR + "frames.json") else ""
 
 
 func _build_anim(spec: Dictionary) -> void:
@@ -206,7 +183,7 @@ func _show_frame(delta: float) -> void:
 func _show_art() -> void:
 	if _art.is_empty():
 		return
-	_art_set = "pixel" if pixel_art and _art.has("pixel") else ("smooth" if _art.has("smooth") else "pixel")
+	_art_set = _art.keys()[0]
 	for set_name in _art:
 		_art[set_name]["root"].visible = set_name == _art_set
 

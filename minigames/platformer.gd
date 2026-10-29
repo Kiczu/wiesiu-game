@@ -12,7 +12,8 @@ const SCREEN := Vector2(1280, 720)
 ## One character per tile:
 ## # ground   B crate   ? apple block (bump it from below)   = plank (jump through from below)
 ## a apple   x thorns   V Viking   C checkpoint   P start   D the drakkar (finish)
-## T treasure chest (open it with the sword)   S royal chest, two tiles wide (leave the tile on its right empty)
+## T treasure chest (open it with F)   S royal chest, two tiles wide (leave the tile on its right empty)
+## H ladder (Q grabs it, W and S climb, Q lets go)
 ## Crates break under the sword or a thrown apple and give apples.
 const LEVEL := [
 	"                                                                                                                                                                          ",
@@ -67,16 +68,14 @@ const JUMP_BUFFER := 0.12
 const HURT_TIME := 1.5
 const VIKING_SPEED := 70.0
 const PLAYER_SIZE := Vector2(40, 92)
-## How many times smaller the level is drawn in pixel mode; bigger gives chunkier pixels.
-const PIXEL_SCALE := 2
-## Ready-made tiles and background layers, one set per folder: level.json names the files and how
-## the layers scroll. L switches between the sets that are there and plain shapes.
-const LEVEL_ART_SETS := ["res://art/platformer/level_kreskowka/", "res://art/platformer/level_autor/", "res://art/platformer/level/"]
+## Ready-made tiles and background layers: level.json names the files and how the layers scroll.
+## Without it the level is drawn with plain shapes.
+const LEVEL_ART_DIR := "res://art/platformer/level_kreskowka/"
 ## Music (music.ogg, looped) and sound effects (<name>.ogg) for the level, each used when present.
 const AUDIO_DIR := "res://art/platformer/audio/"
 ## Drawn pictures for things in the level (<name>.png), each used when present.
 const ITEMS_DIR := "res://art/platformer/items/"
-const ITEMS := ["apple", "crate", "block", "block_used", "thorns", "flag", "flag_on", "drakkar", "heart", "heart_empty", "chest", "chest_open", "chest_royal", "chest_royal_open"]
+const ITEMS := ["apple", "crate", "block", "block_used", "thorns", "flag", "flag_on", "drakkar", "heart", "heart_empty", "chest", "chest_open", "chest_royal", "chest_royal_open", "ladder"]
 ## Drawn hearts are small pixel art, shown this many times bigger.
 const HEART_SCALE := 3.0
 const SOUNDS := ["jump", "apple", "bump", "stomp", "hurt", "checkpoint", "win", "lose"]
@@ -93,6 +92,10 @@ const APPLE_SPEED := 760.0
 const APPLE_GRAVITY := 900.0
 const APPLE_FLIGHT := 1.2
 const THROW_COOLDOWN := 0.3
+## On a ladder: speed up and down, speed sideways, and the hop that gets him onto the ledge at the top.
+const CLIMB_SPEED := 260.0
+const CLIMB_SIDE := 120.0
+const CLIMB_HOP := 620.0
 const LEAVES := 26
 const POLLEN := 40
 
@@ -106,6 +109,8 @@ var input_x := 0.0
 var input_jump := false
 var input_attack := false
 var input_throw := false
+## -1 up, 1 down, while on a ladder.
+var input_climb := 0.0
 ## Which map to play: "knight" (LEVEL_KNIGHT) or "mario" (LEVEL); N switches.
 var layout := "knight"
 ## A map from the campaign (PlatformerCampaign); when set, it is played instead of the layout.
@@ -122,24 +127,23 @@ var checkpoint := Vector2.ZERO
 
 var _level: Node2D
 var _tiles: Node2D
+## Key hints over chests and ladders, drawn in front of the characters.
+var _hints: Node2D
 var _wieslaw: CutoutCharacter
 var _camera: Camera2D
 var _hud: Node2D
 var _background: Node2D
 ## The art set in use: {"scale", "tiles": {name: Texture2D}, "background": [{texture, mirrored, speed, follow, top, bottom, gap}]}.
 var _art := {}
-var _art_sets: Array[Dictionary] = []
-var _art_index := 0
 var _sounds := {}
 var _players: Array[AudioStreamPlayer] = []
 var _music: AudioStreamPlayer
+## Music is off until M turns it on; it stays as chosen for the next levels.
+static var music_on := false
 var _back: CanvasLayer
-## The level is drawn into its own viewport, so it can be drawn at half resolution (pixel mode).
+## The level is drawn into its own viewport, so it can be tinted as a whole (night).
 var _world: SubViewport
 var _view: SubViewportContainer
-## Pixel mode: the level is drawn PIXEL_SCALE times smaller (640 x 360) and enlarged without smoothing,
-## so even turning parts of the puppet snap to a pixel grid. P switches it, to compare with the smooth look.
-var pixel_mode := false
 var _drakkar: Node2D
 var _items := {}
 var _coyote := 0.0
@@ -151,8 +155,6 @@ var _end_time := 0.0
 var _anim := 0.0
 ## Short-lived pictures: apples popping out of blocks, knocked-out Vikings.
 var _effects: Array[Dictionary] = []
-## Depth effects: foreground, haze, leaves and pollen, shadows, light, camera, dust (G turns them off).
-var depth_effects := true
 var _front: CanvasLayer
 var _foreground: Node2D
 var _overlay: Node2D
@@ -171,6 +173,8 @@ var _solid: StaticBody2D
 ## Apples in flight: position, velocity, time in the air.
 var _thrown: Array[Dictionary] = []
 var _look := 0.0
+## Whether Wiesław is holding on to a ladder.
+var _climbing := false
 
 
 func _ready() -> void:
@@ -242,6 +246,7 @@ func restart() -> void:
 	_attack_cooldown = 0.0
 	_throw_cooldown = 0.0
 	_thrown.clear()
+	_climbing = false
 	vikings.clear()
 	if not level_map.is_empty():
 		map.assign(level_map)
@@ -266,7 +271,10 @@ func restart() -> void:
 				"D":
 					_add_drakkar(at)
 	_add_player()
-	if _music and not _music.playing:
+	_hints = Node2D.new()
+	_hints.draw.connect(_draw_key_hints)
+	_level.add_child(_hints)
+	if _music and music_on and not _music.playing:
 		_music.play()
 	set_physics_process(true)
 
@@ -310,21 +318,6 @@ func _add_player() -> void:
 	player.add_child(_camera)
 	_level.add_child(player)
 	_camera.make_current()
-	set_pixel_mode(pixel_mode)
-
-
-func set_pixel_mode(on: bool) -> void:
-	pixel_mode = on
-	_view.stretch_shrink = PIXEL_SCALE if on else 1
-	_world.snap_2d_transforms_to_pixel = on
-	_world.snap_2d_vertices_to_pixel = on
-	_back.scale = Vector2.ONE / _view.stretch_shrink
-	_front.scale = _back.scale
-	if _wieslaw:
-		_wieslaw.pixel_art = on
-	if _camera:
-		_camera.zoom = Vector2.ONE / _view.stretch_shrink
-		_camera.reset_smoothing()
 
 
 func _add_viking(at: Vector2) -> void:
@@ -415,7 +408,10 @@ func _physics_process(delta: float) -> void:
 	var jump_held := input_jump if auto_input else Input.is_action_pressed("move_up")
 	if jump_held and not _jump_was_held:
 		_buffered = JUMP_BUFFER
-	_move_player(delta, steer, jump_held)
+	if _climbing:
+		_climb(delta, steer, input_climb if auto_input else Input.get_axis("move_up", "move_down"))
+	else:
+		_move_player(delta, steer, jump_held)
 	_jump_was_held = jump_held
 	if auto_input and input_attack:
 		attack()
@@ -475,7 +471,7 @@ func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 		_wieslaw.pose = "jump" if player.velocity.y < 0.0 else "fall"
 	else:
 		_wieslaw.pose = "run" if absf(player.velocity.x) > 20.0 else "idle"
-	_stretch = _stretch.lerp(Vector2.ONE, minf(delta * 12.0, 1.0)) if depth_effects else Vector2.ONE
+	_stretch = _stretch.lerp(Vector2.ONE, minf(delta * 12.0, 1.0))
 	_wieslaw.scale = Vector2(0.84 * _stretch.x * _wieslaw.facing, 0.84 * _stretch.y)
 	# Without a drawn swing, he leans into the blow.
 	_wieslaw.rotation = _wieslaw.facing * 0.18 * sin(_attack / ATTACK_TIME * PI) if not _wieslaw.has_pose("attack") else 0.0
@@ -484,6 +480,75 @@ func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 	_wieslaw.visible = _hurt > HURT_TIME - 0.4 or fmod(_hurt, 0.2) < 0.12
 	if player.position.y > map.size() * TILE + 120:
 		_hit(true)
+
+
+## Whether there is a ladder where Wiesław stands, or just under his feet (to climb down from a ledge).
+func _ladder_here() -> bool:
+	for dy in [-PLAYER_SIZE.y / 2, -8.0, 8.0]:
+		if tile_at(player.position + Vector2(0, dy)) == "H":
+			return true
+	return false
+
+
+## Grabs the ladder Wiesław stands at, or lets go of it.
+func climb() -> void:
+	if state != "":
+		return
+	if _climbing:
+		_climbing = false
+	elif _ladder_here():
+		_climbing = true
+		player.velocity = Vector2.ZERO
+		player.position.x = (floori(player.position.x / TILE) + 0.5) * TILE
+	_hud.queue_redraw()
+
+
+## On a ladder he goes up and down without gravity, through planks but not through ground. At the
+## bottom he steps off; past the top he hops onto the ledge; off the side he falls.
+func _climb(delta: float, steer: float, up_down: float) -> void:
+	var step := Vector2(steer * CLIMB_SIDE, up_down * CLIMB_SPEED) * delta
+	var feet := player.position + step
+	if step.y > 0.0 and tile_at(feet + Vector2(0, 1)) in SOLID:
+		player.position.y = floori(feet.y / TILE) * TILE
+		_climbing = false
+		return
+	if step.y < 0.0 and tile_at(feet - Vector2(0, PLAYER_SIZE.y)) in SOLID:
+		step.y = 0.0
+	if tile_at(feet + Vector2(signf(step.x) * PLAYER_SIZE.x / 2, -PLAYER_SIZE.y / 2)) in SOLID:
+		step.x = 0.0
+	player.position += step
+	player.velocity = Vector2.ZERO
+	if absf(steer) > 0.1:
+		_wieslaw.facing = 1 if steer > 0 else -1
+	_wieslaw.pose = "run" if step != Vector2.ZERO else "idle"
+	_wieslaw.scale = Vector2(0.84 * _wieslaw.facing, 0.84)
+	_wieslaw.rotation = 0.0
+	_wieslaw.visible = _hurt > HURT_TIME - 0.4 or fmod(_hurt, 0.2) < 0.12
+	_move_camera(delta)
+	if not _ladder_here():
+		_climbing = false
+		if up_down < 0.0:
+			player.velocity.y = -CLIMB_HOP
+
+
+## The closed chest Wiesław stands at or right next to, or Vector2.INF when there is none.
+func _chest_near() -> Vector2:
+	var middle := player.position + Vector2(0, -TILE / 2.0)
+	for dx in [0.0, -TILE * 0.6, TILE * 0.6]:
+		var point: Vector2 = middle + Vector2(dx, 0)
+		var kind := tile_at(point)
+		if kind == "T" or kind == "S" or (kind == " " and tile_at(point - Vector2(TILE, 0)) == "S"):
+			return point
+	return Vector2.INF
+
+
+## F: opens the chest Wiesław stands at.
+func use() -> void:
+	if state != "" or not player:
+		return
+	var chest := _chest_near()
+	if chest != Vector2.INF:
+		_open_chest(chest)
 
 
 func _bump_block(point: Vector2) -> void:
@@ -525,10 +590,10 @@ func _draw_glint(v: Node2D, at: Vector2, size: Vector2, phase: int) -> void:
 	v.draw_circle(pos, r * 0.25, Color.WHITE)
 
 
-## A chest hit by the sword opens (it stays as an open chest) and gives apples and a heart.
+## A chest opened with F stays open and gives apples and a heart.
 ## The royal chest does the same with more apples and every heart, and shakes the screen.
 func _open_chest(point: Vector2) -> void:
-	# The royal chest covers two tiles; a hit on its right half counts too.
+	# The royal chest covers two tiles; standing at its right half counts too.
 	if tile_at(point) == " " and tile_at(point - Vector2(TILE, 0)) == "S":
 		point -= Vector2(TILE, 0)
 	var kind := tile_at(point)
@@ -578,7 +643,6 @@ func _swing(delta: float) -> void:
 	for point in [blade.position + blade.size * Vector2(0.75, 0.2), blade.position + blade.size * Vector2(0.75, 0.6)]:
 		_bump_block(point)
 		_break_crate(point)
-		_open_chest(point)
 
 
 ## A Viking hit by the sword or an apple flashes and slides back; out of health, he falls over.
@@ -729,31 +793,28 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action("cancel"):
 		pause_requested.emit()
 		get_viewport().set_input_as_handled()
-	elif event is InputEventKey and event.physical_keycode == KEY_P:
-		set_pixel_mode(not pixel_mode)
-		get_viewport().set_input_as_handled()
-	elif event is InputEventKey and event.physical_keycode == KEY_L:
-		next_art_set()
-		get_viewport().set_input_as_handled()
 	elif state == "" and ((event is InputEventKey and event.physical_keycode == KEY_SPACE) or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT)):
 		attack()
 		get_viewport().set_input_as_handled()
 	elif state == "" and ((event is InputEventKey and event.physical_keycode == KEY_E) or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT)):
 		throw_apple()
 		get_viewport().set_input_as_handled()
-	elif event is InputEventKey and event.physical_keycode == KEY_K and CutoutCharacter.anim_dirs().size() > 1:
-		CutoutCharacter.next_anim_dir()
-		restart()
+	elif state == "" and event is InputEventKey and event.physical_keycode == KEY_F:
+		use()
+		get_viewport().set_input_as_handled()
+	elif state == "" and event is InputEventKey and event.physical_keycode == KEY_Q:
+		climb()
 		get_viewport().set_input_as_handled()
 	elif event is InputEventKey and event.physical_keycode == KEY_N and level_map.is_empty():
 		layout = "mario" if layout == "knight" else "knight"
 		restart()
 		get_viewport().set_input_as_handled()
-	elif event is InputEventKey and event.physical_keycode == KEY_G:
-		set_depth_effects(not depth_effects)
-		get_viewport().set_input_as_handled()
-	elif event is InputEventKey and event.physical_keycode == KEY_M:
-		AudioServer.set_bus_mute(0, not AudioServer.is_bus_mute(0))
+	elif event is InputEventKey and event.physical_keycode == KEY_M and _music:
+		music_on = not music_on
+		if music_on and state == "":
+			_music.play()
+		else:
+			_music.stop()
 		_hud.queue_redraw()
 		get_viewport().set_input_as_handled()
 	elif state == "lost" and (event.is_action("interact") or event is InputEventMouseButton):
@@ -763,6 +824,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _redraw() -> void:
 	_tiles.queue_redraw()
+	_hints.queue_redraw()
 	_hud.queue_redraw()
 	_background.queue_redraw()
 	_foreground.queue_redraw()
@@ -811,12 +873,9 @@ func _stop_music() -> void:
 
 
 func _load_art() -> void:
-	for dir in LEVEL_ART_SETS:
-		if FileAccess.file_exists(dir + "level.json"):
-			_art_sets.append(_load_art_set(dir))
 	_background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	if not _art_sets.is_empty():
-		_art = _art_sets[0]
+	if FileAccess.file_exists(LEVEL_ART_DIR + "level.json"):
+		_art = _load_art_set(LEVEL_ART_DIR)
 
 
 func _load_art_set(dir: String) -> Dictionary:
@@ -845,23 +904,6 @@ func _load_art_set(dir: String) -> Dictionary:
 		"haze_color": Color(spec.get("haze_color", "c9dde6"))}
 
 
-## Next art set. Without any art the level is drawn with plain shapes.
-func next_art_set() -> void:
-	if _art_sets.is_empty():
-		return
-	_art_index = (_art_index + 1) % _art_sets.size()
-	_art = _art_sets[_art_index]
-	_redraw()
-
-
-func set_depth_effects(on: bool) -> void:
-	depth_effects = on
-	_shake = 0.0
-	if _camera:
-		_camera.offset = Vector2(0, -80)
-	_redraw()
-
-
 ## A tile wider than TILE is a strip: each cell shows the part of it under the cell, so the
 ## pattern runs on without seams.
 func _draw_tile(tile_name: String, at: Vector2) -> void:
@@ -874,7 +916,7 @@ func _draw_tile(tile_name: String, at: Vector2) -> void:
 ## Each layer repeats sideways and moves at its own share of the camera's speed; the first one also
 ## fills the sky above it with its top colour. When the camera goes up, a layer goes down by its
 ## "follow" share of that, so the nearest trees stay standing on the ground.
-## With depth effects, "haze" lays a veil of the haze colour over a layer and all behind it, so far
+## "haze" lays a veil of the haze colour over a layer and all behind it, so far
 ## things fade into the air.
 func _draw_art_background(scroll: float) -> void:
 	_draw_layers(_background, _art["background"], scroll, true)
@@ -905,7 +947,7 @@ func _draw_layers(v: Node2D, layers: Array, scroll: float, fill_sky: bool) -> vo
 			v.draw_texture_rect(layer["mirrored"] if flipped else texture, Rect2(Vector2(x, y), size), false)
 			x += step
 			index += 1
-		if depth_effects and layer["haze"] > 0.0:
+		if layer["haze"] > 0.0:
 			v.draw_rect(Rect2(Vector2.ZERO, SCREEN), Color(_art["haze_color"], layer["haze"]))
 
 
@@ -985,6 +1027,13 @@ func _draw_tiles() -> void:
 				"C", "c" when _items.has("flag"):
 					var texture: Texture2D = _items["flag_on" if map[row][col] == "c" else "flag"]
 					v.draw_texture(texture, at + Vector2(8, TILE - texture.get_height()))
+				"H" when _items.has("ladder"):
+					v.draw_texture(_items["ladder"], at)
+				"H":
+					for side in [12.0, 52.0]:
+						v.draw_line(at + Vector2(side, 0), at + Vector2(side, TILE), Color("6b4423"), 6.0)
+					for k in 3:
+						v.draw_line(at + Vector2(12, 10 + k * 21), at + Vector2(52, 10 + k * 21), Color("8a5a2e"), 5.0)
 				"B":
 					v.draw_rect(cell, Color("c08a4a"))
 					v.draw_rect(cell.grow(-3), ink, false, 3.0)
@@ -1017,8 +1066,7 @@ func _draw_tiles() -> void:
 					v.draw_line(pole, pole + Vector2(0, -90), ink, 4.0)
 					var flag := Color("e0a832") if map[row][col] == "c" else Color("9aa3ab")
 					v.draw_colored_polygon(PackedVector2Array([pole + Vector2(0, -90), pole + Vector2(36, -78), pole + Vector2(0, -66)]), flag)
-	if depth_effects:
-		_draw_shadows()
+	_draw_shadows()
 	for apple in _thrown:
 		var spin: float = apple["time"] * 14.0 * signf(apple["vel"].x)
 		v.draw_set_transform(apple["pos"], spin, Vector2(0.7, 0.7))
@@ -1078,6 +1126,24 @@ func _process(delta: float) -> void:
 	_move_particles(delta)
 
 
+## A small key in a bubble over a chest Wiesław can open (F) or a ladder he can grab (Q).
+func _draw_key_hints() -> void:
+	if state != "" or not player:
+		return
+	var hints := []
+	var chest := _chest_near()
+	if chest != Vector2.INF:
+		# Over the chest, or over Wiesław's head when he stands in front of it.
+		hints.append(["F", Vector2((floori(chest.x / TILE) + 0.5) * TILE, minf(floori(chest.y / TILE) * TILE - 20, player.position.y - 150))])
+	if not _climbing and _ladder_here():
+		hints.append(["Q", player.position + Vector2(0, -150)])
+	for hint in hints:
+		var at: Vector2 = hint[1] + Vector2(0, sin(_anim * 5.0) * 3.0)
+		_hints.draw_circle(at, 17, Color(1, 1, 1, 0.9))
+		_hints.draw_arc(at, 17, 0.0, TAU, 24, Color("2b1d14"), 3.0)
+		_hints.draw_string(ThemeDB.fallback_font, at + Vector2(-17, 8), hint[0], HORIZONTAL_ALIGNMENT_CENTER, 34, 22, Color("2b1d14"))
+
+
 ## A soft round shadow on the ground under a character; smaller and fainter the higher it is.
 func _draw_shadows() -> void:
 	var feet: Array[Vector2] = []
@@ -1101,8 +1167,6 @@ func _draw_shadows() -> void:
 
 
 func _dust(at: Vector2, count: int) -> void:
-	if not depth_effects:
-		return
 	for i in count:
 		var side := -1.0 if i % 2 == 0 else 1.0
 		_effects.append({"kind": "dust", "pos": at + Vector2(side * randf_range(6, 18), -4),
@@ -1111,7 +1175,7 @@ func _dust(at: Vector2, count: int) -> void:
 
 ## The camera looks ahead where Wiesław runs and shakes for a moment when he is hit.
 func _move_camera(delta: float) -> void:
-	if not depth_effects or not _camera:
+	if not _camera:
 		return
 	if absf(player.velocity.x) > 40.0:
 		_look = move_toward(_look, signf(player.velocity.x) * LOOK_AHEAD, delta * 260.0)
@@ -1131,8 +1195,6 @@ func _make_particles() -> void:
 
 
 func _move_particles(delta: float) -> void:
-	if not depth_effects:
-		return
 	var center := _camera.get_screen_center_position() if _camera else Vector2.ZERO
 	var moved := center - _last_camera if _last_camera != Vector2.ZERO else Vector2.ZERO
 	_last_camera = center
@@ -1145,8 +1207,6 @@ func _move_particles(delta: float) -> void:
 
 
 func _draw_foreground() -> void:
-	if not depth_effects:
-		return
 	var scroll := _camera.get_screen_center_position().x if _camera else 0.0
 	if not _art.is_empty():
 		_draw_layers(_foreground, _art["foreground"], scroll, false)
@@ -1166,8 +1226,6 @@ func _draw_foreground() -> void:
 
 ## Light over the whole picture: slow sunbeams from the top left and a darker edge.
 func _draw_overlay() -> void:
-	if not depth_effects:
-		return
 	if night:
 		_overlay.draw_texture_rect(_vignette, Rect2(Vector2.ZERO, SCREEN), false)
 		return
@@ -1218,16 +1276,12 @@ func _draw_hud() -> void:
 	var apples_at := Vector2(40 + LIVES * 54, 50) if _items.has("heart") else Vector2(170, 50)
 	v.draw_string_outline(font, apples_at, "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, 6, halo)
 	v.draw_string(font, apples_at, "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, ink)
-	var mode := "P: tryb %s" % ("pikselowy" if pixel_mode else "gładki")
-	mode = "G: efekty %s     %s" % ["wł." if depth_effects else "wył.", mode]
-	if _art_sets.size() > 1:
-		mode = "L: grafika     " + mode
+	var modes: Array[String] = []
+	if _music:
+		modes.append("M: muzyka %s" % ("wł." if music_on else "wył."))
 	if level_map.is_empty():
-		mode = "N: plansza %s     %s" % ["rycerska" if layout == "knight" else "mario", mode]
-	if CutoutCharacter.anim_dirs().size() > 1:
-		mode = "K: Wiesiek     " + mode
-	if _music or not _sounds.is_empty():
-		mode = "M: dźwięk %s     %s" % ["wył." if AudioServer.is_bus_mute(0) else "wł.", mode]
+		modes.append("N: plansza %s" % ("rycerska" if layout == "knight" else "mario"))
+	var mode := "     ".join(modes)
 	v.draw_string_outline(font, Vector2(0, 48), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 20, 6, halo)
 	v.draw_string(font, Vector2(0, 48), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 20, ink)
 	if level_name != "" and _anim < 3.0:
@@ -1236,7 +1290,7 @@ func _draw_hud() -> void:
 		v.draw_string(font, Vector2(0, 300), level_name, HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 56, Color(ink, fade))
 	var message := ""
 	if state == "" and player and player.position.x < 900.0:
-		message = "A/D: chodzenie     W: skok, w powietrzu jeszcze raz\nSpacja albo klik: miecz     E albo prawy klik: rzut jabłkiem"
+		message = "A/D: chodzenie     W: skok, w powietrzu jeszcze raz     Q: drabina, W/S: wspinanie\nSpacja albo klik: miecz     E albo prawy klik: rzut jabłkiem     F: otwieranie skrzyń"
 	elif state == "lost":
 		message = "Ojej, Wiesław stracił wszystkie serduszka!\nSpacja albo klik: jeszcze raz"
 	elif state == "won":

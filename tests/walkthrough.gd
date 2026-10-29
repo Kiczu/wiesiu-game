@@ -246,13 +246,11 @@ func _check_platformer() -> void:
 	player.velocity = Vector2.ZERO
 	await _physics(60)
 	_check(level.lives == PlatformerGame.LIVES - 1 and player.position.y <= 640.0, "platformer: falling into a pit costs a heart and goes back (%d, %d)" % [level.lives, player.position.y])
-	level.set_pixel_mode(true)
 	level.input_x = 1.0
 	var before := player.position.x
 	await _physics(10)
 	level.input_x = 0.0
-	_check(level.pixel_mode and player.position.x > before and level._wieslaw.pose == "run", "platformer: pixel mode plays the same, Wiesław runs")
-	level.set_pixel_mode(false)
+	_check(player.position.x > before and level._wieslaw.pose == "run", "platformer: Wiesław runs")
 	player.position = Vector2((level.LEVEL[9].find("D") + 0.5) * PlatformerGame.TILE, 640.0)
 	await _physics(3)
 	_check(level.state == "won", "platformer: reaching the drakkar wins")
@@ -272,7 +270,7 @@ func _check_platformer() -> void:
 	var before_apples := level.apples
 	level._break_crate(crate)
 	_check(widths.size() == 1 and level.player.is_on_floor() and level.tile_at(crate) == " " and level.apples == before_apples + PlatformerGame.CRATE_APPLES, "platformer: the knight map loads and its crates break into apples")
-	# A sword hit opens a treasure chest: it stays open and gives apples and a lost heart back.
+	# The sword leaves a treasure chest shut; F opens it, and it stays open and gives apples and a lost heart back.
 	var chest_row := 9
 	var chest := Vector2((PlatformerGame.LEVEL_KNIGHT[chest_row].find("T") + 0.5) * PlatformerGame.TILE, (chest_row + 0.5) * PlatformerGame.TILE)
 	level.player.position = Vector2(chest.x - 58.0, 640.0)
@@ -281,13 +279,18 @@ func _check_platformer() -> void:
 	await _physics(2)
 	level.attack()
 	await _physics(10)
-	_check(level.tile_at(chest) == "t" and level.apples == before_apples + PlatformerGame.CHEST_APPLES and level.lives == PlatformerGame.LIVES, "platformer: the sword opens a treasure chest for apples and a heart")
-	# The royal chest is two tiles wide; a hit on its right half opens it and fills every heart.
+	var shut := level.tile_at(chest) == "T"
+	level.player.position = Vector2(chest.x - 40.0, 640.0)
+	await _physics(2)
+	level.use()
+	_check(shut and level.tile_at(chest) == "t" and level.apples == before_apples + PlatformerGame.CHEST_APPLES and level.lives == PlatformerGame.LIVES, "platformer: F, not the sword, opens a treasure chest for apples and a heart")
+	# The royal chest is two tiles wide; F at its right half opens it and fills every heart.
 	var royal_row := 3
 	var royal := Vector2((PlatformerGame.LEVEL_KNIGHT[royal_row].find("S") + 1.5) * PlatformerGame.TILE, (royal_row + 0.5) * PlatformerGame.TILE)
 	level.lives = 1
 	before_apples = level.apples
-	level._open_chest(royal)
+	level.player.position = Vector2(royal.x, (royal_row + 1) * PlatformerGame.TILE)
+	level.use()
 	_check(level.tile_at(royal - Vector2(PlatformerGame.TILE, 0)) == "s" and level.apples == before_apples + PlatformerGame.ROYAL_APPLES and level.lives == PlatformerGame.LIVES, "platformer: the royal chest opens from either half for many apples and all hearts")
 	level.queue_free()
 	# Every campaign level is a rectangle with a start and a drakkar at the end, and loads.
@@ -302,7 +305,30 @@ func _check_platformer() -> void:
 		add_child(stage)
 		await _physics(5)
 		_check(same_width and joined.count("P") == 1 and joined.contains("D") and stage.player.is_on_floor(), "platformer: campaign level %s loads" % spec["name"])
+		if spec["map"] == PlatformerCampaign.ORCHARD_AT_NIGHT:
+			await _climb_to_chest(stage)
 		stage.queue_free()
+
+
+## In the orchard a ladder leads up to a plank with a chest: Q grabs it, W climbs, and at the top
+## Wiesław hops onto the plank, where F opens the chest.
+func _climb_to_chest(stage: PlatformerGame) -> void:
+	var rows: Array = PlatformerCampaign.ORCHARD_AT_NIGHT
+	var col: int = rows[9].find("H", 20)
+	stage.player.position = Vector2((col + 0.5) * PlatformerGame.TILE, 10 * PlatformerGame.TILE)
+	await _physics(2)
+	stage.climb()
+	var grabbed := stage._climbing
+	stage.input_climb = -1.0
+	stage.input_jump = true
+	await _physics(90)
+	stage.input_climb = 0.0
+	stage.input_jump = false
+	await _physics(30)
+	var top := stage.player.position.y
+	stage.use()
+	var chest := Vector2((col + 0.5) * PlatformerGame.TILE, 4.5 * PlatformerGame.TILE)
+	_check(grabbed and not stage._climbing and stage.player.is_on_floor() and top <= 5 * PlatformerGame.TILE + 1 and stage.tile_at(chest) == "t", "platformer: Q and W climb a ladder up to a chest that F opens (%d)" % top)
 
 
 func _physics(frames: int) -> void:
