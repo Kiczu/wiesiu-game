@@ -290,6 +290,19 @@ func _check_platformer() -> void:
 	level._open_chest(royal)
 	_check(level.tile_at(royal - Vector2(PlatformerGame.TILE, 0)) == "s" and level.apples == before_apples + PlatformerGame.ROYAL_APPLES and level.lives == PlatformerGame.LIVES, "platformer: the royal chest opens from either half for many apples and all hearts")
 	level.queue_free()
+	# Every campaign level is a rectangle with a start and a drakkar at the end, and loads.
+	for spec in PlatformerCampaign.levels():
+		var rows: Array = spec["map"]
+		var same_width := rows.all(func(row: String) -> bool: return row.length() == rows[0].length())
+		var joined := "".join(rows)
+		var stage := PlatformerGame.new()
+		stage.level_map = rows
+		stage.night = spec["night"]
+		stage.auto_input = true
+		add_child(stage)
+		await _physics(5)
+		_check(same_width and joined.count("P") == 1 and joined.contains("D") and stage.player.is_on_floor(), "platformer: campaign level %s loads" % spec["name"])
+		stage.queue_free()
 
 
 func _physics(frames: int) -> void:

@@ -47,6 +47,7 @@ const LEVEL_KNIGHT := [
 const SOLID := "#B?X"
 ## Apples inside a broken crate.
 const CRATE_APPLES := 2
+const NIGHT_TINT := Color(0.5, 0.56, 0.86)
 ## Apples in a treasure chest; it also gives back a lost heart.
 const CHEST_APPLES := 5
 ## Apples in the royal chest; it also fills every heart.
@@ -107,6 +108,12 @@ var input_attack := false
 var input_throw := false
 ## Which map to play: "knight" (LEVEL_KNIGHT) or "mario" (LEVEL); N switches.
 var layout := "knight"
+## A map from the campaign (PlatformerCampaign); when set, it is played instead of the layout.
+var level_map: Array = []
+## Night: the level is darker and bluer and there are no sunbeams.
+var night := false
+## Shown big for a moment when the level starts.
+var level_name := ""
 
 var player: CharacterBody2D
 var vikings: Array[Dictionary] = []
@@ -236,7 +243,11 @@ func restart() -> void:
 	_throw_cooldown = 0.0
 	_thrown.clear()
 	vikings.clear()
-	map.assign(LEVEL_KNIGHT if layout == "knight" else LEVEL)
+	if not level_map.is_empty():
+		map.assign(level_map)
+	else:
+		map.assign(LEVEL_KNIGHT if layout == "knight" else LEVEL)
+	_view.modulate = NIGHT_TINT if night else Color.WHITE
 	_level = Node2D.new()
 	_world.add_child(_level)
 	_tiles = Node2D.new()
@@ -734,7 +745,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		CutoutCharacter.next_anim_dir()
 		restart()
 		get_viewport().set_input_as_handled()
-	elif event is InputEventKey and event.physical_keycode == KEY_N:
+	elif event is InputEventKey and event.physical_keycode == KEY_N and level_map.is_empty():
 		layout = "mario" if layout == "knight" else "knight"
 		restart()
 		get_viewport().set_input_as_handled()
@@ -1157,6 +1168,9 @@ func _draw_foreground() -> void:
 func _draw_overlay() -> void:
 	if not depth_effects:
 		return
+	if night:
+		_overlay.draw_texture_rect(_vignette, Rect2(Vector2.ZERO, SCREEN), false)
+		return
 	var sway := sin(_anim * 0.3) * 30.0
 	var beams := [[180.0, 90.0, 0.10], [360.0, 50.0, 0.07], [520.0, 120.0, 0.06], [760.0, 60.0, 0.05]]
 	for beam in beams:
@@ -1208,13 +1222,18 @@ func _draw_hud() -> void:
 	mode = "G: efekty %s     %s" % ["wł." if depth_effects else "wył.", mode]
 	if _art_sets.size() > 1:
 		mode = "L: grafika     " + mode
-	mode = "N: plansza %s     %s" % ["rycerska" if layout == "knight" else "mario", mode]
+	if level_map.is_empty():
+		mode = "N: plansza %s     %s" % ["rycerska" if layout == "knight" else "mario", mode]
 	if CutoutCharacter.anim_dirs().size() > 1:
 		mode = "K: Wiesiek     " + mode
 	if _music or not _sounds.is_empty():
 		mode = "M: dźwięk %s     %s" % ["wył." if AudioServer.is_bus_mute(0) else "wł.", mode]
 	v.draw_string_outline(font, Vector2(0, 48), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 20, 6, halo)
 	v.draw_string(font, Vector2(0, 48), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 20, ink)
+	if level_name != "" and _anim < 3.0:
+		var fade := clampf(3.0 - _anim, 0.0, 1.0)
+		v.draw_string_outline(font, Vector2(0, 300), level_name, HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 56, 10, Color(halo, fade))
+		v.draw_string(font, Vector2(0, 300), level_name, HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 56, Color(ink, fade))
 	var message := ""
 	if state == "" and player and player.position.x < 900.0:
 		message = "A/D: chodzenie     W: skok, w powietrzu jeszcze raz\nSpacja albo klik: miecz     E albo prawy klik: rzut jabłkiem"
