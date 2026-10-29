@@ -272,6 +272,16 @@ func _check_platformer() -> void:
 	var before_apples := level.apples
 	level._break_crate(crate)
 	_check(widths.size() == 1 and level.player.is_on_floor() and level.tile_at(crate) == " " and level.apples == before_apples + PlatformerGame.CRATE_APPLES, "platformer: the knight map loads and its crates break into apples")
+	# A sword hit opens a treasure chest: it stays open and gives apples and a lost heart back.
+	var chest_row := 9
+	var chest := Vector2((PlatformerGame.LEVEL_KNIGHT[chest_row].find("T") + 0.5) * PlatformerGame.TILE, (chest_row + 0.5) * PlatformerGame.TILE)
+	level.player.position = Vector2(chest.x - 58.0, 640.0)
+	level.lives = PlatformerGame.LIVES - 1
+	before_apples = level.apples
+	await _physics(2)
+	level.attack()
+	await _physics(10)
+	_check(level.tile_at(chest) == "t" and level.apples == before_apples + PlatformerGame.CHEST_APPLES and level.lives == PlatformerGame.LIVES, "platformer: the sword opens a treasure chest for apples and a heart")
 	level.queue_free()
 
 

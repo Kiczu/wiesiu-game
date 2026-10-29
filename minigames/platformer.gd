@@ -12,6 +12,7 @@ const SCREEN := Vector2(1280, 720)
 ## One character per tile:
 ## # ground   B crate   ? apple block (bump it from below)   = plank (jump through from below)
 ## a apple   x thorns   V Viking   C checkpoint   P start   D the drakkar (finish)
+## T treasure chest (open it with the sword)
 ## Crates break under the sword or a thrown apple and give apples.
 const LEVEL := [
 	"                                                                                                                                                                          ",
@@ -33,19 +34,21 @@ const LEVEL_KNIGHT := [
 	"                                                                                                                                ",
 	"                                                                                                                                ",
 	"                                                                                                                                ",
-	"                                                                 aaaa                                                           ",
+	"                                                                 aaaaT                                                          ",
 	"                                                   a            ######             a                                            ",
-	"                                       aaaB       ===           ######            ===     V   B                                 ",
+	"                                      TaaaB       ===           ######            ===     V   B                                 ",
 	"                  aa      a          ######   a                                       ##########                                ",
 	"                     V B ===         ######  ===                              ===     ##########  a  a             B V          ",
 	"      a a a      #######         B V ######                                           ##########  #  #           #####          ",
-	"  P           ##########     ##############             C    VBB      V   ===         ##########  #  #      V    #####   C  D   ",
+	"  P           ##########     ##############             C    VBB      V   ===         ##########  #  #      V  T #####   C  D   ",
 	"########################xxxxx##############            ##################             ##########xx#xx#xxx#######################",
 	"###########################################            ##################             ##########################################",
 ]
 const SOLID := "#B?X"
 ## Apples inside a broken crate.
 const CRATE_APPLES := 2
+## Apples in a treasure chest; it also gives back a lost heart.
+const CHEST_APPLES := 5
 const LIVES := 3
 const WALK_SPEED := 330.0
 const ACCELERATION := 2400.0
@@ -70,7 +73,7 @@ const LEVEL_ART_SETS := ["res://art/platformer/level_autor/", "res://art/platfor
 const AUDIO_DIR := "res://art/platformer/audio/"
 ## Drawn pictures for things in the level (<name>.png), each used when present.
 const ITEMS_DIR := "res://art/platformer/items/"
-const ITEMS := ["apple", "crate", "block", "block_used", "thorns", "flag", "flag_on", "drakkar", "heart", "heart_empty"]
+const ITEMS := ["apple", "crate", "block", "block_used", "thorns", "flag", "flag_on", "drakkar", "heart", "heart_empty", "chest", "chest_open"]
 ## Drawn hearts are small pixel art, shown this many times bigger.
 const HEART_SCALE := 3.0
 const SOUNDS := ["jump", "apple", "bump", "stomp", "hurt", "checkpoint", "win", "lose"]
@@ -495,6 +498,20 @@ func _break_crate(point: Vector2) -> void:
 		_effects.append({"kind": "apple", "pos": center + Vector2((i - 0.5) * 24.0, 0), "time": 0.0})
 
 
+## A chest hit by the sword opens (it stays as an open chest) and gives apples and a heart.
+func _open_chest(point: Vector2) -> void:
+	if tile_at(point) != "T":
+		return
+	_set_tile(point, "t")
+	apples += CHEST_APPLES
+	lives = mini(lives + 1, LIVES)
+	_play("checkpoint")
+	var center := Vector2((floori(point.x / TILE) + 0.5) * TILE, floori(point.y / TILE) * TILE)
+	for i in CHEST_APPLES:
+		_effects.append({"kind": "apple", "pos": center + Vector2((i - 2) * 18.0, (i % 2) * -12.0), "time": 0.0})
+	_hud.queue_redraw()
+
+
 ## Starts a sword swing in front of Wiesław.
 func attack() -> void:
 	if state != "" or _attack_cooldown > 0.0:
@@ -524,6 +541,7 @@ func _swing(delta: float) -> void:
 	for point in [blade.position + blade.size * Vector2(0.75, 0.2), blade.position + blade.size * Vector2(0.75, 0.6)]:
 		_bump_block(point)
 		_break_crate(point)
+		_open_chest(point)
 
 
 ## A Viking hit by the sword or an apple flashes and slides back; out of health, he falls over.
@@ -899,6 +917,16 @@ func _draw_tiles() -> void:
 					v.draw_texture(_items["crate"], at)
 				"?" when _items.has("block"):
 					v.draw_texture(_items["block"], at + Vector2(0, sin(_anim * 4.0) * 2.0))
+				"T", "t" when _items.has("chest"):
+					var texture: Texture2D = _items["chest_open" if map[row][col] == "t" and _items.has("chest_open") else "chest"]
+					v.draw_texture(texture, at + Vector2(0, TILE - texture.get_height()))
+				"T", "t":
+					var lid := Rect2(at + Vector2(6, 14), Vector2(52, 16))
+					if map[row][col] == "t":
+						lid.position.y -= 14
+					v.draw_rect(Rect2(at + Vector2(6, 30), Vector2(52, 34)), Color("9a5a2e"))
+					v.draw_rect(lid, Color("c08a4a"))
+					v.draw_rect(Rect2(at + Vector2(27, 28), Vector2(10, 12)), Color("f2c14e"))
 				"X" when _items.has("block_used"):
 					v.draw_texture(_items["block_used"], at)
 				"a" when _items.has("apple"):
