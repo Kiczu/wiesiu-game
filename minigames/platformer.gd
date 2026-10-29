@@ -71,7 +71,7 @@ const PLAYER_SIZE := Vector2(40, 92)
 const PIXEL_SCALE := 2
 ## Ready-made tiles and background layers, one set per folder: level.json names the files and how
 ## the layers scroll. L switches between the sets that are there and plain shapes.
-const LEVEL_ART_SETS := ["res://art/platformer/level_autor/", "res://art/platformer/level/"]
+const LEVEL_ART_SETS := ["res://art/platformer/level_kreskowka/", "res://art/platformer/level_autor/", "res://art/platformer/level/"]
 ## Music (music.ogg, looped) and sound effects (<name>.ogg) for the level, each used when present.
 const AUDIO_DIR := "res://art/platformer/audio/"
 ## Drawn pictures for things in the level (<name>.png), each used when present.
