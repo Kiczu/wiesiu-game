@@ -284,6 +284,7 @@ func _check_platformer() -> void:
 	level.use()
 	_check(level.tile_at(royal - Vector2(PlatformerGame.TILE, 0)) == "s" and level.apples == before_apples + PlatformerGame.ROYAL_APPLES and level.lives == PlatformerGame.LIVES, "platformer: the royal chest opens from either half for many apples and all hearts")
 	level.queue_free()
+	await _brothers_shop()
 	# Every campaign level is a rectangle with a start and a drakkar at the end, and loads.
 	for spec in PlatformerCampaign.levels():
 		var rows: Array = spec["map"]
@@ -299,6 +300,33 @@ func _check_platformer() -> void:
 		if spec["name"] == "Sad nocą":
 			await _climb_to_chest(stage)
 		stage.queue_free()
+
+
+## A brother sells a heart and a mug of nalewka for apples; with the mug a Viking does no harm.
+func _brothers_shop() -> void:
+	var rows: Array[String] = []
+	for i in 9:
+		rows.append(" ".repeat(20))
+	rows.append(" P  M    V       D  ")
+	rows.append("#".repeat(20))
+	rows.append("#".repeat(20))
+	var stage := PlatformerGame.new()
+	stage.level_map = rows
+	stage.auto_input = true
+	add_child(stage)
+	await _physics(5)
+	stage.player.position = stage.merchants[0]["node"].position - Vector2(50, 0)
+	stage.apples = 9
+	stage.lives = PlatformerGame.LIVES - 1
+	stage.use()
+	var open := not stage.shop.is_empty()
+	stage.buy("heart")
+	stage.buy("mug")
+	var bought := stage.lives == PlatformerGame.LIVES and stage.apples == 9 - PlatformerGame.HEART_PRICE - PlatformerGame.MUG_PRICE
+	stage.player.position = stage.vikings[0]["node"].position
+	await _physics(3)
+	_check(open and bought and stage.lives == PlatformerGame.LIVES and stage.shop.is_empty(), "platformer: a brother sells a heart and a mug, and with the mug a Viking does no harm")
+	stage.queue_free()
 
 
 ## In the orchard a ladder leads up to a plank with a chest: W grabs it and climbs, and at the top

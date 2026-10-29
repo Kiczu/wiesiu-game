@@ -6,7 +6,7 @@ extends Node2D
 ## (F6) to play it straight away.
 
 ## The palette's tiles from left to right, as map letters.
-const LETTERS := "#=BaxVCPDTSH"
+const LETTERS := "#=BaxVCPDTSHM"
 ## Levels are at least this many rows tall, so the camera always has a full screen.
 const MIN_ROWS := 12
 

@@ -13,7 +13,7 @@ const SCREEN := Vector2(1280, 720)
 ## # ground   B crate   = plank (jump through from below)
 ## a apple   x thorns   V Viking   C checkpoint   P start   D the drakkar (finish)
 ## T treasure chest (open it with F)   S royal chest, two tiles wide (leave the tile on its right empty)
-## H ladder (W and S climb it, A or D steps off)
+## H ladder (W and S climb it, A or D steps off)   M one of Wiesław's brothers, who sells things for apples (F)
 ## Crates break under the sword or a thrown apple and give apples.
 const LEVEL := [
 	"                                                                                                                                                                          ",
@@ -53,6 +53,11 @@ const NIGHT_TINT := Color(0.5, 0.56, 0.86)
 const CHEST_APPLES := 5
 ## Apples in the royal chest; it also fills every heart.
 const ROYAL_APPLES := 15
+## What the brothers sell, for apples: a heart, and a mug of nalewka that keeps Wiesław from harm for a while.
+const HEART_PRICE := 5
+const MUG_PRICE := 3
+const MUG_TIME := 2.0
+const BROTHERS := ["Lesław", "Czesław"]
 const LIVES := 3
 const WALK_SPEED := 330.0
 const ACCELERATION := 2400.0
@@ -123,6 +128,10 @@ var level_name := ""
 
 var player: CharacterBody2D
 var vikings: Array[Dictionary] = []
+## The brothers in the level: {"node", "name"}.
+var merchants: Array[Dictionary] = []
+## The brother whose offer is shown, or empty.
+var shop := {}
 var map: Array[String] = []
 var checkpoint := Vector2.ZERO
 
@@ -177,6 +186,8 @@ var _solid: StaticBody2D
 ## Apples in flight: position, velocity, time in the air.
 var _thrown: Array[Dictionary] = []
 var _look := 0.0
+## Time left on the mug of nalewka: nothing hurts Wiesław.
+var _shield := 0.0
 ## Whether Wiesław is holding on to a ladder.
 var _climbing := false
 
@@ -254,6 +265,9 @@ func restart() -> void:
 	_throw_cooldown = 0.0
 	_thrown.clear()
 	_climbing = false
+	_shield = 0.0
+	shop = {}
+	merchants.clear()
 	vikings.clear()
 	if not level_map.is_empty():
 		map.assign(level_map)
@@ -275,6 +289,8 @@ func restart() -> void:
 					checkpoint = at
 				"V":
 					_add_viking(at)
+				"M":
+					_add_merchant(at)
 				"D":
 					_add_drakkar(at)
 	_add_player()
@@ -432,6 +448,12 @@ func _physics_process(delta: float) -> void:
 	if auto_input and input_throw:
 		throw_apple()
 	_swing(delta)
+	_shield = maxf(_shield - delta, 0.0)
+	_wieslaw.modulate = Color(1.35, 1.2, 0.6) if _shield > 0.0 else Color.WHITE
+	if not shop.is_empty() and _merchant_near() != shop:
+		shop = {}
+	for merchant in merchants:
+		merchant["node"].set("facing", 1 if player.position.x > merchant["node"].position.x else -1)
 	_fly_apples(delta)
 	_move_vikings(delta)
 	_check_touches()
@@ -552,13 +574,64 @@ func _chest_near() -> Vector2:
 	return Vector2.INF
 
 
-## F: opens the chest Wiesław stands at.
+## F: talks to the brother Wiesław stands at (or says goodbye), or opens the chest he stands at.
 func use() -> void:
 	if state != "" or not player:
+		return
+	var merchant := _merchant_near()
+	if not merchant.is_empty():
+		shop = {} if shop == merchant else merchant
 		return
 	var chest := _chest_near()
 	if chest != Vector2.INF:
 		_open_chest(chest)
+
+
+## The brother Wiesław stands next to, or an empty dictionary.
+func _merchant_near() -> Dictionary:
+	for merchant in merchants:
+		var offset: Vector2 = merchant["node"].position - player.position
+		if absf(offset.x) < 90.0 and absf(offset.y) < 40.0:
+			return merchant
+	return {}
+
+
+## Buys from the brother whose offer is shown: "heart" (only with a heart to fill) or "mug".
+func buy(item: String) -> void:
+	if shop.is_empty():
+		return
+	var price := HEART_PRICE if item == "heart" else MUG_PRICE
+	if apples < price or (item == "heart" and lives >= LIVES):
+		_play("bump")
+		return
+	apples -= price
+	if item == "heart":
+		lives += 1
+	else:
+		_shield = MUG_TIME
+	_play("checkpoint")
+	_hud.queue_redraw()
+
+
+## A brother stands at his stall facing the way Wiesław comes from, with his name over him.
+func _add_merchant(at: Vector2) -> void:
+	var color := Color("4f7a3a") if merchants.size() % 2 == 0 else Color("b0302a")
+	var body: Node2D
+	if CutoutCharacter.has_frames():
+		var drawn := CutoutCharacter.new()
+		drawn.robe_color = color
+		drawn.scale = Vector2(0.84, 0.84)
+		body = drawn
+	else:
+		var placeholder := Character.new()
+		placeholder.body_color = color
+		placeholder.scale = Vector2(0.6, 0.6)
+		body = placeholder
+	body.position = at
+	body.set("facing", -1)
+	_level.add_child(body)
+	_level.move_child(body, _tiles.get_index() + 1)
+	merchants.append({"node": body, "name": BROTHERS[merchants.size() % BROTHERS.size()]})
 
 
 ## A crate hit by the sword or an apple breaks and lets its apples out.
@@ -764,7 +837,7 @@ func _squash(node: Node2D) -> void:
 
 
 func _hit(fell: bool) -> void:
-	if _hurt > 0.0 and not fell:
+	if (_hurt > 0.0 or _shield > 0.0) and not fell:
 		return
 	lives -= 1
 	_hurt = HURT_TIME
@@ -798,6 +871,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif event is InputEventKey and event.physical_keycode == KEY_L and _art_sets.size() > 1:
 		next_art_set()
+		get_viewport().set_input_as_handled()
+	elif not shop.is_empty() and event is InputEventKey and event.physical_keycode in [KEY_1, KEY_2]:
+		buy("heart" if event.physical_keycode == KEY_1 else "mug")
 		get_viewport().set_input_as_handled()
 	elif state == "" and event is InputEventKey and event.physical_keycode == KEY_F:
 		use()
@@ -1125,11 +1201,20 @@ func _process(delta: float) -> void:
 	_move_particles(delta)
 
 
-## A small key in a bubble over a chest Wiesław can open with F.
+## A small key in a bubble over a chest Wiesław can open or a brother he can talk to with F,
+## the brother's offer while it is open, and a golden glow while the nalewka works.
 func _draw_key_hints() -> void:
 	if state != "" or not player:
 		return
+	if _shield > 0.0:
+		var glow := player.position + Vector2(0, -PLAYER_SIZE.y / 2)
+		_hints.draw_arc(glow, 70.0 + sin(_anim * 12.0) * 4.0, 0.0, TAU, 40, Color(1, 0.85, 0.3, 0.35 + 0.25 * minf(_shield, 1.0)), 6.0)
 	var hints := []
+	var merchant := _merchant_near()
+	if not shop.is_empty():
+		_draw_offer(shop)
+	elif not merchant.is_empty():
+		hints.append(["F", merchant["node"].position + Vector2(0, -150)])
 	var chest := _chest_near()
 	if chest != Vector2.INF:
 		# Over the chest, or over Wiesław's head when he stands in front of it.
@@ -1139,6 +1224,23 @@ func _draw_key_hints() -> void:
 		_hints.draw_circle(at, 17, Color(1, 1, 1, 0.9))
 		_hints.draw_arc(at, 17, 0.0, TAU, 24, Color("2b1d14"), 3.0)
 		_hints.draw_string(ThemeDB.fallback_font, at + Vector2(-17, 8), hint[0], HORIZONTAL_ALIGNMENT_CENTER, 34, 22, Color("2b1d14"))
+
+
+func _draw_offer(merchant: Dictionary) -> void:
+	var ink := Color("2b1d14")
+	var font := ThemeDB.fallback_font
+	var lines := [merchant["name"] + ":",
+		"1: serce, %d jabłek" % HEART_PRICE,
+		"2: kufel nalewki (nic Cię nie rusza), %d jabłka" % MUG_PRICE,
+		"F: do widzenia"]
+	var box := Rect2(merchant["node"].position + Vector2(-270, -290), Vector2(540, 128))
+	_hints.draw_rect(box, Color(1, 0.98, 0.9, 0.95))
+	_hints.draw_rect(box, ink, false, 3.0)
+	_hints.draw_colored_polygon(PackedVector2Array([box.position + Vector2(250, 128), box.position + Vector2(290, 128), box.position + Vector2(270, 150)]), Color(1, 0.98, 0.9, 0.95))
+	for i in lines.size():
+		var full := i == 1 and lives >= LIVES
+		var color := Color(ink, 0.4) if full or (i == 1 and apples < HEART_PRICE) or (i == 2 and apples < MUG_PRICE) else ink
+		_hints.draw_string(font, box.position + Vector2(16, 30 + i * 28), lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 22, color)
 
 
 ## A soft round shadow on the ground under a character; smaller and fainter the higher it is.
@@ -1289,7 +1391,7 @@ func _draw_hud() -> void:
 		v.draw_string(font, Vector2(0, 300), level_name, HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 56, Color(ink, fade))
 	var message := ""
 	if state == "" and player and player.position.x < 900.0:
-		message = "A/D: chodzenie     W: skok, w powietrzu jeszcze raz     W/S przy drabinie: wspinanie\nSpacja albo klik: miecz     E albo prawy klik: rzut jabłkiem     F: otwieranie skrzyń"
+		message = "A/D: chodzenie     W: skok, w powietrzu jeszcze raz     W/S przy drabinie: wspinanie\nSpacja albo klik: miecz     E albo prawy klik: rzut jabłkiem     F: skrzynie i rozmowa"
 	elif state == "lost":
 		message = "Ojej, Wiesław stracił wszystkie serduszka!\nSpacja albo klik: jeszcze raz"
 	elif state == "won":
