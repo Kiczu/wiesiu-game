@@ -68,9 +68,10 @@ const JUMP_BUFFER := 0.12
 const HURT_TIME := 1.5
 const VIKING_SPEED := 70.0
 const PLAYER_SIZE := Vector2(40, 92)
-## Ready-made tiles and background layers: level.json names the files and how the layers scroll.
-## Without it the level is drawn with plain shapes.
-const LEVEL_ART_DIR := "res://art/platformer/level_kreskowka/"
+## Ready-made tiles and background layers, one set per folder: level.json names the files and how
+## the layers scroll. L switches between the sets that are there; without any the level is drawn
+## with plain shapes.
+const LEVEL_ART_SETS := ["res://art/platformer/level_kreskowka/", "res://art/platformer/level_piksele/"]
 ## Music (music.ogg, looped) and sound effects (<name>.ogg) for the level, each used when present.
 const AUDIO_DIR := "res://art/platformer/audio/"
 ## Drawn pictures for things in the level (<name>.png), each used when present.
@@ -135,6 +136,9 @@ var _hud: Node2D
 var _background: Node2D
 ## The art set in use: {"scale", "tiles": {name: Texture2D}, "background": [{texture, mirrored, speed, follow, top, bottom, gap}]}.
 var _art := {}
+var _art_sets: Array[Dictionary] = []
+## Kept for the next levels.
+static var _art_index := 0
 var _sounds := {}
 var _players: Array[AudioStreamPlayer] = []
 var _music: AudioStreamPlayer
@@ -799,6 +803,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif state == "" and ((event is InputEventKey and event.physical_keycode == KEY_E) or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT)):
 		throw_apple()
 		get_viewport().set_input_as_handled()
+	elif event is InputEventKey and event.physical_keycode == KEY_L and _art_sets.size() > 1:
+		next_art_set()
+		get_viewport().set_input_as_handled()
 	elif state == "" and event is InputEventKey and event.physical_keycode == KEY_F:
 		use()
 		get_viewport().set_input_as_handled()
@@ -874,8 +881,20 @@ func _stop_music() -> void:
 
 func _load_art() -> void:
 	_background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	if FileAccess.file_exists(LEVEL_ART_DIR + "level.json"):
-		_art = _load_art_set(LEVEL_ART_DIR)
+	for dir in LEVEL_ART_SETS:
+		if FileAccess.file_exists(dir + "level.json"):
+			_art_sets.append(_load_art_set(dir))
+	if not _art_sets.is_empty():
+		_art = _art_sets[_art_index % _art_sets.size()]
+
+
+## Next art set.
+func next_art_set() -> void:
+	if _art_sets.is_empty():
+		return
+	_art_index = (_art_index + 1) % _art_sets.size()
+	_art = _art_sets[_art_index]
+	_redraw()
 
 
 func _load_art_set(dir: String) -> Dictionary:
@@ -1279,6 +1298,8 @@ func _draw_hud() -> void:
 	var modes: Array[String] = []
 	if _music:
 		modes.append("M: muzyka %s" % ("wł." if music_on else "wył."))
+	if _art_sets.size() > 1:
+		modes.append("L: grafika")
 	if level_map.is_empty():
 		modes.append("N: plansza %s" % ("rycerska" if layout == "knight" else "mario"))
 	var mode := "     ".join(modes)
