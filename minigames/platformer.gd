@@ -154,8 +154,6 @@ static var _art_index := 0
 var _sounds := {}
 var _players: Array[AudioStreamPlayer] = []
 var _music: AudioStreamPlayer
-## Music is off until M turns it on; it stays as chosen for the next levels.
-static var music_on := false
 var _back: CanvasLayer
 ## The level is drawn into its own viewport, so it can be tinted as a whole (night).
 var _world: SubViewport
@@ -246,6 +244,7 @@ func _ready() -> void:
 		return
 	if get_parent() == get_tree().root:
 		# Run on its own (F6 in the editor): play again after the finish.
+		Game.load_settings()
 		finished.connect(restart)
 	restart()
 
@@ -305,7 +304,7 @@ func restart() -> void:
 	_hints = Node2D.new()
 	_hints.draw.connect(_draw_key_hints)
 	_level.add_child(_hints)
-	if _music and music_on and not _music.playing:
+	if _music and Game.sound == "all" and not _music.playing:
 		_music.play()
 	set_physics_process(true)
 
@@ -907,11 +906,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		layout = "mario" if layout == "knight" else "knight"
 		restart()
 		get_viewport().set_input_as_handled()
-	elif event is InputEventKey and event.physical_keycode == KEY_M and _music:
-		music_on = not music_on
-		if music_on and state == "":
+	elif event is InputEventKey and event.physical_keycode == KEY_M and (_music or not _sounds.is_empty()):
+		# Sounds alone, then silence, then sounds with music (when there is music), and round again.
+		var order := ["sounds", "silent", "all"] if _music else ["sounds", "silent"]
+		Game.sound = order[(order.find(Game.sound) + 1) % order.size()]
+		Game.save_settings()
+		if _music and Game.sound == "all" and state == "":
 			_music.play()
-		else:
+		elif _music:
 			_music.stop()
 		_hud.queue_redraw()
 		get_viewport().set_input_as_handled()
@@ -954,7 +956,7 @@ func _load_audio() -> void:
 
 
 func _play(sound: String) -> void:
-	if not _sounds.has(sound):
+	if Game.sound == "silent" or not _sounds.has(sound):
 		return
 	for player_node in _players:
 		if not player_node.playing:
@@ -1401,8 +1403,8 @@ func _draw_hud() -> void:
 	v.draw_string_outline(font, apples_at, "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, 6, halo)
 	v.draw_string(font, apples_at, "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, ink)
 	var modes: Array[String] = []
-	if _music:
-		modes.append("M: muzyka %s" % ("wł." if music_on else "wył."))
+	if _music or not _sounds.is_empty():
+		modes.append("M: %s" % {"silent": "cisza", "all": "muzyka i dźwięki"}.get(Game.sound, "same dźwięki"))
 	if _art_sets.size() > 1:
 		modes.append("L: grafika")
 	if level_map.is_empty():

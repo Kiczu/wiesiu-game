@@ -42,6 +42,7 @@ func _ready() -> void:
 	if get_parent() != get_tree().root:
 		return
 	# Run on its own (F6): play the painted level.
+	Game.load_settings()
 	$Map.hide()
 	var stage := PlatformerGame.new()
 	stage.level_map = to_rows()
