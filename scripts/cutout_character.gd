@@ -11,8 +11,9 @@ const OUTLINE := Color("2b1d14")
 const ART_SETS := {"smooth": "res://art/platformer/wieslaw/"}
 ## Ready-made animation frames: frames.json lists, for each pose, its fps, whether it loops and
 ## its frames, each with the point of the image that stands on the ground. The first set that is
-## there is used: the author's side view, then the chibi.
-const ANIM_DIRS := ["res://art/platformer/wieslaw_bok/", "res://art/platformer/wieslaw_chibi/"]
+## there is used: the full-size frames made from the author's drawing, the side view cut from it,
+## then the chibi.
+const ANIM_DIRS := ["res://art/platformer/wieslaw_klatki/", "res://art/platformer/wieslaw_bok/", "res://art/platformer/wieslaw_chibi/"]
 ## Parts drawn behind the body.
 const ART_BEHIND := ["arm_far", "foot_far", "foot_near"]
 ## Height of the drawn Wiesław in pixels, before the scale the game gives the puppet.
@@ -153,7 +154,8 @@ static func anim_dir() -> String:
 func _build_anim(spec: Dictionary) -> void:
 	_anim_sprite = Sprite2D.new()
 	_anim_sprite.centered = false
-	_anim_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	# Frames drawn bigger than they show are smoothed when scaled down, the rest keep hard pixels.
+	_anim_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR if spec.get("smooth", false) else CanvasItem.TEXTURE_FILTER_NEAREST
 	_anim_sprite.scale = Vector2.ONE * ART_HEIGHT / spec["height"]
 	add_child(_anim_sprite)
 	if robe_color.a > 0.0:

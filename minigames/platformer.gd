@@ -59,6 +59,8 @@ const ROYAL_APPLES := 15
 const HEART_PRICE := 25
 const MUG_PRICE := 40
 const MUG_TIME := 2.0
+## How long he stands drinking from the mug, when that is drawn.
+const DRINK_TIME := 0.6
 const BROTHERS := ["Lesław", "Czesław"]
 const LIVES := 3
 const WALK_SPEED := 330.0
@@ -541,6 +543,8 @@ func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 		_wieslaw.pose = "hurt"
 	elif _attack > 0.0 and _wieslaw.has_pose("attack"):
 		_wieslaw.pose = "attack"
+	elif _shield > MUG_TIME - DRINK_TIME and _wieslaw.has_drawn_pose("drink") and player.is_on_floor() and absf(player.get_real_velocity().x) < 20.0:
+		_wieslaw.pose = "drink"
 	elif not player.is_on_floor():
 		_wieslaw.pose = "jump" if player.velocity.y < 0.0 else "fall"
 	else:
