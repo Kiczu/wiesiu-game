@@ -544,7 +544,8 @@ func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 	elif not player.is_on_floor():
 		_wieslaw.pose = "jump" if player.velocity.y < 0.0 else "fall"
 	else:
-		_wieslaw.pose = "run" if absf(player.velocity.x) > 20.0 else "idle"
+		# Pushing against a wall he stands still, so the run stops too.
+		_wieslaw.pose = "run" if absf(player.get_real_velocity().x) > 20.0 else "idle"
 	_stretch = _stretch.lerp(Vector2.ONE, minf(delta * 12.0, 1.0))
 	_wieslaw.scale = Vector2(0.84 * _stretch.x * _wieslaw.facing, 0.84 * _stretch.y)
 	# Without a drawn swing, he leans into the blow.

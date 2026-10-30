@@ -286,6 +286,7 @@ func _check_platformer() -> void:
 	level.queue_free()
 	await _brothers_shop()
 	await _crates_both_sides()
+	await _eye_grabbed_early()
 	await _eye_boss()
 	# Every campaign level is a rectangle with a start and a drakkar at the end, and loads.
 	for spec in PlatformerCampaign.levels():
@@ -305,6 +306,45 @@ func _check_platformer() -> void:
 
 
 ## A brother sells a heart and a mug of nalewka for apples; with the mug a Viking does no harm.
+## Knocking the blind Viking down drops the eye, and Wiesław wins by grabbing it before the other
+## Viking gets there. Running into a wall, he stops running.
+func _eye_grabbed_early() -> void:
+	var rows: Array[String] = []
+	for i in 9:
+		rows.append(" ".repeat(30))
+	rows.append(" P            O              #")
+	rows.append("#".repeat(30))
+	rows.append("#".repeat(30))
+	var stage := PlatformerGame.new()
+	stage.level_map = rows
+	stage.auto_input = true
+	add_child(stage)
+	await _physics(5)
+	var boss: EyeBoss = stage._boss
+	stage._shield = 99.0
+	var blind: int = 1 - boss.holder
+	boss.holder = -1
+	while boss.vikings[blind]["health"] > 0:
+		boss.vikings[blind]["stun"] = 0.0
+		boss.strike(boss.rect_of(blind), 1.0, stage.sword_damage)
+	stage.player.position = boss.eye + Vector2(0, 40)
+	await _physics(3)
+	_check(boss.won and stage.state == "won", "platformer: grabbing the dropped eye wins even with a Viking still up")
+	stage.queue_free()
+	rows[9] = " P                   #        "
+	stage = PlatformerGame.new()
+	stage.level_map = rows
+	stage.auto_input = true
+	add_child(stage)
+	await _physics(5)
+	stage.input_x = 1.0
+	await _physics(240)
+	var pose: String = stage._wieslaw.pose
+	stage.input_x = 0.0
+	_check(pose == "idle" and stage.player.is_on_wall(), "platformer: pushing against a wall he stands still (%s)" % pose)
+	stage.queue_free()
+
+
 ## The sword breaks a crate on either side of Wiesław.
 func _crates_both_sides() -> void:
 	var rows: Array[String] = []

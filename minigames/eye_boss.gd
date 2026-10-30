@@ -129,7 +129,8 @@ func step(delta: float) -> void:
 		else:
 			eye = _from.lerp(_head(_to), _flight) + Vector2(0, -ARC * 4.0 * _flight * (1.0 - _flight))
 	var me := Rect2(game.player.position - Vector2(PlatformerGame.PLAYER_SIZE.x / 2, PlatformerGame.PLAYER_SIZE.y), PlatformerGame.PLAYER_SIZE)
-	if _on_ground and not _standing(0) and not _standing(1) and me.grow(EYE_RADIUS).has_point(eye):
+	# The eye on the ground is Wiesław's as soon as he gets to it, before any Viking does.
+	if _on_ground and me.grow(EYE_RADIUS).has_point(eye):
 		_catch()
 		return
 	# Only the one who sees can hurt Wiesław; the blind one does not know where he is.
