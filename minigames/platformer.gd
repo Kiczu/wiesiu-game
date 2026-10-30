@@ -14,6 +14,7 @@ const SCREEN := Vector2(1280, 720)
 ## a apple   x thorns   V Viking   C checkpoint   P start   D the drakkar (finish)
 ## T treasure chest (open it with F)   S royal chest, two tiles wide (leave the tile on its right empty)
 ## H ladder (W and S climb it, A or D steps off)   M one of Wiesław's brothers, who sells things for apples (F)
+## O the two Vikings with one eye (catch the eye to win; no drakkar needed)
 ## Crates break under the sword or a thrown apple and give apples.
 const LEVEL := [
 	"                                                                                                                                                                          ",
@@ -132,6 +133,8 @@ var vikings: Array[Dictionary] = []
 var merchants: Array[Dictionary] = []
 ## The brother whose offer is shown, or empty.
 var shop := {}
+## The fight for the magic eye, when the level has one.
+var _boss: EyeBoss
 var map: Array[String] = []
 var checkpoint := Vector2.ZERO
 
@@ -267,6 +270,7 @@ func restart() -> void:
 	_climbing = false
 	_shield = 0.0
 	shop = {}
+	_boss = null
 	merchants.clear()
 	vikings.clear()
 	if not level_map.is_empty():
@@ -291,6 +295,10 @@ func restart() -> void:
 					_add_viking(at)
 				"M":
 					_add_merchant(at)
+				"O":
+					_boss = EyeBoss.new(self, at)
+					_level.add_child(_boss)
+					_boss.caught.connect(_win)
 				"D":
 					_add_drakkar(at)
 	_add_player()
@@ -456,6 +464,8 @@ func _physics_process(delta: float) -> void:
 		merchant["node"].set("facing", 1 if player.position.x > merchant["node"].position.x else -1)
 	_fly_apples(delta)
 	_move_vikings(delta)
+	if _boss:
+		_boss.step(delta)
 	_check_touches()
 	_redraw()
 
@@ -613,6 +623,20 @@ func buy(item: String) -> void:
 	_hud.queue_redraw()
 
 
+func _win() -> void:
+	if state != "":
+		return
+	state = "won"
+	_stop_music()
+	_play("win")
+	Game.set_flag("jablka_proba", apples)
+
+
+## A Viking of the eye fight runs into Wiesław.
+func hurt_by_boss() -> void:
+	_hit(false)
+
+
 ## A brother stands at his stall facing the way Wiesław comes from, with his name over him.
 func _add_merchant(at: Vector2) -> void:
 	var color := Color("4f7a3a") if merchants.size() % 2 == 0 else Color("b0302a")
@@ -713,6 +737,8 @@ func _swing(delta: float) -> void:
 			continue
 		_struck.append(node)
 		_strike(viking, facing)
+	if _boss:
+		_boss.strike(blade, facing)
 	for point in [blade.position + blade.size * Vector2(0.75, 0.2), blade.position + blade.size * Vector2(0.75, 0.6)]:
 		_break_crate(point)
 
@@ -763,6 +789,8 @@ func _fly_apples(delta: float) -> void:
 			if not spent and Rect2(viking["node"].position - Vector2(24, 80), Vector2(48, 80)).grow(10).has_point(at):
 				_strike(viking, signf(apple["vel"].x))
 				spent = true
+		if not spent and _boss and not _boss.won:
+			spent = _boss.knock_eye(at) or _boss.strike(Rect2(at - Vector2(10, 10), Vector2(20, 20)), signf(apple["vel"].x))
 		var tile := tile_at(at)
 		if not spent and tile in SOLID:
 			_break_crate(at)
@@ -808,10 +836,7 @@ func _check_touches() -> void:
 				_play("checkpoint")
 				_set_tile(corner, "c")
 			"D":
-				state = "won"
-				_stop_music()
-				_play("win")
-				Game.set_flag("jablka_proba", apples)
+				_win()
 				return
 	for viking in vikings.duplicate():
 		var node: Node2D = viking["node"]
@@ -1390,10 +1415,14 @@ func _draw_hud() -> void:
 		v.draw_string_outline(font, Vector2(0, 300), level_name, HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 56, 10, Color(halo, fade))
 		v.draw_string(font, Vector2(0, 300), level_name, HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 56, Color(ink, fade))
 	var message := ""
-	if state == "" and player and player.position.x < 900.0:
+	if state == "" and _boss:
+		message = "Dwaj Wikingowie i jedno oko! Złap oko, kiedy leci.\nJabłko trafione w lecące oko strąca je na ziemię."
+	elif state == "" and player and player.position.x < 900.0:
 		message = "A/D: chodzenie     W: skok, w powietrzu jeszcze raz     W/S przy drabinie: wspinanie\nSpacja albo klik: miecz     E albo prawy klik: rzut jabłkiem     F: skrzynie i rozmowa"
 	elif state == "lost":
 		message = "Ojej, Wiesław stracił wszystkie serduszka!\nSpacja albo klik: jeszcze raz"
+	elif state == "won" and _boss:
+		message = "Oko jest Wieśka! Wikingowie oddają jabłka i drakkar."
 	elif state == "won":
 		message = "Hop! Wiesław dogonił drakkar!"
 	if message != "":

@@ -285,6 +285,7 @@ func _check_platformer() -> void:
 	_check(level.tile_at(royal - Vector2(PlatformerGame.TILE, 0)) == "s" and level.apples == before_apples + PlatformerGame.ROYAL_APPLES and level.lives == PlatformerGame.LIVES, "platformer: the royal chest opens from either half for many apples and all hearts")
 	level.queue_free()
 	await _brothers_shop()
+	await _eye_boss()
 	# Every campaign level is a rectangle with a start and a drakkar at the end, and loads.
 	for spec in PlatformerCampaign.levels():
 		var rows: Array = spec["map"]
@@ -296,7 +297,7 @@ func _check_platformer() -> void:
 		stage.auto_input = true
 		add_child(stage)
 		await _physics(5)
-		_check(same_width and joined.count("P") == 1 and joined.contains("D") and stage.player.is_on_floor(), "platformer: campaign level %s loads" % spec["name"])
+		_check(same_width and joined.count("P") == 1 and (joined.contains("D") or joined.contains("O")) and stage.player.is_on_floor(), "platformer: campaign level %s loads" % spec["name"])
 		if spec["name"] == "Sad nocą":
 			await _climb_to_chest(stage)
 		stage.queue_free()
@@ -326,6 +327,34 @@ func _brothers_shop() -> void:
 	stage.player.position = stage.vikings[0]["node"].position
 	await _physics(3)
 	_check(open and bought and stage.lives == PlatformerGame.LIVES and stage.shop.is_empty(), "platformer: a brother sells a heart and a mug, and with the mug a Viking does no harm")
+	stage.queue_free()
+
+
+## The two Vikings toss their one eye; an apple knocks the flying eye down, and Wiesław wins by
+## picking it up (or catching it in the air).
+func _eye_boss() -> void:
+	var rows: Array[String] = []
+	for i in 9:
+		rows.append(" ".repeat(30))
+	rows.append(" P            O               ")
+	rows.append("#".repeat(30))
+	rows.append("#".repeat(30))
+	var stage := PlatformerGame.new()
+	stage.level_map = rows
+	stage.auto_input = true
+	add_child(stage)
+	await _physics(5)
+	var boss: EyeBoss = stage._boss
+	boss._hold = 0.0
+	await _physics(2)
+	var tossed := boss.holder == -1
+	await _physics(30)
+	var knocked := boss.knock_eye(boss.eye)
+	stage.lives = PlatformerGame.LIVES
+	stage._shield = 5.0
+	stage.player.position = boss.eye + Vector2(0, 40)
+	await _physics(3)
+	_check(tossed and knocked and boss.won and stage.state == "won", "platformer: the Vikings toss their eye, an apple knocks it down and Wiesław takes it")
 	stage.queue_free()
 
 

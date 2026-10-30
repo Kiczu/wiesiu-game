@@ -38,6 +38,13 @@ static func intro_pages() -> Array:
 				"chars": [_with(WIESLAW, {"pos": Vector2(290, 500)})],
 				"say": {"who": 0, "text": "A wy dokąd?! Stać, złodzieje!"}},
 		],
+		[
+			{"caption": "Drakkar wylądował na polanie. Wikingowie mieli jedno oko na dwóch.",
+				"chars": [_with(WIKING_A, {"pos": Vector2(220, 500)}), _with(WIKING_B, {"pos": Vector2(380, 500)})],
+				"say": {"who": 1, "text": "Daj oko, teraz moja kolej patrzeć!"}},
+			{"chars": [_with(WIESLAW, {"pos": Vector2(290, 500)})],
+				"say": {"who": 0, "text": "Jak złapię to oko, będziecie tańczyć, jak ja zagram!"}},
+		],
 	]
 
 
