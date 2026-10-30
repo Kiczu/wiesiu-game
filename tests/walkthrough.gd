@@ -382,25 +382,42 @@ func _eye_boss() -> void:
 	stage.queue_free()
 
 
-## In the orchard a ladder leads up to a plank with a chest: W grabs it and climbs, and at the top
-## Wiesław hops onto the plank, where F opens the chest.
+## In the orchard a ladder goes down through the ground into the cellar, where F opens a chest,
+## and another ladder leads back up: S climbs down from the top, W climbs up and hops off.
 func _climb_to_chest(stage: PlatformerGame) -> void:
 	var rows: Array = stage.level_map
-	var col: int = rows[9].find("H", 20)
-	stage.player.position = Vector2((col + 0.5) * PlatformerGame.TILE, 10 * PlatformerGame.TILE)
+	var tile := float(PlatformerGame.TILE)
+	var surface := -1
+	for row in rows.size():
+		if rows[row].contains("P"):
+			surface = row
+	var down: int = rows[surface + 1].find("H")
+	var up: int = rows[surface + 1].find("H", down + 1)
+	var floor_row := surface + 1
+	while rows[floor_row + 1][down] != "#":
+		floor_row += 1
+	stage.player.position = Vector2((down + 0.5) * tile, (surface + 1) * tile)
+	await _physics(2)
+	stage.input_climb = 1.0
+	await _physics(150)
+	stage.input_climb = 0.0
+	await _physics(20)
+	var in_cellar: bool = stage.player.position.y > (floor_row + 0.5) * tile and stage.player.is_on_floor()
+	var chest_col: int = rows[floor_row].find("T")
+	stage.player.position = Vector2((chest_col - 0.5) * tile, (floor_row + 1) * tile)
+	await _physics(5)
+	stage.use()
+	var opened := stage.tile_at(Vector2((chest_col + 0.5) * tile, (floor_row + 0.5) * tile)) == "t"
+	stage.player.position = Vector2((up + 0.5) * tile, (floor_row + 1) * tile)
 	await _physics(2)
 	stage.input_climb = -1.0
 	stage.input_jump = true
-	await _physics(2)
-	var grabbed := stage._climbing
-	await _physics(90)
+	await _physics(150)
 	stage.input_climb = 0.0
 	stage.input_jump = false
-	await _physics(30)
+	await _physics(40)
 	var top := stage.player.position.y
-	stage.use()
-	var chest := Vector2((col + 0.5) * PlatformerGame.TILE, 4.5 * PlatformerGame.TILE)
-	_check(grabbed and not stage._climbing and stage.player.is_on_floor() and top <= 5 * PlatformerGame.TILE + 1 and stage.tile_at(chest) == "t", "platformer: W climbs a ladder up to a chest that F opens (%d)" % top)
+	_check(in_cellar and opened and not stage._climbing and stage.player.is_on_floor() and top <= (surface + 1) * tile + 1, "platformer: S climbs down into the cellar, F opens its chest, W climbs back up (%d)" % top)
 
 
 func _physics(frames: int) -> void:

@@ -408,12 +408,12 @@ func _build_collision() -> void:
 		var col := 0
 		while col < map[row].length():
 			var kind := map[row][col]
-			var plank := kind == "="
+			var plank := _is_plank(row, col)
 			if not (plank or kind in SOLID):
 				col += 1
 				continue
 			var start := col
-			while col < map[row].length() and (map[row][col] == "=" if plank else map[row][col] in SOLID):
+			while col < map[row].length() and (_is_plank(row, col) if plank else map[row][col] in SOLID):
 				col += 1
 			var shape := CollisionShape2D.new()
 			shape.shape = RectangleShape2D.new()
@@ -422,6 +422,16 @@ func _build_collision() -> void:
 			shape.position = Vector2((start + col) * TILE / 2.0, row * TILE + height / 2)
 			shape.one_way_collision = plank
 			body.add_child(shape)
+
+
+## Planks, and the top of a ladder that goes down through the ground, can be stood on and passed
+## from below.
+func _is_plank(row: int, col: int) -> bool:
+	if map[row][col] == "=":
+		return true
+	if map[row][col] != "H" or (row > 0 and map[row - 1][col] == "H"):
+		return false
+	return (col > 0 and map[row][col - 1] == "#") or (col + 1 < map[row].length() and map[row][col + 1] == "#")
 
 
 func tile_at(point: Vector2) -> String:
@@ -1114,6 +1124,19 @@ func _draw_background() -> void:
 		v.draw_circle(Vector2(x, 450), 60, Color("9cc58d"))
 
 
+## Whether there is ground in this column at or above the row.
+func _ground_above(row: int, col: int) -> bool:
+	for above in range(row, -1, -1):
+		if map[above][col] == "#" or _shaft(above, col):
+			return true
+	return false
+
+
+## A ladder going down through the ground.
+func _shaft(row: int, col: int) -> bool:
+	return map[row][col] == "H" and col > 0 and map[row][col - 1] == "#"
+
+
 func _draw_tiles() -> void:
 	var v := _tiles
 	var ink := Color("2b1d14")
@@ -1123,13 +1146,23 @@ func _draw_tiles() -> void:
 	for col in range(span.x, mini(span.y, map[bottom].length())):
 		if map[bottom][col] != "#":
 			v.draw_rect(Rect2(col * TILE, (bottom - 1) * TILE + 16, TILE, 3 * TILE), Color("3b2a1f"))
+	# Caves: a dark back wall wherever there is ground somewhere overhead.
+	for col in range(span.x, mini(span.y, map[0].length())):
+		var under_ground := false
+		for row in map.size():
+			if map[row][col] == "#":
+				under_ground = true
+			elif under_ground or _shaft(row, col):
+				under_ground = true
+				v.draw_rect(Rect2(col * TILE, row * TILE, TILE, TILE), Color("2a1d16"))
 	for row in map.size():
 		for col in range(span.x, mini(span.y, map[row].length())):
 			var at := Vector2(col * TILE, row * TILE)
 			var cell := Rect2(at, Vector2(TILE, TILE))
 			match map[row][col]:
 				"#":
-					var top := row == 0 or map[row - 1][col] != "#"
+					# Grass only under the open sky, not on a cave floor.
+					var top := row == 0 or (map[row - 1][col] != "#" and not _ground_above(row - 1, col))
 					if not _art.is_empty():
 						# The deeper tile only from the third row down, where it is mostly off screen,
 						# so it does not show as a dark band in a cliff.
