@@ -285,6 +285,7 @@ func _check_platformer() -> void:
 	_check(level.tile_at(royal - Vector2(PlatformerGame.TILE, 0)) == "s" and level.apples == before_apples + PlatformerGame.ROYAL_APPLES and level.lives == PlatformerGame.LIVES, "platformer: the royal chest opens from either half for many apples and all hearts")
 	level.queue_free()
 	await _brothers_shop()
+	await _crates_both_sides()
 	await _eye_boss()
 	# Every campaign level is a rectangle with a start and a drakkar at the end, and loads.
 	for spec in PlatformerCampaign.levels():
@@ -304,6 +305,33 @@ func _check_platformer() -> void:
 
 
 ## A brother sells a heart and a mug of nalewka for apples; with the mug a Viking does no harm.
+## The sword breaks a crate on either side of Wiesław.
+func _crates_both_sides() -> void:
+	var rows: Array[String] = []
+	for i in 9:
+		rows.append(" ".repeat(20))
+	rows.append("    B  P  B      D  ")
+	rows.append("#".repeat(20))
+	rows.append("#".repeat(20))
+	var stage := PlatformerGame.new()
+	stage.level_map = rows
+	stage.auto_input = true
+	add_child(stage)
+	await _physics(5)
+	var tile := float(PlatformerGame.TILE)
+	var broken := []
+	for side in [-1, 1]:
+		var col := 4 if side < 0 else 10
+		stage.player.position = Vector2((col + 0.5) * tile - side * (tile / 2 + 50), 10 * tile)
+		stage._wieslaw.facing = side
+		await _physics(2)
+		stage.attack()
+		await _physics(30)
+		broken.append(stage.tile_at(Vector2((col + 0.5) * tile, 9.5 * tile)) == " ")
+	_check(broken == [true, true], "platformer: the sword breaks crates on the left and on the right %s" % str(broken))
+	stage.queue_free()
+
+
 func _brothers_shop() -> void:
 	var rows: Array[String] = []
 	for i in 9:

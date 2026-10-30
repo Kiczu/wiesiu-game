@@ -778,7 +778,9 @@ func _swing(delta: float) -> void:
 		_strike(viking, facing, sword_damage)
 	if _boss:
 		_boss.strike(blade, facing, sword_damage)
-	for point in [blade.position + blade.size * Vector2(0.75, 0.2), blade.position + blade.size * Vector2(0.75, 0.6)]:
+	# The far end of the blade, whichever way he faces.
+	var reach := 0.75 if facing > 0 else 0.25
+	for point in [blade.position + blade.size * Vector2(reach, 0.2), blade.position + blade.size * Vector2(reach, 0.6)]:
 		_break_crate(point)
 
 
