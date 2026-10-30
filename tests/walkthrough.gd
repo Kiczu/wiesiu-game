@@ -317,13 +317,13 @@ func _brothers_shop() -> void:
 	add_child(stage)
 	await _physics(5)
 	stage.player.position = stage.merchants[0]["node"].position - Vector2(50, 0)
-	stage.apples = 9
+	stage.apples = 70
 	stage.lives = PlatformerGame.LIVES - 1
 	stage.use()
 	var open := not stage.shop.is_empty()
 	stage.buy("heart")
 	stage.buy("mug")
-	var bought := stage.lives == PlatformerGame.LIVES and stage.apples == 9 - PlatformerGame.HEART_PRICE - PlatformerGame.MUG_PRICE
+	var bought := stage.lives == PlatformerGame.LIVES and stage.apples == 70 - PlatformerGame.HEART_PRICE - PlatformerGame.MUG_PRICE
 	bought = bought and stage.mugs == 1 and stage._shield == 0.0
 	stage.drink()
 	bought = bought and stage.mugs == 0 and stage._shield > 0.0

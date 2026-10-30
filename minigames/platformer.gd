@@ -56,8 +56,8 @@ const CHEST_APPLES := 5
 const ROYAL_APPLES := 15
 ## What the brothers sell, for apples: a heart, and a mug of nalewka for the bag, which keeps
 ## Wiesław from harm for a while once he drinks it.
-const HEART_PRICE := 5
-const MUG_PRICE := 3
+const HEART_PRICE := 25
+const MUG_PRICE := 40
 const MUG_TIME := 2.0
 const BROTHERS := ["Lesław", "Czesław"]
 const LIVES := 3
@@ -1261,9 +1261,7 @@ func _draw_key_hints() -> void:
 		_hints.draw_arc(glow, 70.0 + sin(_anim * 12.0) * 4.0, 0.0, TAU, 40, Color(1, 0.85, 0.3, 0.35 + 0.25 * minf(_shield, 1.0)), 6.0)
 	var hints := []
 	var merchant := _merchant_near()
-	if not shop.is_empty():
-		_draw_offer(shop)
-	elif not merchant.is_empty():
+	if shop.is_empty() and not merchant.is_empty():
 		hints.append(["F", merchant["node"].position + Vector2(0, -150)])
 	var chest := _chest_near()
 	if chest != Vector2.INF:
@@ -1283,21 +1281,59 @@ static func draw_health_bar(canvas: CanvasItem, center: Vector2, share: float, w
 	canvas.draw_rect(Rect2(bar.position, Vector2(width * clampf(share, 0.0, 1.0), 8)), Color("e04a32"))
 
 
-func _draw_offer(merchant: Dictionary) -> void:
+## The brother's stall as a window in the middle of the screen: one card per thing, each with
+## its picture, what it does, its price in apples and the key that buys it.
+func _draw_shop(v: Node2D) -> void:
 	var ink := Color("2b1d14")
+	var paper := Color(1, 0.98, 0.9, 0.97)
 	var font := ThemeDB.fallback_font
-	var lines := [merchant["name"] + ":",
-		"1: serce, %d jabłek" % HEART_PRICE,
-		"2: kufel nalewki do torby (Q: wypij), %d jabłka" % MUG_PRICE,
-		"F: do widzenia"]
-	var box := Rect2(merchant["node"].position + Vector2(-270, -290), Vector2(540, 128))
-	_hints.draw_rect(box, Color(1, 0.98, 0.9, 0.95))
-	_hints.draw_rect(box, ink, false, 3.0)
-	_hints.draw_colored_polygon(PackedVector2Array([box.position + Vector2(250, 128), box.position + Vector2(290, 128), box.position + Vector2(270, 150)]), Color(1, 0.98, 0.9, 0.95))
-	for i in lines.size():
-		var full := i == 1 and lives >= LIVES
-		var color := Color(ink, 0.4) if full or (i == 1 and apples < HEART_PRICE) or (i == 2 and apples < MUG_PRICE) else ink
-		_hints.draw_string(font, box.position + Vector2(16, 30 + i * 28), lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 22, color)
+	var panel := Rect2(Vector2(340, 190), Vector2(600, 340))
+	v.draw_rect(panel.grow(4), ink)
+	v.draw_rect(panel, Color("c08a4a"))
+	v.draw_string(font, panel.position + Vector2(0, 42), "%s sprzedaje" % shop["name"], HORIZONTAL_ALIGNMENT_CENTER, panel.size.x, 30, ink)
+	var offers := [
+		{"key": "1", "name": "Serce", "about": "+1 serduszko od razu", "price": HEART_PRICE,
+			"why": "Masz wszystkie serca" if lives >= LIVES else ""},
+		{"key": "2", "name": "Kufel nalewki", "about": "Do torby. Q: 2 s nietykalności", "price": MUG_PRICE, "why": ""},
+	]
+	for i in offers.size():
+		var offer: Dictionary = offers[i]
+		if offer["why"] == "" and apples < int(offer["price"]):
+			offer["why"] = "Za mało jabłek"
+		var card := Rect2(panel.position + Vector2(24 + i * 284, 64), Vector2(268, 214))
+		v.draw_rect(card, paper)
+		v.draw_rect(card, ink, false, 3.0)
+		var faded: bool = offer["why"] != ""
+		var tint := Color(1, 1, 1, 0.4) if faded else Color.WHITE
+		# The picture.
+		var icon := card.position + Vector2(card.size.x / 2, 52)
+		if i == 0 and _items.has("heart"):
+			var heart: Texture2D = _items["heart"]
+			var size := heart.get_size() * HEART_SCALE
+			v.draw_texture_rect(heart, Rect2(icon - size / 2, size), false, tint)
+		elif i == 0:
+			v.draw_circle(icon, 22, Color(Color("d62828"), tint.a))
+		else:
+			v.draw_rect(Rect2(icon - Vector2(18, 16), Vector2(36, 40)), Color(Color("c08a4a"), tint.a))
+			v.draw_rect(Rect2(icon - Vector2(18, 26), Vector2(36, 11)), Color(Color("f4f0e0"), tint.a))
+			v.draw_rect(Rect2(icon - Vector2(18, 16), Vector2(36, 40)), Color(ink, tint.a), false, 3.0)
+			v.draw_arc(icon + Vector2(21, 4), 10, -PI / 2, PI / 2, 10, Color(ink, tint.a), 4.0)
+		v.draw_string(font, card.position + Vector2(0, 112), offer["name"], HORIZONTAL_ALIGNMENT_CENTER, card.size.x, 26, Color(ink, tint.a))
+		v.draw_string(font, card.position + Vector2(0, 140), offer["about"], HORIZONTAL_ALIGNMENT_CENTER, card.size.x, 17, Color(ink, 0.8 * tint.a))
+		# Price in apples, and the key in a little box.
+		var price := card.position + Vector2(20, 186)
+		if _items.has("apple"):
+			v.draw_texture_rect(_items["apple"], Rect2(price - Vector2(0, 26), Vector2(32, 32)), false, tint)
+		else:
+			v.draw_circle(price + Vector2(16, -10), 13, Color(Color("d62828"), tint.a))
+		v.draw_string(font, price + Vector2(40, 0), str(offer["price"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color(ink, tint.a))
+		var key := Rect2(card.end - Vector2(58, 52), Vector2(40, 38))
+		v.draw_rect(key, Color(Color("f2c14e"), tint.a))
+		v.draw_rect(key, Color(ink, tint.a), false, 3.0)
+		v.draw_string(font, key.position + Vector2(0, 29), offer["key"], HORIZONTAL_ALIGNMENT_CENTER, key.size.x, 26, Color(ink, tint.a))
+		if faded:
+			v.draw_string(font, card.position + Vector2(0, card.size.y + 22), offer["why"], HORIZONTAL_ALIGNMENT_CENTER, card.size.x, 18, Color("7a1010"))
+	v.draw_string(font, panel.position + Vector2(0, panel.size.y - 10), "F: wyjście", HORIZONTAL_ALIGNMENT_CENTER, panel.size.x, 20, ink)
 
 
 ## A soft round shadow on the ground under a character; smaller and fainter the higher it is.
@@ -1452,6 +1488,8 @@ func _draw_hud() -> void:
 	var mode := "     ".join(modes)
 	v.draw_string_outline(font, Vector2(0, 48), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 20, 6, halo)
 	v.draw_string(font, Vector2(0, 48), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 20, ink)
+	if not shop.is_empty():
+		_draw_shop(v)
 	if level_name != "" and _anim < 3.0:
 		var fade := clampf(3.0 - _anim, 0.0, 1.0)
 		v.draw_string_outline(font, Vector2(0, 300), level_name, HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 56, 10, Color(halo, fade))
