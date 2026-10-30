@@ -189,23 +189,15 @@ func _check_platformer() -> void:
 	level.input_jump = false
 	_check(player.position.y < falling_from - PlatformerGame.TILE, "platformer: a second press in the air jumps again")
 	await _physics(80)
-	# Bump the first ? block from below.
-	player.position = Vector2(9.5 * PlatformerGame.TILE, 640.0)
-	await _physics(5)
-	var apples := level.apples
-	level.input_jump = true
-	await _physics(40)
-	level.input_jump = false
-	await _physics(30)
-	_check(level.apples == apples + 1 and level.LEVEL[5][9] == "?" and level.map[5][9] == "X", "platformer: bumping a ? block gives an apple")
 	# Throw two apples at a Viking.
 	var viking: Node2D = level.vikings[0]["node"]
 	for other in level.vikings:
 		if other["node"].position.x < viking.position.x:
 			viking = other["node"]
 	var count := level.vikings.size()
-	level.apples = 2
-	for throw in 2:
+	var throws := PlatformerGame.VIKING_HEALTH / PlatformerGame.APPLE_DAMAGE
+	level.apples = throws
+	for throw in throws:
 		# Clear of the pit before him.
 		viking.position.x = 34.5 * PlatformerGame.TILE
 		player.position = viking.position + Vector2(-180, 0)
@@ -214,24 +206,23 @@ func _check_platformer() -> void:
 		await _physics(2)
 		level.throw_apple()
 		await _physics(40)
-	_check(level.vikings.size() == count - 1 and level.apples == 0 and level.lives == PlatformerGame.LIVES, "platformer: two thrown apples knock a Viking out")
+	_check(level.vikings.size() == count - 1 and level.apples == 0 and level.lives == PlatformerGame.LIVES, "platformer: thrown apples knock a Viking out")
 	await _physics(60)
-	# Two sword hits knock a Viking out.
+	# Enough sword hits knock a Viking out.
 	viking = level.vikings[0]["node"]
 	count = level.vikings.size()
-	player.position = viking.position + Vector2(-70, 0)
-	player.velocity = Vector2.ZERO
-	level._wieslaw.facing = 1
-	await _physics(2)
-	level.attack()
-	await _physics(3)
-	var hit_once: bool = level.vikings.size() == count and level.vikings[0]["health"] == PlatformerGame.VIKING_HEALTH - 1
-	await _physics(30)
-	player.position = viking.position + Vector2(-70, 0)
-	level._wieslaw.facing = 1
-	level.attack()
-	await _physics(3)
-	_check(hit_once and level.vikings.size() == count - 1, "platformer: two sword hits knock a Viking out")
+	var hit_once := false
+	for hit in PlatformerGame.VIKING_HEALTH / level.sword_damage:
+		player.position = viking.position + Vector2(-70, 0)
+		player.velocity = Vector2.ZERO
+		level._wieslaw.facing = 1
+		await _physics(2)
+		level.attack()
+		await _physics(3)
+		if hit == 0:
+			hit_once = level.vikings.size() == count and level.vikings[0]["health"] == PlatformerGame.VIKING_HEALTH - level.sword_damage
+		await _physics(30)
+	_check(hit_once and level.vikings.size() == count - 1, "platformer: sword hits knock a Viking out")
 	await _physics(60)
 	# Walk into a Viking.
 	viking = level.vikings[0]["node"]
@@ -246,13 +237,11 @@ func _check_platformer() -> void:
 	player.velocity = Vector2.ZERO
 	await _physics(60)
 	_check(level.lives == PlatformerGame.LIVES - 1 and player.position.y <= 640.0, "platformer: falling into a pit costs a heart and goes back (%d, %d)" % [level.lives, player.position.y])
-	level.set_pixel_mode(true)
 	level.input_x = 1.0
 	var before := player.position.x
 	await _physics(10)
 	level.input_x = 0.0
-	_check(level.pixel_mode and player.position.x > before and level._wieslaw.pose == "run", "platformer: pixel mode plays the same, Wiesław runs")
-	level.set_pixel_mode(false)
+	_check(player.position.x > before and level._wieslaw.pose == "run", "platformer: Wiesław runs")
 	player.position = Vector2((level.LEVEL[9].find("D") + 0.5) * PlatformerGame.TILE, 640.0)
 	await _physics(3)
 	_check(level.state == "won", "platformer: reaching the drakkar wins")
@@ -272,7 +261,7 @@ func _check_platformer() -> void:
 	var before_apples := level.apples
 	level._break_crate(crate)
 	_check(widths.size() == 1 and level.player.is_on_floor() and level.tile_at(crate) == " " and level.apples == before_apples + PlatformerGame.CRATE_APPLES, "platformer: the knight map loads and its crates break into apples")
-	# A sword hit opens a treasure chest: it stays open and gives apples and a lost heart back.
+	# The sword leaves a treasure chest shut; F opens it, and it stays open and gives apples and a lost heart back.
 	var chest_row := 9
 	var chest := Vector2((PlatformerGame.LEVEL_KNIGHT[chest_row].find("T") + 0.5) * PlatformerGame.TILE, (chest_row + 0.5) * PlatformerGame.TILE)
 	level.player.position = Vector2(chest.x - 58.0, 640.0)
@@ -281,15 +270,137 @@ func _check_platformer() -> void:
 	await _physics(2)
 	level.attack()
 	await _physics(10)
-	_check(level.tile_at(chest) == "t" and level.apples == before_apples + PlatformerGame.CHEST_APPLES and level.lives == PlatformerGame.LIVES, "platformer: the sword opens a treasure chest for apples and a heart")
-	# The royal chest is two tiles wide; a hit on its right half opens it and fills every heart.
+	var shut := level.tile_at(chest) == "T"
+	level.player.position = Vector2(chest.x - 40.0, 640.0)
+	await _physics(2)
+	level.use()
+	_check(shut and level.tile_at(chest) == "t" and level.apples == before_apples + PlatformerGame.CHEST_APPLES and level.lives == PlatformerGame.LIVES, "platformer: F, not the sword, opens a treasure chest for apples and a heart")
+	# The royal chest is two tiles wide; F at its right half opens it and fills every heart.
 	var royal_row := 3
 	var royal := Vector2((PlatformerGame.LEVEL_KNIGHT[royal_row].find("S") + 1.5) * PlatformerGame.TILE, (royal_row + 0.5) * PlatformerGame.TILE)
 	level.lives = 1
 	before_apples = level.apples
-	level._open_chest(royal)
+	level.player.position = Vector2(royal.x, (royal_row + 1) * PlatformerGame.TILE)
+	level.use()
 	_check(level.tile_at(royal - Vector2(PlatformerGame.TILE, 0)) == "s" and level.apples == before_apples + PlatformerGame.ROYAL_APPLES and level.lives == PlatformerGame.LIVES, "platformer: the royal chest opens from either half for many apples and all hearts")
 	level.queue_free()
+	await _brothers_shop()
+	await _eye_boss()
+	# Every campaign level is a rectangle with a start and a drakkar at the end, and loads.
+	for spec in PlatformerCampaign.levels():
+		var rows: Array = spec["map"]
+		var same_width := rows.all(func(row: String) -> bool: return row.length() == rows[0].length())
+		var joined := "".join(rows)
+		var stage := PlatformerGame.new()
+		stage.level_map = rows
+		stage.night = spec["night"]
+		stage.auto_input = true
+		add_child(stage)
+		await _physics(5)
+		_check(same_width and joined.count("P") == 1 and (joined.contains("D") or joined.contains("O")) and stage.player.is_on_floor(), "platformer: campaign level %s loads" % spec["name"])
+		if spec["name"] == "Sad nocą":
+			await _climb_to_chest(stage)
+		stage.queue_free()
+
+
+## A brother sells a heart and a mug of nalewka for apples; with the mug a Viking does no harm.
+func _brothers_shop() -> void:
+	var rows: Array[String] = []
+	for i in 9:
+		rows.append(" ".repeat(20))
+	rows.append(" P  M    V       D  ")
+	rows.append("#".repeat(20))
+	rows.append("#".repeat(20))
+	var stage := PlatformerGame.new()
+	stage.level_map = rows
+	stage.auto_input = true
+	add_child(stage)
+	await _physics(5)
+	stage.player.position = stage.merchants[0]["node"].position - Vector2(50, 0)
+	stage.apples = 70
+	stage.lives = PlatformerGame.LIVES - 1
+	stage.use()
+	var open := not stage.shop.is_empty()
+	stage.buy("heart")
+	stage.buy("mug")
+	var bought := stage.lives == PlatformerGame.LIVES and stage.apples == 70 - PlatformerGame.HEART_PRICE - PlatformerGame.MUG_PRICE
+	bought = bought and stage.mugs == 1 and stage._shield == 0.0
+	stage.drink()
+	bought = bought and stage.mugs == 0 and stage._shield > 0.0
+	stage.player.position = stage.vikings[0]["node"].position
+	await _physics(3)
+	_check(open and bought and stage.lives == PlatformerGame.LIVES and stage.shop.is_empty(), "platformer: a brother sells a heart and a mug for the bag, and with the mug drunk a Viking does no harm")
+	stage.queue_free()
+
+
+## Only the blind Viking can be hit; going for him (out of the other's reach) makes the other
+## toss him the eye, and he lunges once he has it. The one who sees only blocks. Beaten, a Viking
+## drops the eye, the last one picks it up and can be hit like any Viking, and when he falls too
+## Wiesław wins by picking the eye up.
+func _eye_boss() -> void:
+	var rows: Array[String] = []
+	for i in 9:
+		rows.append(" ".repeat(30))
+	rows.append(" P            O               ")
+	rows.append("#".repeat(30))
+	rows.append("#".repeat(30))
+	var stage := PlatformerGame.new()
+	stage.level_map = rows
+	stage.auto_input = true
+	add_child(stage)
+	await _physics(5)
+	var boss: EyeBoss = stage._boss
+	stage._shield = 99.0
+	var seeing: int = boss.holder
+	var blind: int = 1 - seeing
+	boss.strike(boss.rect_of(seeing), 1.0, stage.sword_damage)
+	var blocked: bool = boss.vikings[seeing]["health"] == EyeBoss.HEALTH
+	boss.vikings[seeing]["stun"] = 0.0
+	# Out of the holder's reach, next to the blind one.
+	boss.vikings[seeing]["node"].position.x = boss.vikings[blind]["node"].position.x + 5.0 * PlatformerGame.TILE
+	stage.player.position = boss.vikings[blind]["node"].position - Vector2(100, 0)
+	boss._cooldown = 0.0
+	await _physics(2)
+	var tossed: bool = boss.holder == -1
+	await _physics(120)
+	var lunged: bool = boss.holder == blind
+	blind = 1 - boss.holder
+	while boss.vikings[blind]["health"] > 0:
+		boss.vikings[blind]["stun"] = 0.0
+		boss.strike(boss.rect_of(blind), 1.0, stage.sword_damage)
+	var last: int = 1 - blind
+	var dropped: bool = boss.holder == -1 and boss.alone()
+	stage.player.position = Vector2(2.0 * PlatformerGame.TILE, stage.player.position.y)
+	await _physics(240)
+	var picked: bool = boss.holder == last
+	while boss.vikings[last]["health"] > 0:
+		boss.vikings[last]["stun"] = 0.0
+		boss.strike(boss.rect_of(last), 1.0, stage.sword_damage)
+	stage.player.position = boss.eye + Vector2(0, 40)
+	await _physics(3)
+	_check(blocked and tossed and lunged and dropped and picked and boss.won and stage.state == "won", "platformer: only the blind Viking takes hits, the eye goes to him, the last one picks it up and fights, and Wiesław takes it (%s %s %s %s %s)" % [blocked, tossed, lunged, dropped, picked])
+	stage.queue_free()
+
+
+## In the orchard a ladder leads up to a plank with a chest: W grabs it and climbs, and at the top
+## Wiesław hops onto the plank, where F opens the chest.
+func _climb_to_chest(stage: PlatformerGame) -> void:
+	var rows: Array = stage.level_map
+	var col: int = rows[9].find("H", 20)
+	stage.player.position = Vector2((col + 0.5) * PlatformerGame.TILE, 10 * PlatformerGame.TILE)
+	await _physics(2)
+	stage.input_climb = -1.0
+	stage.input_jump = true
+	await _physics(2)
+	var grabbed := stage._climbing
+	await _physics(90)
+	stage.input_climb = 0.0
+	stage.input_jump = false
+	await _physics(30)
+	var top := stage.player.position.y
+	stage.use()
+	var chest := Vector2((col + 0.5) * PlatformerGame.TILE, 4.5 * PlatformerGame.TILE)
+	_check(grabbed and not stage._climbing and stage.player.is_on_floor() and top <= 5 * PlatformerGame.TILE + 1 and stage.tile_at(chest) == "t", "platformer: W climbs a ladder up to a chest that F opens (%d)" % top)
 
 
 func _physics(frames: int) -> void:

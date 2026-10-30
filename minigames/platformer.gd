@@ -10,9 +10,11 @@ signal pause_requested
 const TILE := 64
 const SCREEN := Vector2(1280, 720)
 ## One character per tile:
-## # ground   B crate   ? apple block (bump it from below)   = plank (jump through from below)
+## # ground   B crate   = plank (jump through from below)
 ## a apple   x thorns   V Viking   C checkpoint   P start   D the drakkar (finish)
-## T treasure chest (open it with the sword)   S royal chest, two tiles wide (leave the tile on its right empty)
+## T treasure chest (open it with F)   S royal chest, two tiles wide (leave the tile on its right empty)
+## H ladder (W and S climb it, A or D steps off)   M one of Wiesław's brothers, who sells things for apples (F)
+## O the two Vikings with one eye (catch the eye to win; no drakkar needed)
 ## Crates break under the sword or a thrown apple and give apples.
 const LEVEL := [
 	"                                                                                                                                                                          ",
@@ -20,8 +22,8 @@ const LEVEL := [
 	"                                                                                                                                                                          ",
 	"                                                                                                        a a a                                                             ",
 	"                                                     a  a  a                                                                                                              ",
-	"         ?B?                     aaa                                      ?B?B?                        =====                        V                                     ",
-	"                                                  #  ===  ===                                                                     ######    ?             ##              ",
+	"         BBB                     aaa                                      BBBBB                        =====                        V                                     ",
+	"                                                  #  ===  ===                                                                     ######    B             ##              ",
 	"    a a        a a              ===              ##                                   a a         ===          ===                                       ###              ",
 	"                                     a          ###            a                                                           a   a                        ####              ",
 	" P                       ##       V  #         ####          x     C       V        V                                    B   x   B          a      V   #####        D     ",
@@ -44,13 +46,20 @@ const LEVEL_KNIGHT := [
 	"########################xxxxx##############            ##################             ##########xx#xx#xxx#######################",
 	"###########################################            ##################             ##########################################",
 ]
-const SOLID := "#B?X"
+const SOLID := "#B"
 ## Apples inside a broken crate.
 const CRATE_APPLES := 2
+const NIGHT_TINT := Color(0.5, 0.56, 0.86)
 ## Apples in a treasure chest; it also gives back a lost heart.
 const CHEST_APPLES := 5
 ## Apples in the royal chest; it also fills every heart.
 const ROYAL_APPLES := 15
+## What the brothers sell, for apples: a heart, and a mug of nalewka for the bag, which keeps
+## Wiesław from harm for a while once he drinks it.
+const HEART_PRICE := 25
+const MUG_PRICE := 40
+const MUG_TIME := 2.0
+const BROTHERS := ["Lesław", "Czesław"]
 const LIVES := 3
 const WALK_SPEED := 330.0
 const ACCELERATION := 2400.0
@@ -66,16 +75,15 @@ const JUMP_BUFFER := 0.12
 const HURT_TIME := 1.5
 const VIKING_SPEED := 70.0
 const PLAYER_SIZE := Vector2(40, 92)
-## How many times smaller the level is drawn in pixel mode; bigger gives chunkier pixels.
-const PIXEL_SCALE := 2
 ## Ready-made tiles and background layers, one set per folder: level.json names the files and how
-## the layers scroll. L switches between the sets that are there and plain shapes.
-const LEVEL_ART_SETS := ["res://art/platformer/level_autor/", "res://art/platformer/level/"]
+## the layers scroll. L switches between the sets that are there; without any the level is drawn
+## with plain shapes.
+const LEVEL_ART_SETS := ["res://art/platformer/level_kreskowka/", "res://art/platformer/level_piksele/"]
 ## Music (music.ogg, looped) and sound effects (<name>.ogg) for the level, each used when present.
 const AUDIO_DIR := "res://art/platformer/audio/"
 ## Drawn pictures for things in the level (<name>.png), each used when present.
 const ITEMS_DIR := "res://art/platformer/items/"
-const ITEMS := ["apple", "crate", "block", "block_used", "thorns", "flag", "flag_on", "drakkar", "heart", "heart_empty", "chest", "chest_open", "chest_royal", "chest_royal_open"]
+const ITEMS := ["apple", "crate", "thorns", "flag", "flag_on", "drakkar", "heart", "heart_empty", "chest", "chest_open", "chest_royal", "chest_royal_open", "ladder"]
 ## Drawn hearts are small pixel art, shown this many times bigger.
 const HEART_SCALE := 3.0
 const SOUNDS := ["jump", "apple", "bump", "stomp", "hurt", "checkpoint", "win", "lose"]
@@ -85,13 +93,18 @@ const LOOK_AHEAD := 140.0
 const ATTACK_TIME := 0.3
 const ATTACK_COOLDOWN := 0.35
 const ATTACK_REACH := 84.0
-## Sword hits a Viking takes before he falls over.
-const VIKING_HEALTH := 2
+## A Viking's health; the sword and a thrown apple each take away their damage.
+const VIKING_HEALTH := 40
+const APPLE_DAMAGE := 10
 ## A thrown apple: speed, how much it drops, how long it flies, and the wait before the next throw.
 const APPLE_SPEED := 760.0
 const APPLE_GRAVITY := 900.0
 const APPLE_FLIGHT := 1.2
 const THROW_COOLDOWN := 0.3
+## On a ladder: speed up and down, speed sideways, and the hop that gets him onto the ledge at the top.
+const CLIMB_SPEED := 260.0
+const CLIMB_SIDE := 120.0
+const CLIMB_HOP := 620.0
 const LEAVES := 26
 const POLLEN := 40
 
@@ -101,20 +114,38 @@ var apples := 0
 var state := ""
 ## Tests set these instead of the keyboard.
 var auto_input := false
+## Damage of the sword Wiesław carries (other swords can hit harder).
+var sword_damage := 10
 var input_x := 0.0
 var input_jump := false
 var input_attack := false
 var input_throw := false
+## -1 up, 1 down: climbs a ladder Wiesław is at.
+var input_climb := 0.0
 ## Which map to play: "knight" (LEVEL_KNIGHT) or "mario" (LEVEL); N switches.
 var layout := "knight"
+## A map from the campaign (PlatformerCampaign); when set, it is played instead of the layout.
+var level_map: Array = []
+## Night: the level is darker and bluer and there are no sunbeams.
+var night := false
+## Shown big for a moment when the level starts.
+var level_name := ""
 
 var player: CharacterBody2D
 var vikings: Array[Dictionary] = []
+## The brothers in the level: {"node", "name"}.
+var merchants: Array[Dictionary] = []
+## The brother whose offer is shown, or empty.
+var shop := {}
+## The fight for the magic eye, when the level has one.
+var _boss: EyeBoss
 var map: Array[String] = []
 var checkpoint := Vector2.ZERO
 
 var _level: Node2D
 var _tiles: Node2D
+## Key hints over chests and ladders, drawn in front of the characters.
+var _hints: Node2D
 var _wieslaw: CutoutCharacter
 var _camera: Camera2D
 var _hud: Node2D
@@ -122,17 +153,15 @@ var _background: Node2D
 ## The art set in use: {"scale", "tiles": {name: Texture2D}, "background": [{texture, mirrored, speed, follow, top, bottom, gap}]}.
 var _art := {}
 var _art_sets: Array[Dictionary] = []
-var _art_index := 0
+## Kept for the next levels.
+static var _art_index := 0
 var _sounds := {}
 var _players: Array[AudioStreamPlayer] = []
 var _music: AudioStreamPlayer
 var _back: CanvasLayer
-## The level is drawn into its own viewport, so it can be drawn at half resolution (pixel mode).
+## The level is drawn into its own viewport, so it can be tinted as a whole (night).
 var _world: SubViewport
 var _view: SubViewportContainer
-## Pixel mode: the level is drawn PIXEL_SCALE times smaller (640 x 360) and enlarged without smoothing,
-## so even turning parts of the puppet snap to a pixel grid. P switches it, to compare with the smooth look.
-var pixel_mode := false
 var _drakkar: Node2D
 var _items := {}
 var _coyote := 0.0
@@ -144,8 +173,6 @@ var _end_time := 0.0
 var _anim := 0.0
 ## Short-lived pictures: apples popping out of blocks, knocked-out Vikings.
 var _effects: Array[Dictionary] = []
-## Depth effects: foreground, haze, leaves and pollen, shadows, light, camera, dust (G turns them off).
-var depth_effects := true
 var _front: CanvasLayer
 var _foreground: Node2D
 var _overlay: Node2D
@@ -164,6 +191,12 @@ var _solid: StaticBody2D
 ## Apples in flight: position, velocity, time in the air.
 var _thrown: Array[Dictionary] = []
 var _look := 0.0
+## Time left on the mug of nalewka: nothing hurts Wiesław.
+var _shield := 0.0
+## Mugs of nalewka bought from the brothers and kept for later; Q drinks one.
+var mugs := 0
+## Whether Wiesław is holding on to a ladder.
+var _climbing := false
 
 
 func _ready() -> void:
@@ -173,6 +206,9 @@ func _ready() -> void:
 	_view.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	add_child(_view)
 	_world = SubViewport.new()
+	# Whole pixels only: with the camera between pixels, tiles could show thin gaps between them.
+	_world.snap_2d_transforms_to_pixel = true
+	_world.snap_2d_vertices_to_pixel = true
 	_view.add_child(_world)
 	_back = CanvasLayer.new()
 	_back.layer = -1
@@ -214,6 +250,7 @@ func _ready() -> void:
 		return
 	if get_parent() == get_tree().root:
 		# Run on its own (F6 in the editor): play again after the finish.
+		Game.load_settings()
 		finished.connect(restart)
 	restart()
 
@@ -235,8 +272,17 @@ func restart() -> void:
 	_attack_cooldown = 0.0
 	_throw_cooldown = 0.0
 	_thrown.clear()
+	_climbing = false
+	_shield = 0.0
+	shop = {}
+	_boss = null
+	merchants.clear()
 	vikings.clear()
-	map.assign(LEVEL_KNIGHT if layout == "knight" else LEVEL)
+	if not level_map.is_empty():
+		map.assign(level_map)
+	else:
+		map.assign(LEVEL_KNIGHT if layout == "knight" else LEVEL)
+	_view.modulate = NIGHT_TINT if night else Color.WHITE
 	_level = Node2D.new()
 	_world.add_child(_level)
 	_tiles = Node2D.new()
@@ -252,10 +298,19 @@ func restart() -> void:
 					checkpoint = at
 				"V":
 					_add_viking(at)
+				"M":
+					_add_merchant(at)
+				"O":
+					_boss = EyeBoss.new(self, at)
+					_level.add_child(_boss)
+					_boss.caught.connect(_win)
 				"D":
 					_add_drakkar(at)
 	_add_player()
-	if _music and not _music.playing:
+	_hints = Node2D.new()
+	_hints.draw.connect(_draw_key_hints)
+	_level.add_child(_hints)
+	if _music and Game.sound == "all" and not _music.playing:
 		_music.play()
 	set_physics_process(true)
 
@@ -299,21 +354,6 @@ func _add_player() -> void:
 	player.add_child(_camera)
 	_level.add_child(player)
 	_camera.make_current()
-	set_pixel_mode(pixel_mode)
-
-
-func set_pixel_mode(on: bool) -> void:
-	pixel_mode = on
-	_view.stretch_shrink = PIXEL_SCALE if on else 1
-	_world.snap_2d_transforms_to_pixel = on
-	_world.snap_2d_vertices_to_pixel = on
-	_back.scale = Vector2.ONE / _view.stretch_shrink
-	_front.scale = _back.scale
-	if _wieslaw:
-		_wieslaw.pixel_art = on
-	if _camera:
-		_camera.zoom = Vector2.ONE / _view.stretch_shrink
-		_camera.reset_smoothing()
 
 
 func _add_viking(at: Vector2) -> void:
@@ -404,15 +444,33 @@ func _physics_process(delta: float) -> void:
 	var jump_held := input_jump if auto_input else Input.is_action_pressed("move_up")
 	if jump_held and not _jump_was_held:
 		_buffered = JUMP_BUFFER
-	_move_player(delta, steer, jump_held)
+	var up_down := input_climb if auto_input else Input.get_axis("move_up", "move_down")
+	if not _climbing and _ladder_ahead(up_down):
+		_climbing = true
+		player.velocity = Vector2.ZERO
+		player.position.x = (floori(player.position.x / TILE) + 0.5) * TILE
+		_buffered = 0.0
+	if _climbing:
+		_climb(delta, steer, up_down)
+	else:
+		_wieslaw.paused = false
+		_move_player(delta, steer, jump_held)
 	_jump_was_held = jump_held
 	if auto_input and input_attack:
 		attack()
 	if auto_input and input_throw:
 		throw_apple()
 	_swing(delta)
+	_shield = maxf(_shield - delta, 0.0)
+	_wieslaw.modulate = Color(1.35, 1.2, 0.6) if _shield > 0.0 else Color.WHITE
+	if not shop.is_empty() and _merchant_near() != shop:
+		shop = {}
+	for merchant in merchants:
+		merchant["node"].set("facing", 1 if player.position.x > merchant["node"].position.x else -1)
 	_fly_apples(delta)
 	_move_vikings(delta)
+	if _boss:
+		_boss.step(delta)
 	_check_touches()
 	_redraw()
 
@@ -452,7 +510,6 @@ func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 		_dust(player.position, 1)
 	_was_on_floor = on_floor
 	if player.is_on_ceiling():
-		_bump_block(player.position + Vector2(0, -PLAYER_SIZE.y - 4))
 		_play("bump")
 	if absf(steer) > 0.1:
 		_wieslaw.facing = 1 if steer > 0 else -1
@@ -464,7 +521,7 @@ func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 		_wieslaw.pose = "jump" if player.velocity.y < 0.0 else "fall"
 	else:
 		_wieslaw.pose = "run" if absf(player.velocity.x) > 20.0 else "idle"
-	_stretch = _stretch.lerp(Vector2.ONE, minf(delta * 12.0, 1.0)) if depth_effects else Vector2.ONE
+	_stretch = _stretch.lerp(Vector2.ONE, minf(delta * 12.0, 1.0))
 	_wieslaw.scale = Vector2(0.84 * _stretch.x * _wieslaw.facing, 0.84 * _stretch.y)
 	# Without a drawn swing, he leans into the blow.
 	_wieslaw.rotation = _wieslaw.facing * 0.18 * sin(_attack / ATTACK_TIME * PI) if not _wieslaw.has_pose("attack") else 0.0
@@ -475,14 +532,145 @@ func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 		_hit(true)
 
 
-func _bump_block(point: Vector2) -> void:
-	if tile_at(point) != "?":
+## Whether there is a ladder where Wiesław stands, or just under his feet (to climb down from a ledge).
+func _ladder_here() -> bool:
+	for dy in [-PLAYER_SIZE.y / 2, -8.0, 8.0]:
+		if tile_at(player.position + Vector2(0, dy)) == "H":
+			return true
+	return false
+
+
+## W at a ladder (or S on top of one) grabs it instead of jumping.
+func _ladder_ahead(up_down: float) -> bool:
+	if up_down < -0.5:
+		return tile_at(player.position + Vector2(0, -PLAYER_SIZE.y / 2)) == "H" or tile_at(player.position + Vector2(0, -8)) == "H"
+	if up_down > 0.5:
+		return tile_at(player.position + Vector2(0, 8)) == "H"
+	return false
+
+
+## On a ladder he goes up and down without gravity, through planks but not through ground. At the
+## bottom he steps off; past the top he hops onto the ledge; A or D takes him off the side.
+func _climb(delta: float, steer: float, up_down: float) -> void:
+	var step := Vector2(steer * CLIMB_SIDE, up_down * CLIMB_SPEED) * delta
+	var feet := player.position + step
+	if step.y > 0.0 and tile_at(feet + Vector2(0, 1)) in SOLID:
+		player.position.y = floori(feet.y / TILE) * TILE
+		_climbing = false
 		return
-	_set_tile(point, "X")
-	apples += 1
-	_play("apple")
-	var center := Vector2((floori(point.x / TILE) + 0.5) * TILE, floori(point.y / TILE) * TILE)
-	_effects.append({"kind": "apple", "pos": center, "time": 0.0})
+	if step.y < 0.0 and tile_at(feet - Vector2(0, PLAYER_SIZE.y)) in SOLID:
+		step.y = 0.0
+	if tile_at(feet + Vector2(signf(step.x) * PLAYER_SIZE.x / 2, -PLAYER_SIZE.y / 2)) in SOLID:
+		step.x = 0.0
+	player.position += step
+	player.velocity = Vector2.ZERO
+	if absf(steer) > 0.1:
+		_wieslaw.facing = 1 if steer > 0 else -1
+	_wieslaw.pose = "climb" if _wieslaw.has_drawn_pose("climb") else ("run" if step != Vector2.ZERO else "idle")
+	_wieslaw.paused = _wieslaw.pose == "climb" and step.y == 0.0
+	_wieslaw.scale = Vector2(0.84 * _wieslaw.facing, 0.84)
+	_wieslaw.rotation = 0.0
+	_wieslaw.visible = _hurt > HURT_TIME - 0.4 or fmod(_hurt, 0.2) < 0.12
+	_move_camera(delta)
+	if not _ladder_here():
+		_climbing = false
+		if up_down < 0.0:
+			player.velocity.y = -CLIMB_HOP
+
+
+## The closed chest Wiesław stands at or right next to, or Vector2.INF when there is none.
+func _chest_near() -> Vector2:
+	var middle := player.position + Vector2(0, -TILE / 2.0)
+	for dx in [0.0, -TILE * 0.6, TILE * 0.6]:
+		var point: Vector2 = middle + Vector2(dx, 0)
+		var kind := tile_at(point)
+		if kind == "T" or kind == "S" or (kind == " " and tile_at(point - Vector2(TILE, 0)) == "S"):
+			return point
+	return Vector2.INF
+
+
+## F: talks to the brother Wiesław stands at (or says goodbye), or opens the chest he stands at.
+func use() -> void:
+	if state != "" or not player:
+		return
+	var merchant := _merchant_near()
+	if not merchant.is_empty():
+		shop = {} if shop == merchant else merchant
+		return
+	var chest := _chest_near()
+	if chest != Vector2.INF:
+		_open_chest(chest)
+
+
+## The brother Wiesław stands next to, or an empty dictionary.
+func _merchant_near() -> Dictionary:
+	for merchant in merchants:
+		var offset: Vector2 = merchant["node"].position - player.position
+		if absf(offset.x) < 90.0 and absf(offset.y) < 40.0:
+			return merchant
+	return {}
+
+
+## Buys from the brother whose offer is shown: "heart" (only with a heart to fill) or "mug".
+func buy(item: String) -> void:
+	if shop.is_empty():
+		return
+	var price := HEART_PRICE if item == "heart" else MUG_PRICE
+	if apples < price or (item == "heart" and lives >= LIVES):
+		_play("bump")
+		return
+	apples -= price
+	if item == "heart":
+		lives += 1
+	else:
+		mugs += 1
+	_play("checkpoint")
+	_hud.queue_redraw()
+
+
+func _win() -> void:
+	if state != "":
+		return
+	state = "won"
+	_stop_music()
+	_play("win")
+	Game.set_flag("jablka_proba", apples)
+
+
+## A Viking of the eye fight runs into Wiesław.
+func hurt_by_boss() -> void:
+	_hit(false)
+
+
+## Q: drinks a mug of nalewka from the bag, and for a while nothing hurts Wiesław.
+func drink() -> void:
+	if state != "" or mugs <= 0 or _shield > 0.0:
+		return
+	mugs -= 1
+	_shield = MUG_TIME
+	_play("checkpoint")
+	_hud.queue_redraw()
+
+
+## A brother stands at his stall facing the way Wiesław comes from, with his name over him.
+func _add_merchant(at: Vector2) -> void:
+	var color := Color("4f7a3a") if merchants.size() % 2 == 0 else Color("b0302a")
+	var body: Node2D
+	if CutoutCharacter.has_frames():
+		var drawn := CutoutCharacter.new()
+		drawn.robe_color = color
+		drawn.scale = Vector2(0.84, 0.84)
+		body = drawn
+	else:
+		var placeholder := Character.new()
+		placeholder.body_color = color
+		placeholder.scale = Vector2(0.6, 0.6)
+		body = placeholder
+	body.position = at
+	body.set("facing", -1)
+	_level.add_child(body)
+	_level.move_child(body, _tiles.get_index() + 1)
+	merchants.append({"node": body, "name": BROTHERS[merchants.size() % BROTHERS.size()]})
 
 
 ## A crate hit by the sword or an apple breaks and lets its apples out.
@@ -514,10 +702,10 @@ func _draw_glint(v: Node2D, at: Vector2, size: Vector2, phase: int) -> void:
 	v.draw_circle(pos, r * 0.25, Color.WHITE)
 
 
-## A chest hit by the sword opens (it stays as an open chest) and gives apples and a heart.
+## A chest opened with F stays open and gives apples and a heart.
 ## The royal chest does the same with more apples and every heart, and shakes the screen.
 func _open_chest(point: Vector2) -> void:
-	# The royal chest covers two tiles; a hit on its right half counts too.
+	# The royal chest covers two tiles; standing at its right half counts too.
 	if tile_at(point) == " " and tile_at(point - Vector2(TILE, 0)) == "S":
 		point -= Vector2(TILE, 0)
 	var kind := tile_at(point)
@@ -563,17 +751,17 @@ func _swing(delta: float) -> void:
 		if node in _struck or not blade.intersects(Rect2(node.position - Vector2(24, 80), Vector2(48, 80))):
 			continue
 		_struck.append(node)
-		_strike(viking, facing)
+		_strike(viking, facing, sword_damage)
+	if _boss:
+		_boss.strike(blade, facing, sword_damage)
 	for point in [blade.position + blade.size * Vector2(0.75, 0.2), blade.position + blade.size * Vector2(0.75, 0.6)]:
-		_bump_block(point)
 		_break_crate(point)
-		_open_chest(point)
 
 
 ## A Viking hit by the sword or an apple flashes and slides back; out of health, he falls over.
-func _strike(viking: Dictionary, from_dir: float) -> void:
+func _strike(viking: Dictionary, from_dir: float, damage: int) -> void:
 	var node: Node2D = viking["node"]
-	viking["health"] -= 1
+	viking["health"] -= damage
 	_shake = maxf(_shake, 0.1)
 	_play("stomp")
 	node.modulate = Color(3, 3, 3)
@@ -614,12 +802,12 @@ func _fly_apples(delta: float) -> void:
 		var spent: bool = apple["time"] > APPLE_FLIGHT
 		for viking in vikings.duplicate():
 			if not spent and Rect2(viking["node"].position - Vector2(24, 80), Vector2(48, 80)).grow(10).has_point(at):
-				_strike(viking, signf(apple["vel"].x))
+				_strike(viking, signf(apple["vel"].x), APPLE_DAMAGE)
 				spent = true
+		if not spent and _boss and not _boss.won:
+			spent = _boss.knock_eye(at) or _boss.strike(Rect2(at - Vector2(10, 10), Vector2(20, 20)), signf(apple["vel"].x), APPLE_DAMAGE)
 		var tile := tile_at(at)
 		if not spent and tile in SOLID:
-			if tile == "?":
-				_bump_block(at)
 			_break_crate(at)
 			spent = true
 		if spent:
@@ -663,10 +851,7 @@ func _check_touches() -> void:
 				_play("checkpoint")
 				_set_tile(corner, "c")
 			"D":
-				state = "won"
-				_stop_music()
-				_play("win")
-				Game.set_flag("jablka_proba", apples)
+				_win()
 				return
 	for viking in vikings.duplicate():
 		var node: Node2D = viking["node"]
@@ -692,7 +877,7 @@ func _squash(node: Node2D) -> void:
 
 
 func _hit(fell: bool) -> void:
-	if _hurt > 0.0 and not fell:
+	if (_hurt > 0.0 or _shield > 0.0) and not fell:
 		return
 	lives -= 1
 	_hurt = HURT_TIME
@@ -718,31 +903,37 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action("cancel"):
 		pause_requested.emit()
 		get_viewport().set_input_as_handled()
-	elif event is InputEventKey and event.physical_keycode == KEY_P:
-		set_pixel_mode(not pixel_mode)
-		get_viewport().set_input_as_handled()
-	elif event is InputEventKey and event.physical_keycode == KEY_L:
-		next_art_set()
-		get_viewport().set_input_as_handled()
 	elif state == "" and ((event is InputEventKey and event.physical_keycode == KEY_SPACE) or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT)):
 		attack()
 		get_viewport().set_input_as_handled()
 	elif state == "" and ((event is InputEventKey and event.physical_keycode == KEY_E) or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT)):
 		throw_apple()
 		get_viewport().set_input_as_handled()
-	elif event is InputEventKey and event.physical_keycode == KEY_K and CutoutCharacter.anim_dirs().size() > 1:
-		CutoutCharacter.next_anim_dir()
-		restart()
+	elif event is InputEventKey and event.physical_keycode == KEY_L and _art_sets.size() > 1:
+		next_art_set()
 		get_viewport().set_input_as_handled()
-	elif event is InputEventKey and event.physical_keycode == KEY_N:
+	elif not shop.is_empty() and event is InputEventKey and event.physical_keycode in [KEY_1, KEY_2]:
+		buy("heart" if event.physical_keycode == KEY_1 else "mug")
+		get_viewport().set_input_as_handled()
+	elif state == "" and event is InputEventKey and event.physical_keycode == KEY_Q:
+		drink()
+		get_viewport().set_input_as_handled()
+	elif state == "" and event is InputEventKey and event.physical_keycode == KEY_F:
+		use()
+		get_viewport().set_input_as_handled()
+	elif event is InputEventKey and event.physical_keycode == KEY_N and level_map.is_empty():
 		layout = "mario" if layout == "knight" else "knight"
 		restart()
 		get_viewport().set_input_as_handled()
-	elif event is InputEventKey and event.physical_keycode == KEY_G:
-		set_depth_effects(not depth_effects)
-		get_viewport().set_input_as_handled()
-	elif event is InputEventKey and event.physical_keycode == KEY_M:
-		AudioServer.set_bus_mute(0, not AudioServer.is_bus_mute(0))
+	elif event is InputEventKey and event.physical_keycode == KEY_M and (_music or not _sounds.is_empty()):
+		# Sounds alone, then silence, then sounds with music (when there is music), and round again.
+		var order := ["sounds", "silent", "all"] if _music else ["sounds", "silent"]
+		Game.sound = order[(order.find(Game.sound) + 1) % order.size()]
+		Game.save_settings()
+		if _music and Game.sound == "all" and state == "":
+			_music.play()
+		elif _music:
+			_music.stop()
 		_hud.queue_redraw()
 		get_viewport().set_input_as_handled()
 	elif state == "lost" and (event.is_action("interact") or event is InputEventMouseButton):
@@ -752,6 +943,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _redraw() -> void:
 	_tiles.queue_redraw()
+	_hints.queue_redraw()
 	_hud.queue_redraw()
 	_background.queue_redraw()
 	_foreground.queue_redraw()
@@ -783,7 +975,7 @@ func _load_audio() -> void:
 
 
 func _play(sound: String) -> void:
-	if not _sounds.has(sound):
+	if Game.sound == "silent" or not _sounds.has(sound):
 		return
 	for player_node in _players:
 		if not player_node.playing:
@@ -800,12 +992,21 @@ func _stop_music() -> void:
 
 
 func _load_art() -> void:
+	_background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	for dir in LEVEL_ART_SETS:
 		if FileAccess.file_exists(dir + "level.json"):
 			_art_sets.append(_load_art_set(dir))
-	_background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	if not _art_sets.is_empty():
-		_art = _art_sets[0]
+		_art = _art_sets[_art_index % _art_sets.size()]
+
+
+## Next art set.
+func next_art_set() -> void:
+	if _art_sets.is_empty():
+		return
+	_art_index = (_art_index + 1) % _art_sets.size()
+	_art = _art_sets[_art_index]
+	_redraw()
 
 
 func _load_art_set(dir: String) -> Dictionary:
@@ -834,23 +1035,6 @@ func _load_art_set(dir: String) -> Dictionary:
 		"haze_color": Color(spec.get("haze_color", "c9dde6"))}
 
 
-## Next art set. Without any art the level is drawn with plain shapes.
-func next_art_set() -> void:
-	if _art_sets.is_empty():
-		return
-	_art_index = (_art_index + 1) % _art_sets.size()
-	_art = _art_sets[_art_index]
-	_redraw()
-
-
-func set_depth_effects(on: bool) -> void:
-	depth_effects = on
-	_shake = 0.0
-	if _camera:
-		_camera.offset = Vector2(0, -80)
-	_redraw()
-
-
 ## A tile wider than TILE is a strip: each cell shows the part of it under the cell, so the
 ## pattern runs on without seams.
 func _draw_tile(tile_name: String, at: Vector2) -> void:
@@ -863,7 +1047,7 @@ func _draw_tile(tile_name: String, at: Vector2) -> void:
 ## Each layer repeats sideways and moves at its own share of the camera's speed; the first one also
 ## fills the sky above it with its top colour. When the camera goes up, a layer goes down by its
 ## "follow" share of that, so the nearest trees stay standing on the ground.
-## With depth effects, "haze" lays a veil of the haze colour over a layer and all behind it, so far
+## "haze" lays a veil of the haze colour over a layer and all behind it, so far
 ## things fade into the air.
 func _draw_art_background(scroll: float) -> void:
 	_draw_layers(_background, _art["background"], scroll, true)
@@ -894,7 +1078,7 @@ func _draw_layers(v: Node2D, layers: Array, scroll: float, fill_sky: bool) -> vo
 			v.draw_texture_rect(layer["mirrored"] if flipped else texture, Rect2(Vector2(x, y), size), false)
 			x += step
 			index += 1
-		if depth_effects and layer["haze"] > 0.0:
+		if layer["haze"] > 0.0:
 			v.draw_rect(Rect2(Vector2.ZERO, SCREEN), Color(_art["haze_color"], layer["haze"]))
 
 
@@ -932,8 +1116,10 @@ func _draw_tiles() -> void:
 				"#":
 					var top := row == 0 or map[row - 1][col] != "#"
 					if not _art.is_empty():
-						var under_top := row > 0 and map[row - 1][col] == "#" and (row < 2 or map[row - 2][col] != "#")
-						var fill := "ground" if under_top or not _art["tiles"].has("ground_deep") else "ground_deep"
+						# The deeper tile only from the third row down, where it is mostly off screen,
+						# so it does not show as a dark band in a cliff.
+						var deep := row >= 3 and map[row - 1][col] == "#" and map[row - 2][col] == "#" and map[row - 3][col] == "#"
+						var fill := "ground_deep" if deep and _art["tiles"].has("ground_deep") else "ground"
 						_draw_tile("ground_top" if top else fill, at)
 						continue
 					v.draw_rect(cell, Color("8b5a2b"))
@@ -941,8 +1127,6 @@ func _draw_tiles() -> void:
 						v.draw_rect(Rect2(at, Vector2(TILE, 16)), Color("5e9e3f"))
 				"B" when _items.has("crate"):
 					v.draw_texture(_items["crate"], at)
-				"?" when _items.has("block"):
-					v.draw_texture(_items["block"], at + Vector2(0, sin(_anim * 4.0) * 2.0))
 				"S", "s" when _items.has("chest_royal"):
 					var texture: Texture2D = _items["chest_royal_open" if map[row][col] == "s" and _items.has("chest_royal_open") else "chest_royal"]
 					v.draw_texture(texture, at + Vector2(0, TILE - texture.get_height()))
@@ -964,8 +1148,6 @@ func _draw_tiles() -> void:
 					v.draw_rect(Rect2(at + Vector2(6, 30), Vector2(52, 34)), Color("9a5a2e"))
 					v.draw_rect(lid, Color("c08a4a"))
 					v.draw_rect(Rect2(at + Vector2(27, 28), Vector2(10, 12)), Color("f2c14e"))
-				"X" when _items.has("block_used"):
-					v.draw_texture(_items["block_used"], at)
 				"a" when _items.has("apple"):
 					var texture: Texture2D = _items["apple"]
 					v.draw_texture(texture, at + (Vector2(TILE, TILE) - texture.get_size()) / 2 + Vector2(0, sin(_anim * 3.0 + col) * 4.0))
@@ -974,18 +1156,17 @@ func _draw_tiles() -> void:
 				"C", "c" when _items.has("flag"):
 					var texture: Texture2D = _items["flag_on" if map[row][col] == "c" else "flag"]
 					v.draw_texture(texture, at + Vector2(8, TILE - texture.get_height()))
+				"H" when _items.has("ladder"):
+					v.draw_texture(_items["ladder"], at)
+				"H":
+					for side in [12.0, 52.0]:
+						v.draw_line(at + Vector2(side, 0), at + Vector2(side, TILE), Color("6b4423"), 6.0)
+					for k in 3:
+						v.draw_line(at + Vector2(12, 10 + k * 21), at + Vector2(52, 10 + k * 21), Color("8a5a2e"), 5.0)
 				"B":
 					v.draw_rect(cell, Color("c08a4a"))
 					v.draw_rect(cell.grow(-3), ink, false, 3.0)
 					v.draw_line(at + Vector2(6, 6), at + Vector2(58, 58), ink, 3.0)
-				"?":
-					var bob := sin(_anim * 4.0) * 2.0
-					v.draw_rect(cell, Color("f2c14e"))
-					v.draw_rect(cell.grow(-3), ink, false, 3.0)
-					v.draw_string(ThemeDB.fallback_font, at + Vector2(0, 46 + bob), "?", HORIZONTAL_ALIGNMENT_CENTER, TILE, 40, ink)
-				"X":
-					v.draw_rect(cell, Color("a08060"))
-					v.draw_rect(cell.grow(-3), ink, false, 3.0)
 				"=":
 					if not _art.is_empty():
 						_draw_tile("plank", at)
@@ -1006,8 +1187,7 @@ func _draw_tiles() -> void:
 					v.draw_line(pole, pole + Vector2(0, -90), ink, 4.0)
 					var flag := Color("e0a832") if map[row][col] == "c" else Color("9aa3ab")
 					v.draw_colored_polygon(PackedVector2Array([pole + Vector2(0, -90), pole + Vector2(36, -78), pole + Vector2(0, -66)]), flag)
-	if depth_effects:
-		_draw_shadows()
+	_draw_shadows()
 	for apple in _thrown:
 		var spin: float = apple["time"] * 14.0 * signf(apple["vel"].x)
 		v.draw_set_transform(apple["pos"], spin, Vector2(0.7, 0.7))
@@ -1067,6 +1247,95 @@ func _process(delta: float) -> void:
 	_move_particles(delta)
 
 
+## A small key in a bubble over a chest Wiesław can open or a brother he can talk to with F,
+## the brother's offer while it is open, and a golden glow while the nalewka works.
+func _draw_key_hints() -> void:
+	if state != "" or not player:
+		return
+	# A health bar over every Viking who has been hit.
+	for viking in vikings:
+		if viking["health"] < VIKING_HEALTH:
+			draw_health_bar(_hints, viking["node"].position + Vector2(0, -100), float(viking["health"]) / VIKING_HEALTH)
+	if _shield > 0.0:
+		var glow := player.position + Vector2(0, -PLAYER_SIZE.y / 2)
+		_hints.draw_arc(glow, 70.0 + sin(_anim * 12.0) * 4.0, 0.0, TAU, 40, Color(1, 0.85, 0.3, 0.35 + 0.25 * minf(_shield, 1.0)), 6.0)
+	var hints := []
+	var merchant := _merchant_near()
+	if shop.is_empty() and not merchant.is_empty():
+		hints.append(["F", merchant["node"].position + Vector2(0, -150)])
+	var chest := _chest_near()
+	if chest != Vector2.INF:
+		# Over the chest, or over Wiesław's head when he stands in front of it.
+		hints.append(["F", Vector2((floori(chest.x / TILE) + 0.5) * TILE, minf(floori(chest.y / TILE) * TILE - 20, player.position.y - 150))])
+	for hint in hints:
+		var at: Vector2 = hint[1] + Vector2(0, sin(_anim * 5.0) * 3.0)
+		_hints.draw_circle(at, 17, Color(1, 1, 1, 0.9))
+		_hints.draw_arc(at, 17, 0.0, TAU, 24, Color("2b1d14"), 3.0)
+		_hints.draw_string(ThemeDB.fallback_font, at + Vector2(-17, 8), hint[0], HORIZONTAL_ALIGNMENT_CENTER, 34, 22, Color("2b1d14"))
+
+
+static func draw_health_bar(canvas: CanvasItem, center: Vector2, share: float, width := 56.0) -> void:
+	var bar := Rect2(center - Vector2(width / 2, 4), Vector2(width, 8))
+	canvas.draw_rect(bar.grow(2), Color("2b1d14"))
+	canvas.draw_rect(bar, Color("5a1a14"))
+	canvas.draw_rect(Rect2(bar.position, Vector2(width * clampf(share, 0.0, 1.0), 8)), Color("e04a32"))
+
+
+## The brother's stall as a window in the middle of the screen: one card per thing, each with
+## its picture, what it does, its price in apples and the key that buys it.
+func _draw_shop(v: Node2D) -> void:
+	var ink := Color("2b1d14")
+	var paper := Color(1, 0.98, 0.9, 0.97)
+	var font := ThemeDB.fallback_font
+	var panel := Rect2(Vector2(340, 190), Vector2(600, 340))
+	v.draw_rect(panel.grow(4), ink)
+	v.draw_rect(panel, Color("c08a4a"))
+	v.draw_string(font, panel.position + Vector2(0, 42), "%s sprzedaje" % shop["name"], HORIZONTAL_ALIGNMENT_CENTER, panel.size.x, 30, ink)
+	var offers := [
+		{"key": "1", "name": "Serce", "about": "+1 serduszko od razu", "price": HEART_PRICE,
+			"why": "Masz wszystkie serca" if lives >= LIVES else ""},
+		{"key": "2", "name": "Kufel nalewki", "about": "Do torby. Q: 2 s nietykalności", "price": MUG_PRICE, "why": ""},
+	]
+	for i in offers.size():
+		var offer: Dictionary = offers[i]
+		if offer["why"] == "" and apples < int(offer["price"]):
+			offer["why"] = "Za mało jabłek"
+		var card := Rect2(panel.position + Vector2(24 + i * 284, 64), Vector2(268, 214))
+		v.draw_rect(card, paper)
+		v.draw_rect(card, ink, false, 3.0)
+		var faded: bool = offer["why"] != ""
+		var tint := Color(1, 1, 1, 0.4) if faded else Color.WHITE
+		# The picture.
+		var icon := card.position + Vector2(card.size.x / 2, 52)
+		if i == 0 and _items.has("heart"):
+			var heart: Texture2D = _items["heart"]
+			var size := heart.get_size() * HEART_SCALE
+			v.draw_texture_rect(heart, Rect2(icon - size / 2, size), false, tint)
+		elif i == 0:
+			v.draw_circle(icon, 22, Color(Color("d62828"), tint.a))
+		else:
+			v.draw_rect(Rect2(icon - Vector2(18, 16), Vector2(36, 40)), Color(Color("c08a4a"), tint.a))
+			v.draw_rect(Rect2(icon - Vector2(18, 26), Vector2(36, 11)), Color(Color("f4f0e0"), tint.a))
+			v.draw_rect(Rect2(icon - Vector2(18, 16), Vector2(36, 40)), Color(ink, tint.a), false, 3.0)
+			v.draw_arc(icon + Vector2(21, 4), 10, -PI / 2, PI / 2, 10, Color(ink, tint.a), 4.0)
+		v.draw_string(font, card.position + Vector2(0, 112), offer["name"], HORIZONTAL_ALIGNMENT_CENTER, card.size.x, 26, Color(ink, tint.a))
+		v.draw_string(font, card.position + Vector2(0, 140), offer["about"], HORIZONTAL_ALIGNMENT_CENTER, card.size.x, 17, Color(ink, 0.8 * tint.a))
+		# Price in apples, and the key in a little box.
+		var price := card.position + Vector2(20, 186)
+		if _items.has("apple"):
+			v.draw_texture_rect(_items["apple"], Rect2(price - Vector2(0, 26), Vector2(32, 32)), false, tint)
+		else:
+			v.draw_circle(price + Vector2(16, -10), 13, Color(Color("d62828"), tint.a))
+		v.draw_string(font, price + Vector2(40, 0), str(offer["price"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color(ink, tint.a))
+		var key := Rect2(card.end - Vector2(58, 52), Vector2(40, 38))
+		v.draw_rect(key, Color(Color("f2c14e"), tint.a))
+		v.draw_rect(key, Color(ink, tint.a), false, 3.0)
+		v.draw_string(font, key.position + Vector2(0, 29), offer["key"], HORIZONTAL_ALIGNMENT_CENTER, key.size.x, 26, Color(ink, tint.a))
+		if faded:
+			v.draw_string(font, card.position + Vector2(0, card.size.y + 22), offer["why"], HORIZONTAL_ALIGNMENT_CENTER, card.size.x, 18, Color("7a1010"))
+	v.draw_string(font, panel.position + Vector2(0, panel.size.y - 10), "F: wyjście", HORIZONTAL_ALIGNMENT_CENTER, panel.size.x, 20, ink)
+
+
 ## A soft round shadow on the ground under a character; smaller and fainter the higher it is.
 func _draw_shadows() -> void:
 	var feet: Array[Vector2] = []
@@ -1090,8 +1359,6 @@ func _draw_shadows() -> void:
 
 
 func _dust(at: Vector2, count: int) -> void:
-	if not depth_effects:
-		return
 	for i in count:
 		var side := -1.0 if i % 2 == 0 else 1.0
 		_effects.append({"kind": "dust", "pos": at + Vector2(side * randf_range(6, 18), -4),
@@ -1100,7 +1367,7 @@ func _dust(at: Vector2, count: int) -> void:
 
 ## The camera looks ahead where Wiesław runs and shakes for a moment when he is hit.
 func _move_camera(delta: float) -> void:
-	if not depth_effects or not _camera:
+	if not _camera:
 		return
 	if absf(player.velocity.x) > 40.0:
 		_look = move_toward(_look, signf(player.velocity.x) * LOOK_AHEAD, delta * 260.0)
@@ -1120,8 +1387,6 @@ func _make_particles() -> void:
 
 
 func _move_particles(delta: float) -> void:
-	if not depth_effects:
-		return
 	var center := _camera.get_screen_center_position() if _camera else Vector2.ZERO
 	var moved := center - _last_camera if _last_camera != Vector2.ZERO else Vector2.ZERO
 	_last_camera = center
@@ -1134,8 +1399,6 @@ func _move_particles(delta: float) -> void:
 
 
 func _draw_foreground() -> void:
-	if not depth_effects:
-		return
 	var scroll := _camera.get_screen_center_position().x if _camera else 0.0
 	if not _art.is_empty():
 		_draw_layers(_foreground, _art["foreground"], scroll, false)
@@ -1155,7 +1418,8 @@ func _draw_foreground() -> void:
 
 ## Light over the whole picture: slow sunbeams from the top left and a darker edge.
 func _draw_overlay() -> void:
-	if not depth_effects:
+	if night:
+		_overlay.draw_texture_rect(_vignette, Rect2(Vector2.ZERO, SCREEN), false)
 		return
 	var sway := sin(_anim * 0.3) * 30.0
 	var beams := [[180.0, 90.0, 0.10], [360.0, 50.0, 0.07], [520.0, 120.0, 0.06], [760.0, 60.0, 0.05]]
@@ -1204,22 +1468,41 @@ func _draw_hud() -> void:
 	var apples_at := Vector2(40 + LIVES * 54, 50) if _items.has("heart") else Vector2(170, 50)
 	v.draw_string_outline(font, apples_at, "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, 6, halo)
 	v.draw_string(font, apples_at, "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, ink)
-	var mode := "P: tryb %s" % ("pikselowy" if pixel_mode else "gładki")
-	mode = "G: efekty %s     %s" % ["wł." if depth_effects else "wył.", mode]
-	if _art_sets.size() > 1:
-		mode = "L: grafika     " + mode
-	mode = "N: plansza %s     %s" % ["rycerska" if layout == "knight" else "mario", mode]
-	if CutoutCharacter.anim_dirs().size() > 1:
-		mode = "K: Wiesiek     " + mode
+	if mugs > 0:
+		# A little mug with its foam, and how many are in the bag.
+		var mug := apples_at + Vector2(170, -26)
+		v.draw_rect(Rect2(mug, Vector2(22, 26)), Color("c08a4a"))
+		v.draw_rect(Rect2(mug, Vector2(22, 26)), ink, false, 2.0)
+		v.draw_rect(Rect2(mug + Vector2(0, -6), Vector2(22, 7)), Color("f4f0e0"))
+		v.draw_arc(mug + Vector2(24, 13), 7, -PI / 2, PI / 2, 8, ink, 3.0)
+		var count := "x%d (Q)" % mugs
+		v.draw_string_outline(font, mug + Vector2(38, 24), count, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, 6, halo)
+		v.draw_string(font, mug + Vector2(38, 24), count, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, ink)
+	var modes: Array[String] = []
 	if _music or not _sounds.is_empty():
-		mode = "M: dźwięk %s     %s" % ["wył." if AudioServer.is_bus_mute(0) else "wł.", mode]
+		modes.append("M: %s" % {"silent": "cisza", "all": "muzyka i dźwięki"}.get(Game.sound, "same dźwięki"))
+	if _art_sets.size() > 1:
+		modes.append("L: grafika")
+	if level_map.is_empty():
+		modes.append("N: plansza %s" % ("rycerska" if layout == "knight" else "mario"))
+	var mode := "     ".join(modes)
 	v.draw_string_outline(font, Vector2(0, 48), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 20, 6, halo)
 	v.draw_string(font, Vector2(0, 48), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 20, ink)
+	if not shop.is_empty():
+		_draw_shop(v)
+	if level_name != "" and _anim < 3.0:
+		var fade := clampf(3.0 - _anim, 0.0, 1.0)
+		v.draw_string_outline(font, Vector2(0, 300), level_name, HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 56, 10, Color(halo, fade))
+		v.draw_string(font, Vector2(0, 300), level_name, HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 56, Color(ink, fade))
 	var message := ""
-	if state == "" and player and player.position.x < 900.0:
-		message = "A/D: chodzenie     W: skok, w powietrzu jeszcze raz\nSpacja albo klik: miecz     E albo prawy klik: rzut jabłkiem"
+	if state == "" and _boss:
+		message = "Dwaj Wikingowie i jedno oko! Bij tego, który nie ma oka.\nKto złapie oko, od razu atakuje. Pokonaj obu i podnieś oko!"
+	elif state == "" and player and player.position.x < 900.0:
+		message = "A/D: chodzenie     W: skok, w powietrzu jeszcze raz     W/S przy drabinie: wspinanie\nSpacja albo klik: miecz     E albo prawy klik: rzut jabłkiem     F: skrzynie i rozmowa     Q: kufel"
 	elif state == "lost":
 		message = "Ojej, Wiesław stracił wszystkie serduszka!\nSpacja albo klik: jeszcze raz"
+	elif state == "won" and _boss:
+		message = "Oko jest Wieśka! Wikingowie oddają jabłka i drakkar."
 	elif state == "won":
 		message = "Hop! Wiesław dogonił drakkar!"
 	if message != "":
