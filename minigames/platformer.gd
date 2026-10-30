@@ -201,15 +201,17 @@ var _climbing := false
 
 func _ready() -> void:
 	_view = SubViewportContainer.new()
-	_view.stretch = true
-	_view.size = SCREEN
 	_view.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	add_child(_view)
 	_world = SubViewport.new()
 	# Whole pixels only: with the camera between pixels, tiles could show thin gaps between them.
 	_world.snap_2d_transforms_to_pixel = true
 	_world.snap_2d_vertices_to_pixel = true
+	_world.size_2d_override = Vector2i(SCREEN)
+	_world.size_2d_override_stretch = true
 	_view.add_child(_world)
+	_fit_view()
+	get_viewport().size_changed.connect(_fit_view)
 	_back = CanvasLayer.new()
 	_back.layer = -1
 	_world.add_child(_back)
@@ -333,6 +335,16 @@ func _add_drakkar(at: Vector2) -> void:
 	_level.add_child(_drakkar)
 
 
+## The level is drawn at the screen's own resolution, not at 1280x720 and blown up, so on a big
+## screen it moves in fine steps instead of jumping a few screen pixels at a time.
+func _fit_view() -> void:
+	var window := Vector2(get_window().size)
+	var zoom := Vector2.ONE * maxf(minf(window.x / SCREEN.x, window.y / SCREEN.y), 1.0)
+	_world.size = Vector2i((SCREEN * zoom).round())
+	_view.size = Vector2(_world.size)
+	_view.scale = Vector2.ONE / zoom
+
+
 func _add_player() -> void:
 	player = CharacterBody2D.new()
 	player.position = checkpoint
@@ -350,6 +362,8 @@ func _add_player() -> void:
 	_camera.limit_right = map[0].length() * TILE
 	_camera.limit_bottom = map.size() * TILE
 	_camera.position_smoothing_enabled = true
+	# Moves with the physics steps, which physics interpolation smooths between frames.
+	_camera.process_callback = Camera2D.CAMERA2D_PROCESS_PHYSICS
 	_camera.offset = Vector2(0, -80)
 	player.add_child(_camera)
 	_level.add_child(player)
@@ -893,6 +907,7 @@ func _hit(fell: bool) -> void:
 	if fell:
 		player.position = checkpoint
 		player.velocity = Vector2.ZERO
+		player.reset_physics_interpolation()
 	else:
 		player.velocity = Vector2(-_wieslaw.facing * 300.0, -450.0)
 
