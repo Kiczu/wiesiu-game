@@ -94,7 +94,7 @@ const ATTACK_TIME := 0.3
 const ATTACK_COOLDOWN := 0.35
 const ATTACK_REACH := 84.0
 ## A Viking's health; the sword and a thrown apple each take away their damage.
-const VIKING_HEALTH := 20
+const VIKING_HEALTH := 40
 const APPLE_DAMAGE := 10
 ## A thrown apple: speed, how much it drops, how long it flies, and the wait before the next throw.
 const APPLE_SPEED := 760.0

@@ -195,8 +195,9 @@ func _check_platformer() -> void:
 		if other["node"].position.x < viking.position.x:
 			viking = other["node"]
 	var count := level.vikings.size()
-	level.apples = 2
-	for throw in 2:
+	var throws := PlatformerGame.VIKING_HEALTH / PlatformerGame.APPLE_DAMAGE
+	level.apples = throws
+	for throw in throws:
 		# Clear of the pit before him.
 		viking.position.x = 34.5 * PlatformerGame.TILE
 		player.position = viking.position + Vector2(-180, 0)
@@ -205,24 +206,23 @@ func _check_platformer() -> void:
 		await _physics(2)
 		level.throw_apple()
 		await _physics(40)
-	_check(level.vikings.size() == count - 1 and level.apples == 0 and level.lives == PlatformerGame.LIVES, "platformer: two thrown apples knock a Viking out")
+	_check(level.vikings.size() == count - 1 and level.apples == 0 and level.lives == PlatformerGame.LIVES, "platformer: thrown apples knock a Viking out")
 	await _physics(60)
-	# Two sword hits knock a Viking out.
+	# Enough sword hits knock a Viking out.
 	viking = level.vikings[0]["node"]
 	count = level.vikings.size()
-	player.position = viking.position + Vector2(-70, 0)
-	player.velocity = Vector2.ZERO
-	level._wieslaw.facing = 1
-	await _physics(2)
-	level.attack()
-	await _physics(3)
-	var hit_once: bool = level.vikings.size() == count and level.vikings[0]["health"] == PlatformerGame.VIKING_HEALTH - level.sword_damage
-	await _physics(30)
-	player.position = viking.position + Vector2(-70, 0)
-	level._wieslaw.facing = 1
-	level.attack()
-	await _physics(3)
-	_check(hit_once and level.vikings.size() == count - 1, "platformer: two sword hits knock a Viking out")
+	var hit_once := false
+	for hit in PlatformerGame.VIKING_HEALTH / level.sword_damage:
+		player.position = viking.position + Vector2(-70, 0)
+		player.velocity = Vector2.ZERO
+		level._wieslaw.facing = 1
+		await _physics(2)
+		level.attack()
+		await _physics(3)
+		if hit == 0:
+			hit_once = level.vikings.size() == count and level.vikings[0]["health"] == PlatformerGame.VIKING_HEALTH - level.sword_damage
+		await _physics(30)
+	_check(hit_once and level.vikings.size() == count - 1, "platformer: sword hits knock a Viking out")
 	await _physics(60)
 	# Walk into a Viking.
 	viking = level.vikings[0]["node"]

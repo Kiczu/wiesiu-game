@@ -10,7 +10,7 @@ extends Node2D
 
 signal caught
 
-const HEALTH := 30
+const HEALTH := 50
 ## How close Wiesław gets to the blind one, while farther than this from the holder, before the
 ## holder tosses the eye; and the wait after a toss before the next one.
 const TOSS_RANGE := 2.5 * PlatformerGame.TILE
