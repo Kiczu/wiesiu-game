@@ -92,8 +92,9 @@ const LOOK_AHEAD := 140.0
 const ATTACK_TIME := 0.3
 const ATTACK_COOLDOWN := 0.35
 const ATTACK_REACH := 84.0
-## Sword hits a Viking takes before he falls over.
-const VIKING_HEALTH := 2
+## A Viking's health; the sword and a thrown apple each take away their damage.
+const VIKING_HEALTH := 20
+const APPLE_DAMAGE := 10
 ## A thrown apple: speed, how much it drops, how long it flies, and the wait before the next throw.
 const APPLE_SPEED := 760.0
 const APPLE_GRAVITY := 900.0
@@ -112,6 +113,8 @@ var apples := 0
 var state := ""
 ## Tests set these instead of the keyboard.
 var auto_input := false
+## Damage of the sword Wiesław carries (other swords can hit harder).
+var sword_damage := 10
 var input_x := 0.0
 var input_jump := false
 var input_attack := false
@@ -735,17 +738,17 @@ func _swing(delta: float) -> void:
 		if node in _struck or not blade.intersects(Rect2(node.position - Vector2(24, 80), Vector2(48, 80))):
 			continue
 		_struck.append(node)
-		_strike(viking, facing)
+		_strike(viking, facing, sword_damage)
 	if _boss:
-		_boss.strike(blade, facing)
+		_boss.strike(blade, facing, sword_damage)
 	for point in [blade.position + blade.size * Vector2(0.75, 0.2), blade.position + blade.size * Vector2(0.75, 0.6)]:
 		_break_crate(point)
 
 
 ## A Viking hit by the sword or an apple flashes and slides back; out of health, he falls over.
-func _strike(viking: Dictionary, from_dir: float) -> void:
+func _strike(viking: Dictionary, from_dir: float, damage: int) -> void:
 	var node: Node2D = viking["node"]
-	viking["health"] -= 1
+	viking["health"] -= damage
 	_shake = maxf(_shake, 0.1)
 	_play("stomp")
 	node.modulate = Color(3, 3, 3)
@@ -786,10 +789,10 @@ func _fly_apples(delta: float) -> void:
 		var spent: bool = apple["time"] > APPLE_FLIGHT
 		for viking in vikings.duplicate():
 			if not spent and Rect2(viking["node"].position - Vector2(24, 80), Vector2(48, 80)).grow(10).has_point(at):
-				_strike(viking, signf(apple["vel"].x))
+				_strike(viking, signf(apple["vel"].x), APPLE_DAMAGE)
 				spent = true
 		if not spent and _boss and not _boss.won:
-			spent = _boss.knock_eye(at) or _boss.strike(Rect2(at - Vector2(10, 10), Vector2(20, 20)), signf(apple["vel"].x))
+			spent = _boss.knock_eye(at) or _boss.strike(Rect2(at - Vector2(10, 10), Vector2(20, 20)), signf(apple["vel"].x), APPLE_DAMAGE)
 		var tile := tile_at(at)
 		if not spent and tile in SOLID:
 			_break_crate(at)
@@ -1233,6 +1236,10 @@ func _process(delta: float) -> void:
 func _draw_key_hints() -> void:
 	if state != "" or not player:
 		return
+	# A health bar over every Viking who has been hit.
+	for viking in vikings:
+		if viking["health"] < VIKING_HEALTH:
+			draw_health_bar(_hints, viking["node"].position + Vector2(0, -100), float(viking["health"]) / VIKING_HEALTH)
 	if _shield > 0.0:
 		var glow := player.position + Vector2(0, -PLAYER_SIZE.y / 2)
 		_hints.draw_arc(glow, 70.0 + sin(_anim * 12.0) * 4.0, 0.0, TAU, 40, Color(1, 0.85, 0.3, 0.35 + 0.25 * minf(_shield, 1.0)), 6.0)
@@ -1251,6 +1258,13 @@ func _draw_key_hints() -> void:
 		_hints.draw_circle(at, 17, Color(1, 1, 1, 0.9))
 		_hints.draw_arc(at, 17, 0.0, TAU, 24, Color("2b1d14"), 3.0)
 		_hints.draw_string(ThemeDB.fallback_font, at + Vector2(-17, 8), hint[0], HORIZONTAL_ALIGNMENT_CENTER, 34, 22, Color("2b1d14"))
+
+
+static func draw_health_bar(canvas: CanvasItem, center: Vector2, share: float, width := 56.0) -> void:
+	var bar := Rect2(center - Vector2(width / 2, 4), Vector2(width, 8))
+	canvas.draw_rect(bar.grow(2), Color("2b1d14"))
+	canvas.draw_rect(bar, Color("5a1a14"))
+	canvas.draw_rect(Rect2(bar.position, Vector2(width * clampf(share, 0.0, 1.0), 8)), Color("e04a32"))
 
 
 func _draw_offer(merchant: Dictionary) -> void:
@@ -1418,7 +1432,7 @@ func _draw_hud() -> void:
 		v.draw_string(font, Vector2(0, 300), level_name, HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 56, Color(ink, fade))
 	var message := ""
 	if state == "" and _boss:
-		message = "Dwaj Wikingowie i jedno oko! Bij tego, który nie ma oka.\nKto złapie oko, od razu atakuje. Kto padnie, gubi oko: podnieś je!"
+		message = "Dwaj Wikingowie i jedno oko! Bij tego, który nie ma oka.\nKto złapie oko, od razu atakuje. Pokonaj obu i podnieś oko!"
 	elif state == "" and player and player.position.x < 900.0:
 		message = "A/D: chodzenie     W: skok, w powietrzu jeszcze raz     W/S przy drabinie: wspinanie\nSpacja albo klik: miecz     E albo prawy klik: rzut jabłkiem     F: skrzynie i rozmowa"
 	elif state == "lost":

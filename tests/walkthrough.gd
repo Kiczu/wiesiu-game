@@ -216,7 +216,7 @@ func _check_platformer() -> void:
 	await _physics(2)
 	level.attack()
 	await _physics(3)
-	var hit_once: bool = level.vikings.size() == count and level.vikings[0]["health"] == PlatformerGame.VIKING_HEALTH - 1
+	var hit_once: bool = level.vikings.size() == count and level.vikings[0]["health"] == PlatformerGame.VIKING_HEALTH - level.sword_damage
 	await _physics(30)
 	player.position = viking.position + Vector2(-70, 0)
 	level._wieslaw.facing = 1
@@ -330,9 +330,10 @@ func _brothers_shop() -> void:
 	stage.queue_free()
 
 
-## Only the blind Viking can be hit; going for him makes the other toss him the eye, and he
-## lunges once he has it. The one who sees only blocks. Beaten, a Viking drops the eye, and
-## Wiesław wins by picking it up.
+## Only the blind Viking can be hit; going for him (out of the other's reach) makes the other
+## toss him the eye, and he lunges once he has it. The one who sees only blocks. Beaten, a Viking
+## drops the eye, the last one picks it up and can be hit like any Viking, and when he falls too
+## Wiesław wins by picking the eye up.
 func _eye_boss() -> void:
 	var rows: Array[String] = []
 	for i in 9:
@@ -347,23 +348,34 @@ func _eye_boss() -> void:
 	await _physics(5)
 	var boss: EyeBoss = stage._boss
 	stage._shield = 99.0
-	var blind: int = 1 - boss.holder
 	var seeing: int = boss.holder
-	var blocked: bool = not boss.strike(boss.rect_of(seeing), 1.0) or boss.vikings[seeing]["health"] == EyeBoss.HEALTH
+	var blind: int = 1 - seeing
+	boss.strike(boss.rect_of(seeing), 1.0, stage.sword_damage)
+	var blocked: bool = boss.vikings[seeing]["health"] == EyeBoss.HEALTH
 	boss.vikings[seeing]["stun"] = 0.0
+	# Out of the holder's reach, next to the blind one.
+	boss.vikings[seeing]["node"].position.x = boss.vikings[blind]["node"].position.x + 5.0 * PlatformerGame.TILE
 	stage.player.position = boss.vikings[blind]["node"].position - Vector2(100, 0)
+	boss._cooldown = 0.0
 	await _physics(2)
 	var tossed: bool = boss.holder == -1
-	await _physics(80)
+	await _physics(120)
 	var lunged: bool = boss.holder == blind
 	blind = 1 - boss.holder
-	for k in EyeBoss.HEALTH:
+	while boss.vikings[blind]["health"] > 0:
 		boss.vikings[blind]["stun"] = 0.0
-		boss.strike(boss.rect_of(blind), 1.0)
-	var dropped: bool = boss.holder == -1 and not boss.won
+		boss.strike(boss.rect_of(blind), 1.0, stage.sword_damage)
+	var last: int = 1 - blind
+	var dropped: bool = boss.holder == -1 and boss.alone()
+	stage.player.position = Vector2(2.0 * PlatformerGame.TILE, stage.player.position.y)
+	await _physics(240)
+	var picked: bool = boss.holder == last
+	while boss.vikings[last]["health"] > 0:
+		boss.vikings[last]["stun"] = 0.0
+		boss.strike(boss.rect_of(last), 1.0, stage.sword_damage)
 	stage.player.position = boss.eye + Vector2(0, 40)
 	await _physics(3)
-	_check(blocked and tossed and lunged and dropped and boss.won and stage.state == "won", "platformer: only the blind Viking takes hits, the eye goes to him, and a beaten Viking drops it for Wiesław")
+	_check(blocked and tossed and lunged and dropped and picked and boss.won and stage.state == "won", "platformer: only the blind Viking takes hits, the eye goes to him, the last one picks it up and fights, and Wiesław takes it (%s %s %s %s %s)" % [blocked, tossed, lunged, dropped, picked])
 	stage.queue_free()
 
 
