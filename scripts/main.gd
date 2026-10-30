@@ -76,8 +76,11 @@ func _play_trial() -> void:
 	ui.show_adventure_controls(false)
 	# Each campaign level: its comic pages, then the level; the comic ending comes after the last.
 	var total := 0
+	var mugs := 0
 	for spec in PlatformerCampaign.levels():
 		var stage := PlatformerGame.new()
+		# Mugs bought from the brothers go on to the next levels.
+		stage.mugs = mugs
 		stage.level_map = spec["map"]
 		stage.night = spec["night"]
 		stage.level_name = spec["name"]
@@ -91,6 +94,7 @@ func _play_trial() -> void:
 			await part.finished
 			part.queue_free()
 		total += int(Game.flag("jablka_proba"))
+		mugs = stage.mugs
 	var outro := ComicStrip.new(BookOneStory.outro_pages())
 	outro.pause_requested.connect(menu.show_pause)
 	add_child(outro)

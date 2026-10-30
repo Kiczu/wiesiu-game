@@ -54,7 +54,8 @@ const NIGHT_TINT := Color(0.5, 0.56, 0.86)
 const CHEST_APPLES := 5
 ## Apples in the royal chest; it also fills every heart.
 const ROYAL_APPLES := 15
-## What the brothers sell, for apples: a heart, and a mug of nalewka that keeps Wiesław from harm for a while.
+## What the brothers sell, for apples: a heart, and a mug of nalewka for the bag, which keeps
+## Wiesław from harm for a while once he drinks it.
 const HEART_PRICE := 5
 const MUG_PRICE := 3
 const MUG_TIME := 2.0
@@ -192,6 +193,8 @@ var _thrown: Array[Dictionary] = []
 var _look := 0.0
 ## Time left on the mug of nalewka: nothing hurts Wiesław.
 var _shield := 0.0
+## Mugs of nalewka bought from the brothers and kept for later; Q drinks one.
+var mugs := 0
 ## Whether Wiesław is holding on to a ladder.
 var _climbing := false
 
@@ -620,7 +623,7 @@ func buy(item: String) -> void:
 	if item == "heart":
 		lives += 1
 	else:
-		_shield = MUG_TIME
+		mugs += 1
 	_play("checkpoint")
 	_hud.queue_redraw()
 
@@ -637,6 +640,16 @@ func _win() -> void:
 ## A Viking of the eye fight runs into Wiesław.
 func hurt_by_boss() -> void:
 	_hit(false)
+
+
+## Q: drinks a mug of nalewka from the bag, and for a while nothing hurts Wiesław.
+func drink() -> void:
+	if state != "" or mugs <= 0 or _shield > 0.0:
+		return
+	mugs -= 1
+	_shield = MUG_TIME
+	_play("checkpoint")
+	_hud.queue_redraw()
 
 
 ## A brother stands at his stall facing the way Wiesław comes from, with his name over him.
@@ -901,6 +914,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif not shop.is_empty() and event is InputEventKey and event.physical_keycode in [KEY_1, KEY_2]:
 		buy("heart" if event.physical_keycode == KEY_1 else "mug")
+		get_viewport().set_input_as_handled()
+	elif state == "" and event is InputEventKey and event.physical_keycode == KEY_Q:
+		drink()
 		get_viewport().set_input_as_handled()
 	elif state == "" and event is InputEventKey and event.physical_keycode == KEY_F:
 		use()
@@ -1272,7 +1288,7 @@ func _draw_offer(merchant: Dictionary) -> void:
 	var font := ThemeDB.fallback_font
 	var lines := [merchant["name"] + ":",
 		"1: serce, %d jabłek" % HEART_PRICE,
-		"2: kufel nalewki (nic Cię nie rusza), %d jabłka" % MUG_PRICE,
+		"2: kufel nalewki do torby (Q: wypij), %d jabłka" % MUG_PRICE,
 		"F: do widzenia"]
 	var box := Rect2(merchant["node"].position + Vector2(-270, -290), Vector2(540, 128))
 	_hints.draw_rect(box, Color(1, 0.98, 0.9, 0.95))
@@ -1416,6 +1432,16 @@ func _draw_hud() -> void:
 	var apples_at := Vector2(40 + LIVES * 54, 50) if _items.has("heart") else Vector2(170, 50)
 	v.draw_string_outline(font, apples_at, "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, 6, halo)
 	v.draw_string(font, apples_at, "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, ink)
+	if mugs > 0:
+		# A little mug with its foam, and how many are in the bag.
+		var mug := apples_at + Vector2(170, -26)
+		v.draw_rect(Rect2(mug, Vector2(22, 26)), Color("c08a4a"))
+		v.draw_rect(Rect2(mug, Vector2(22, 26)), ink, false, 2.0)
+		v.draw_rect(Rect2(mug + Vector2(0, -6), Vector2(22, 7)), Color("f4f0e0"))
+		v.draw_arc(mug + Vector2(24, 13), 7, -PI / 2, PI / 2, 8, ink, 3.0)
+		var count := "x%d (Q)" % mugs
+		v.draw_string_outline(font, mug + Vector2(38, 24), count, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, 6, halo)
+		v.draw_string(font, mug + Vector2(38, 24), count, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, ink)
 	var modes: Array[String] = []
 	if _music or not _sounds.is_empty():
 		modes.append("M: %s" % {"silent": "cisza", "all": "muzyka i dźwięki"}.get(Game.sound, "same dźwięki"))
@@ -1434,7 +1460,7 @@ func _draw_hud() -> void:
 	if state == "" and _boss:
 		message = "Dwaj Wikingowie i jedno oko! Bij tego, który nie ma oka.\nKto złapie oko, od razu atakuje. Pokonaj obu i podnieś oko!"
 	elif state == "" and player and player.position.x < 900.0:
-		message = "A/D: chodzenie     W: skok, w powietrzu jeszcze raz     W/S przy drabinie: wspinanie\nSpacja albo klik: miecz     E albo prawy klik: rzut jabłkiem     F: skrzynie i rozmowa"
+		message = "A/D: chodzenie     W: skok, w powietrzu jeszcze raz     W/S przy drabinie: wspinanie\nSpacja albo klik: miecz     E albo prawy klik: rzut jabłkiem     F: skrzynie i rozmowa     Q: kufel"
 	elif state == "lost":
 		message = "Ojej, Wiesław stracił wszystkie serduszka!\nSpacja albo klik: jeszcze raz"
 	elif state == "won" and _boss:

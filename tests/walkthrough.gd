@@ -324,9 +324,12 @@ func _brothers_shop() -> void:
 	stage.buy("heart")
 	stage.buy("mug")
 	var bought := stage.lives == PlatformerGame.LIVES and stage.apples == 9 - PlatformerGame.HEART_PRICE - PlatformerGame.MUG_PRICE
+	bought = bought and stage.mugs == 1 and stage._shield == 0.0
+	stage.drink()
+	bought = bought and stage.mugs == 0 and stage._shield > 0.0
 	stage.player.position = stage.vikings[0]["node"].position
 	await _physics(3)
-	_check(open and bought and stage.lives == PlatformerGame.LIVES and stage.shop.is_empty(), "platformer: a brother sells a heart and a mug, and with the mug a Viking does no harm")
+	_check(open and bought and stage.lives == PlatformerGame.LIVES and stage.shop.is_empty(), "platformer: a brother sells a heart and a mug for the bag, and with the mug drunk a Viking does no harm")
 	stage.queue_free()
 
 
