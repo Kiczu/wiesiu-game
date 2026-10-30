@@ -330,8 +330,9 @@ func _brothers_shop() -> void:
 	stage.queue_free()
 
 
-## The two Vikings toss their one eye; an apple knocks the flying eye down, and Wiesław wins by
-## picking it up (or catching it in the air).
+## Only the blind Viking can be hit; going for him makes the other toss him the eye, and he
+## lunges once he has it. The one who sees only blocks. Beaten, a Viking drops the eye, and
+## Wiesław wins by picking it up.
 func _eye_boss() -> void:
 	var rows: Array[String] = []
 	for i in 9:
@@ -345,16 +346,24 @@ func _eye_boss() -> void:
 	add_child(stage)
 	await _physics(5)
 	var boss: EyeBoss = stage._boss
-	boss._hold = 0.0
+	stage._shield = 99.0
+	var blind: int = 1 - boss.holder
+	var seeing: int = boss.holder
+	var blocked: bool = not boss.strike(boss.rect_of(seeing), 1.0) or boss.vikings[seeing]["health"] == EyeBoss.HEALTH
+	boss.vikings[seeing]["stun"] = 0.0
+	stage.player.position = boss.vikings[blind]["node"].position - Vector2(100, 0)
 	await _physics(2)
-	var tossed := boss.holder == -1
-	await _physics(30)
-	var knocked := boss.knock_eye(boss.eye)
-	stage.lives = PlatformerGame.LIVES
-	stage._shield = 5.0
+	var tossed: bool = boss.holder == -1
+	await _physics(80)
+	var lunged: bool = boss.holder == blind
+	blind = 1 - boss.holder
+	for k in EyeBoss.HEALTH:
+		boss.vikings[blind]["stun"] = 0.0
+		boss.strike(boss.rect_of(blind), 1.0)
+	var dropped: bool = boss.holder == -1 and not boss.won
 	stage.player.position = boss.eye + Vector2(0, 40)
 	await _physics(3)
-	_check(tossed and knocked and boss.won and stage.state == "won", "platformer: the Vikings toss their eye, an apple knocks it down and Wiesław takes it")
+	_check(blocked and tossed and lunged and dropped and boss.won and stage.state == "won", "platformer: only the blind Viking takes hits, the eye goes to him, and a beaten Viking drops it for Wiesław")
 	stage.queue_free()
 
 

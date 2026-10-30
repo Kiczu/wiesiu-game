@@ -1416,7 +1416,7 @@ func _draw_hud() -> void:
 		v.draw_string(font, Vector2(0, 300), level_name, HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 56, Color(ink, fade))
 	var message := ""
 	if state == "" and _boss:
-		message = "Dwaj Wikingowie i jedno oko! Złap oko, kiedy leci.\nJabłko trafione w lecące oko strąca je na ziemię."
+		message = "Dwaj Wikingowie i jedno oko! Bij tego, który nie ma oka.\nKto złapie oko, od razu atakuje. Kto padnie, gubi oko: podnieś je!"
 	elif state == "" and player and player.position.x < 900.0:
 		message = "A/D: chodzenie     W: skok, w powietrzu jeszcze raz     W/S przy drabinie: wspinanie\nSpacja albo klik: miecz     E albo prawy klik: rzut jabłkiem     F: skrzynie i rozmowa"
 	elif state == "lost":
