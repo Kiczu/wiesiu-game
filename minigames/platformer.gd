@@ -86,7 +86,8 @@ const PLAYER_SIZE := Vector2(40, 92)
 ## Ready-made tiles and background layers, one set per folder: level.json names the files and how
 ## the layers scroll. L switches between the sets that are there; without any the level is drawn
 ## with plain shapes.
-const LEVEL_ART_SETS := ["res://art/platformer/level_kreskowka/", "res://art/platformer/level_piksele/"]
+## Keyed by the name kept in Game.level_art. "piksele" is the author's pixel-art sample board.
+const LEVEL_ART_SETS := {"kreskowka": "res://art/platformer/level_kreskowka/", "piksele": "res://art/platformer/level_autor/"}
 ## Music (music.ogg, looped) and sound effects (<name>.ogg) for the level, each used when present.
 const AUDIO_DIR := "res://art/platformer/audio/"
 ## Drawn pictures for things in the level (<name>.png), each used when present.
@@ -1071,10 +1072,11 @@ func _stop_music() -> void:
 
 func _load_art() -> void:
 	_background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	for dir in LEVEL_ART_SETS:
+	for art_name in LEVEL_ART_SETS:
+		var dir: String = LEVEL_ART_SETS[art_name]
 		if FileAccess.file_exists(dir + "level.json"):
 			var art_set := _load_art_set(dir)
-			art_set["name"] = dir.trim_suffix("/").get_file().trim_prefix("level_")
+			art_set["name"] = art_name
 			_art_sets.append(art_set)
 	if not _art_sets.is_empty():
 		_art = _art_sets[0]
