@@ -206,6 +206,9 @@ var _look := 0.0
 var _shield := 0.0
 ## Mugs of nalewka bought from the brothers and kept for later; Q drinks one.
 var mugs := 0
+## What Wiesław last drank. A frame set can draw a pose per drink ("drink_mug",
+## "drink_potion", ...); one without it uses the plain "drink" pose.
+var drinking := "mug"
 ## Whether Wiesław is holding on to a ladder.
 var _climbing := false
 
@@ -571,8 +574,8 @@ func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 		_wieslaw.pose = "hurt"
 	elif _attack > 0.0 and _wieslaw.has_pose("attack"):
 		_wieslaw.pose = "attack"
-	elif _shield > MUG_TIME - DRINK_TIME and _wieslaw.has_drawn_pose("drink") and player.is_on_floor() and absf(player.get_real_velocity().x) < 20.0:
-		_wieslaw.pose = "drink"
+	elif _shield > MUG_TIME - DRINK_TIME and _drink_pose() != "" and player.is_on_floor() and absf(player.get_real_velocity().x) < 20.0:
+		_wieslaw.pose = _drink_pose()
 	elif _wall != 0 and _wieslaw.has_drawn_pose("wall"):
 		_wieslaw.pose = "wall"
 	elif not player.is_on_floor():
@@ -706,9 +709,18 @@ func drink() -> void:
 	if state != "" or mugs <= 0 or _shield > 0.0:
 		return
 	mugs -= 1
+	drinking = "mug"
 	_shield = MUG_TIME
 	_play("checkpoint")
 	_hud.queue_redraw()
+
+
+## The pose for what Wiesław is drinking, or "" when the frame set draws no drinking at all.
+func _drink_pose() -> String:
+	for name in ["drink_" + drinking, "drink"]:
+		if _wieslaw.has_drawn_pose(name):
+			return name
+	return ""
 
 
 ## A brother stands at his stall facing the way Wiesław comes from, with his name over him.
