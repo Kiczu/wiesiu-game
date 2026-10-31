@@ -13,6 +13,8 @@ const SCREEN := Vector2(1280, 720)
 const VIEW_ZOOM := 0.8
 ## Where the background pictures expect the ground: two tiles above the bottom of the screen.
 const GROUND_LINE := SCREEN.y - 2 * TILE
+## Rows of open sky the camera can show above an outdoor level.
+const SKY_ROWS := 4
 ## One character per tile:
 ## # ground   B crate   = plank (jump through from below)
 ## a apple   x thorns   V Viking   C checkpoint   P start   D the drakkar (finish)
@@ -418,7 +420,8 @@ func _add_player() -> void:
 	player.add_child(_wieslaw)
 	_camera = Camera2D.new()
 	_camera.limit_left = 0
-	_camera.limit_top = 0
+	# Outdoors the camera may rise a little above the highest thing in the level, into open sky.
+	_camera.limit_top = 0 if dungeon else -SKY_ROWS * TILE
 	_camera.limit_right = map[0].length() * TILE
 	_camera.limit_bottom = map.size() * TILE
 	_camera.position_smoothing_enabled = true
@@ -1183,7 +1186,9 @@ func _draw_tile(tile_name: String, at: Vector2) -> void:
 	var texture: Texture2D = _art["tiles"][tile_name]
 	var size := texture.get_size()
 	var x := fposmod(at.x, size.x) if size.x > TILE else 0.0
-	_tiles.draw_texture_rect_region(texture, Rect2(at, Vector2(minf(TILE, size.x), size.y)), Rect2(x, 0, minf(TILE, size.x), size.y))
+	# One pixel bigger than the cell, so at an uneven zoom no hairline of background shows between
+	# neighbouring tiles.
+	_tiles.draw_texture_rect_region(texture, Rect2(at, Vector2(minf(TILE, size.x), size.y) + Vector2.ONE), Rect2(x, 0, minf(TILE, size.x), size.y))
 
 
 ## Each layer repeats sideways and moves at its own share of the camera's speed; the first one also
@@ -1261,7 +1266,7 @@ func _draw_background() -> void:
 func _draw_wall(v: Node2D, row: int, col: int) -> void:
 	var at := Vector2(col * TILE, row * TILE)
 	var hall := (row + 1) * TILE <= _horizon
-	v.draw_rect(Rect2(at, Vector2(TILE, TILE)), HALL if hall else WALL)
+	v.draw_rect(Rect2(at, Vector2(TILE + 1, TILE + 1)), HALL if hall else WALL)
 	for half in 2:
 		var y := at.y + half * 32.0
 		var mortar := HALL_MORTAR if hall else WALL_MORTAR
@@ -1328,7 +1333,7 @@ func _draw_wall_things(v: Node2D, span: Vector2i) -> void:
 ## A dungeon floor or ceiling block: grey stones, lit on the edge that faces open air.
 func _draw_stone(v: Node2D, row: int, col: int) -> void:
 	var at := Vector2(col * TILE, row * TILE)
-	v.draw_rect(Rect2(at, Vector2(TILE, TILE)), STONE)
+	v.draw_rect(Rect2(at, Vector2(TILE + 1, TILE + 1)), STONE)
 	var shade := 0.06 * float((row * 7 + col * 13) % 3)
 	v.draw_rect(Rect2(at, Vector2(TILE, TILE)), Color(0, 0, 0, shade))
 	if row == 0 or map[row - 1][col] != "#":
@@ -1387,7 +1392,7 @@ func _draw_tiles() -> void:
 				if dungeon:
 					_draw_wall(v, row, col)
 				else:
-					v.draw_rect(Rect2(col * TILE, row * TILE, TILE, TILE), Color("2a1d16"))
+					v.draw_rect(Rect2(col * TILE, row * TILE, TILE + 1, TILE + 1), Color("2a1d16"))
 	if dungeon:
 		# Windows a column further left still reach into view.
 		_draw_wall_things(v, Vector2i(maxi(span.x - 1, 0), span.y))
@@ -1406,6 +1411,10 @@ func _draw_tiles() -> void:
 						# so it does not show as a dark band in a cliff.
 						var deep := row >= 3 and map[row - 1][col] == "#" and map[row - 2][col] == "#" and map[row - 3][col] == "#"
 						var fill := "ground_deep" if deep and _art["tiles"].has("ground_deep") else "ground"
+						# Solid earth behind the tile: a drawn tile may be partly see-through, and the
+						# sky must not show through the ground.
+						var backing := Rect2(at + Vector2(0, 24 if top else 0), Vector2(TILE + 1, TILE + 1 - (24 if top else 0)))
+						v.draw_rect(backing, Color("27161a"))
 						_draw_tile("ground_top" if top else fill, at)
 						continue
 					v.draw_rect(cell, Color("8b5a2b"))
