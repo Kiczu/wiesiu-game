@@ -50,6 +50,12 @@ const SOLID := "#B"
 ## Apples inside a broken crate.
 const CRATE_APPLES := 2
 const NIGHT_TINT := Color(0.5, 0.56, 0.86)
+const DUNGEON_TINT := Color(0.92, 0.86, 0.8)
+const STONE := Color("6e6a66")
+const STONE_LIGHT := Color("8d8882")
+const MORTAR := Color("3e3a37")
+const WALL := Color("2e2a2c")
+const WALL_MORTAR := Color("1f1c1e")
 ## Apples in a treasure chest; it also gives back a lost heart.
 const CHEST_APPLES := 5
 ## Apples in the royal chest; it also fills every heart.
@@ -139,6 +145,9 @@ var level_map: Array = []
 var night := false
 ## Shown big for a moment when the level starts.
 var level_name := ""
+## Castle dungeons: stone walls and floors with torches instead of the outdoor art, and the
+## drakkar tile (D) is the way out, a door.
+var dungeon := false
 
 var player: CharacterBody2D
 var vikings: Array[Dictionary] = []
@@ -298,7 +307,7 @@ func restart() -> void:
 		map.assign(level_map)
 	else:
 		map.assign(LEVEL_KNIGHT if layout == "knight" else LEVEL)
-	_view.modulate = NIGHT_TINT if night else Color.WHITE
+	_view.modulate = NIGHT_TINT if night else (DUNGEON_TINT if dungeon else Color.WHITE)
 	_level = Node2D.new()
 	_world.add_child(_level)
 	_tiles = Node2D.new()
@@ -332,7 +341,12 @@ func restart() -> void:
 
 
 func _add_drakkar(at: Vector2) -> void:
-	if _items.has("drakkar"):
+	if dungeon:
+		var door := Node2D.new()
+		door.position = at
+		door.draw.connect(_draw_door.bind(door))
+		_drakkar = door
+	elif _items.has("drakkar"):
 		var sprite := Sprite2D.new()
 		sprite.texture = _items["drakkar"]
 		sprite.centered = false
@@ -347,6 +361,28 @@ func _add_drakkar(at: Vector2) -> void:
 		hotspot.position = at + Vector2(60, 0)
 		_drakkar = hotspot
 	_level.add_child(_drakkar)
+
+
+## The way out of the dungeons: an arched wooden door with daylight around it, two tiles tall.
+func _draw_door(door: Node2D) -> void:
+	var glow := 0.5 + 0.15 * sin(_anim * 2.0)
+	door.draw_circle(Vector2(0, -70), 90, Color(1.0, 0.9, 0.6, 0.18 * glow))
+	var arch := PackedVector2Array()
+	for i in 13:
+		var angle := PI + PI * i / 12.0
+		arch.append(Vector2(cos(angle) * 46, -96 + sin(angle) * 40))
+	var frame := PackedVector2Array([Vector2(46, 0), Vector2(-46, 0)])
+	frame.append_array(arch)
+	door.draw_colored_polygon(frame, MORTAR)
+	var wood := PackedVector2Array()
+	for point in frame:
+		wood.append(point * Vector2(0.82, 1.0) + Vector2(0, 6) * signf(-point.y))
+	door.draw_colored_polygon(wood, Color("7a4a26"))
+	for x in [-24.0, -8.0, 8.0, 24.0]:
+		door.draw_line(Vector2(x, -4), Vector2(x, -120 + absf(x) * 0.6), Color("5a3418"), 3.0)
+	for y in [-30.0, -90.0]:
+		door.draw_line(Vector2(-37, y), Vector2(37, y), Color("3a2a20"), 6.0)
+	door.draw_circle(Vector2(26, -60), 5, Color("c9a24a"))
 
 
 ## The level is drawn at the screen's own resolution, not at 1280x720 and blown up, so on a big
@@ -1179,6 +1215,18 @@ func _draw_layers(v: Node2D, layers: Array, scroll: float, fill_sky: bool) -> vo
 func _draw_background() -> void:
 	var v := _background
 	var scroll := _camera.get_screen_center_position().x if _camera else 0.0
+	if dungeon:
+		# A far stone wall behind the corridors, scrolling slowly.
+		v.draw_rect(Rect2(Vector2.ZERO, SCREEN), Color("1c191b"))
+		var shift := fposmod(scroll * 0.3, 96.0)
+		for row in 16:
+			var y := row * 48.0
+			var offset := 48.0 if row % 2 else 0.0
+			v.draw_line(Vector2(0, y), Vector2(SCREEN.x, y), Color("131113"), 3.0)
+			for k in 16:
+				var x := k * 96.0 - shift + offset
+				v.draw_line(Vector2(x, y), Vector2(x, y + 48), Color("131113"), 3.0)
+		return
 	if not _art.is_empty():
 		_draw_art_background(scroll)
 		return
@@ -1193,12 +1241,62 @@ func _draw_background() -> void:
 		v.draw_circle(Vector2(x, 450), 60, Color("9cc58d"))
 
 
+## A dungeon wall cell: dark bricks, and a torch now and then a step above the floor.
+func _draw_wall(v: Node2D, row: int, col: int) -> void:
+	var at := Vector2(col * TILE, row * TILE)
+	v.draw_rect(Rect2(at, Vector2(TILE, TILE)), WALL)
+	for half in 2:
+		var y := at.y + half * 32.0
+		v.draw_line(Vector2(at.x, y), Vector2(at.x + TILE, y), WALL_MORTAR, 2.0)
+		var x := at.x + (16.0 if (row * 2 + half) % 2 else 48.0)
+		v.draw_line(Vector2(x, y), Vector2(x, y + 32), WALL_MORTAR, 2.0)
+	var below := row + 2 < map.size() and map[row + 1][col] != "#" and map[row + 2][col] == "#"
+	if below and col % 7 == 3:
+		var flicker := 0.85 + 0.15 * sin(_anim * 9.0 + col) * sin(_anim * 5.3 + row)
+		var base := at + Vector2(32, 40)
+		v.draw_circle(base + Vector2(0, -18), 70 * flicker, Color(1.0, 0.6, 0.2, 0.08))
+		v.draw_circle(base + Vector2(0, -18), 34 * flicker, Color(1.0, 0.7, 0.3, 0.12))
+		v.draw_rect(Rect2(base + Vector2(-4, -6), Vector2(8, 22)), Color("4a3020"))
+		v.draw_rect(Rect2(base + Vector2(-9, -8), Vector2(18, 5)), Color("2a2a2a"))
+		var tip := base + Vector2(sin(_anim * 7.0 + col) * 2.0, -26 * flicker)
+		v.draw_colored_polygon(PackedVector2Array([base + Vector2(-8, -8), tip, base + Vector2(8, -8)]), Color("ff9a2e"))
+		v.draw_colored_polygon(PackedVector2Array([base + Vector2(-4, -8), base.lerp(tip, 0.7), base + Vector2(4, -8)]), Color("ffe08a"))
+
+
+## A dungeon floor or ceiling block: grey stones, lit on the edge that faces open air.
+func _draw_stone(v: Node2D, row: int, col: int) -> void:
+	var at := Vector2(col * TILE, row * TILE)
+	v.draw_rect(Rect2(at, Vector2(TILE, TILE)), STONE)
+	var shade := 0.06 * float((row * 7 + col * 13) % 3)
+	v.draw_rect(Rect2(at, Vector2(TILE, TILE)), Color(0, 0, 0, shade))
+	if row == 0 or map[row - 1][col] != "#":
+		v.draw_rect(Rect2(at, Vector2(TILE, 8)), STONE_LIGHT)
+	for half in 2:
+		var y := at.y + half * 32.0
+		v.draw_line(Vector2(at.x, y), Vector2(at.x + TILE, y), MORTAR, 3.0)
+		var x := at.x + (20.0 if (row * 2 + half + col) % 2 else 44.0)
+		v.draw_line(Vector2(x, y), Vector2(x, y + 32), MORTAR, 3.0)
+
+
 ## Whether there is ground in this column at or above the row.
 func _ground_above(row: int, col: int) -> bool:
 	for above in range(row, -1, -1):
 		if map[above][col] == "#" or _shaft(above, col):
 			return true
 	return false
+
+
+## A cell of a narrow hole down into a cave: ground overhead close by on the left and on the
+## right, and ground at the bottom of the map under it.
+func _in_hole(row: int, col: int) -> bool:
+	if map[map.size() - 1][col] != "#" or row == 0:
+		return false
+	var left := false
+	var right := false
+	for side in [1, 2]:
+		left = left or (col - side >= 0 and _ground_above(row - 1, col - side))
+		right = right or (col + side < map[row].length() and _ground_above(row - 1, col + side))
+	return left and right
 
 
 ## A ladder going down through the ground.
@@ -1215,20 +1313,26 @@ func _draw_tiles() -> void:
 	for col in range(span.x, mini(span.y, map[bottom].length())):
 		if map[bottom][col] != "#":
 			v.draw_rect(Rect2(col * TILE, (bottom - 1) * TILE + 16, TILE, 3 * TILE), Color("3b2a1f"))
-	# Caves: a dark back wall wherever there is ground somewhere overhead.
+	# Caves: a dark back wall wherever there is ground somewhere overhead, and down a hole into a
+	# cave (ground overhead on both sides and the bottom closed).
 	for col in range(span.x, mini(span.y, map[0].length())):
 		var under_ground := false
 		for row in map.size():
 			if map[row][col] == "#":
 				under_ground = true
-			elif under_ground or _shaft(row, col):
+			elif under_ground or _shaft(row, col) or _in_hole(row, col):
 				under_ground = true
-				v.draw_rect(Rect2(col * TILE, row * TILE, TILE, TILE), Color("2a1d16"))
+				if dungeon:
+					_draw_wall(v, row, col)
+				else:
+					v.draw_rect(Rect2(col * TILE, row * TILE, TILE, TILE), Color("2a1d16"))
 	for row in map.size():
 		for col in range(span.x, mini(span.y, map[row].length())):
 			var at := Vector2(col * TILE, row * TILE)
 			var cell := Rect2(at, Vector2(TILE, TILE))
 			match map[row][col]:
+				"#" when dungeon:
+					_draw_stone(v, row, col)
 				"#":
 					# Grass only under the open sky, not on a cave floor.
 					var top := row == 0 or (map[row - 1][col] != "#" and not _ground_above(row - 1, col))
@@ -1284,6 +1388,12 @@ func _draw_tiles() -> void:
 					v.draw_rect(cell, Color("c08a4a"))
 					v.draw_rect(cell.grow(-3), ink, false, 3.0)
 					v.draw_line(at + Vector2(6, 6), at + Vector2(58, 58), ink, 3.0)
+				"=" when dungeon:
+					v.draw_rect(Rect2(at, Vector2(TILE, 14)), Color("7a4a26"))
+					v.draw_rect(Rect2(at, Vector2(TILE, 3)), Color("9a6a3a"))
+					v.draw_line(at + Vector2(0, 14), at + Vector2(TILE, 14), ink, 2.0)
+					v.draw_circle(at + Vector2(8, 7), 2, Color("3a2a20"))
+					v.draw_circle(at + Vector2(56, 7), 2, Color("3a2a20"))
 				"=":
 					if not _art.is_empty():
 						_draw_tile("plank", at)
@@ -1517,9 +1627,11 @@ func _move_particles(delta: float) -> void:
 
 func _draw_foreground() -> void:
 	var scroll := _camera.get_screen_center_position().x if _camera else 0.0
-	if not _art.is_empty():
+	if not _art.is_empty() and not dungeon:
 		_draw_layers(_foreground, _art["foreground"], scroll, false)
 	for p in _particles:
+		if dungeon and p["leaf"]:
+			continue
 		var at: Vector2 = p["pos"] - Vector2(20, 20)
 		var depth: float = p["depth"]
 		if p["leaf"]:
@@ -1535,7 +1647,7 @@ func _draw_foreground() -> void:
 
 ## Light over the whole picture: slow sunbeams from the top left and a darker edge.
 func _draw_overlay() -> void:
-	if night:
+	if night or dungeon:
 		_overlay.draw_texture_rect(_vignette, Rect2(Vector2.ZERO, SCREEN), false)
 		return
 	var sway := sin(_anim * 0.3) * 30.0
@@ -1622,6 +1734,8 @@ func _draw_hud() -> void:
 		message = "Ojej, Wiesław stracił wszystkie serduszka!\nSpacja albo klik: jeszcze raz"
 	elif state == "won" and _boss:
 		message = "Oko jest Wieśka! Wikingowie oddają jabłka i drakkar."
+	elif state == "won" and dungeon:
+		message = "Wiesław wydostał się z lochów!"
 	elif state == "won":
 		message = "Hop! Wiesław dogonił drakkar!"
 	if message != "":

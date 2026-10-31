@@ -298,6 +298,7 @@ func _check_platformer() -> void:
 		var stage := PlatformerGame.new()
 		stage.level_map = rows
 		stage.night = spec["night"]
+		stage.dungeon = spec["dungeon"]
 		stage.auto_input = true
 		add_child(stage)
 		await _physics(5)

@@ -12,6 +12,8 @@ const MIN_ROWS := 12
 
 @export var level_name := ""
 @export var night := false
+## Castle dungeons: stone and torches instead of the outdoor art, and D is the way out.
+@export var dungeon := false
 
 
 ## The painted level as text rows, the lowest painted row at the bottom.
@@ -33,7 +35,7 @@ func to_rows() -> Array[String]:
 ## Name, night and rows of the level scene at path.
 static func read(path: String) -> Dictionary:
 	var level: LevelMap = load(path).instantiate()
-	var spec := {"name": level.level_name, "night": level.night, "map": level.to_rows()}
+	var spec := {"name": level.level_name, "night": level.night, "dungeon": level.dungeon, "map": level.to_rows()}
 	level.free()
 	return spec
 
@@ -47,6 +49,7 @@ func _ready() -> void:
 	var stage := PlatformerGame.new()
 	stage.level_map = to_rows()
 	stage.night = night
+	stage.dungeon = dungeon
 	stage.level_name = level_name
 	add_child(stage)
 	stage.finished.connect(stage.restart)
