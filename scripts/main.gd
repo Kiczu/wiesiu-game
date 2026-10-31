@@ -29,7 +29,7 @@ func _ready() -> void:
 	menu = GameMenu.new()
 	add_child(menu)
 	menu.new_game_requested.connect(_new_game)
-	menu.platformer_requested.connect(func() -> void: _play_trial(PlatformerGame.new()))
+	menu.platformer_requested.connect(_play_trial)
 	menu.load_requested.connect(_load)
 	menu.save_requested.connect(func(slot: int) -> void: Game.save_game(slot, room_id))
 	menu.resume_requested.connect(menu.close)
@@ -67,19 +67,41 @@ func _load(slot: int) -> void:
 		_start(Game.load_game(slot))
 
 
-## The platformer version: comic pages, one level, comic pages, the end screen.
+## The platformer version: for each level its comic pages and the level, then the comic ending and the end screen.
 ## `busy` keeps the adventure controls off, since there is no room meanwhile.
-func _play_trial(level: Node) -> void:
+func _play_trial() -> void:
 	menu.close()
 	busy = true
 	menu.can_save = false
 	ui.show_adventure_controls(false)
-	for part in [ComicStrip.new(BookOneStory.intro_pages()), level, ComicStrip.new(BookOneStory.outro_pages())]:
-		part.pause_requested.connect(menu.show_pause)
-		add_child(part)
-		await part.finished
-		part.queue_free()
-	ui.show_end("Koniec wersji próbnej", "Złapane jabłka: %d. Dalsze przygody czekają w kolejnych księgach!" % int(Game.flag("jablka_proba")))
+	# Each campaign level: its comic pages, then the level; the comic ending comes after the last.
+	var total := 0
+	var mugs := 0
+	for spec in PlatformerCampaign.levels():
+		var stage := PlatformerGame.new()
+		# Mugs bought from the brothers go on to the next levels.
+		stage.mugs = mugs
+		stage.level_map = spec["map"]
+		stage.night = spec["night"]
+		stage.dungeon = spec["dungeon"]
+		stage.level_name = spec["name"]
+		var parts: Array[Node] = [stage]
+		# A level added without comic pages starts straight away.
+		if not spec["pages"].is_empty():
+			parts.push_front(ComicStrip.new(spec["pages"]))
+		for part: Node in parts:
+			part.pause_requested.connect(menu.show_pause)
+			add_child(part)
+			await part.finished
+			part.queue_free()
+		total += int(Game.flag("jablka_proba"))
+		mugs = stage.mugs
+	var outro := ComicStrip.new(BookOneStory.outro_pages())
+	outro.pause_requested.connect(menu.show_pause)
+	add_child(outro)
+	await outro.finished
+	outro.queue_free()
+	ui.show_end("Koniec wersji próbnej", "Złapane jabłka: %d. Dalsze przygody czekają w kolejnych księgach!" % total)
 
 
 func _to_main_menu() -> void:
