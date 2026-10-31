@@ -230,6 +230,8 @@ var _climbing := false
 ## The top of the ground Wiesław starts on: the background stands on it, so the trees grow up
 ## from there and below it there is only the underground.
 var _horizon := 0.0
+## See _find_first_ground.
+var _first_ground := PackedInt32Array()
 
 
 func _ready() -> void:
@@ -318,6 +320,7 @@ func restart() -> void:
 		map.assign(level_map)
 	else:
 		map.assign(LEVEL_KNIGHT if layout == "knight" else LEVEL)
+	_find_first_ground()
 	_view.modulate = NIGHT_TINT if night else (DUNGEON_TINT if dungeon else Color.WHITE)
 	_level = Node2D.new()
 	_world.add_child(_level)
@@ -510,6 +513,7 @@ func _set_tile(point: Vector2, kind: String) -> void:
 	var row := floori(point.y / TILE)
 	var col := floori(point.x / TILE)
 	map[row] = map[row].substr(0, col) + kind + map[row].substr(col + 1)
+	_find_first_ground()
 	_tiles.queue_redraw()
 
 
@@ -1384,10 +1388,21 @@ func _draw_stone(v: Node2D, row: int, col: int) -> void:
 
 ## Whether there is ground in this column at or above the row.
 func _ground_above(row: int, col: int) -> bool:
-	for above in range(row, -1, -1):
-		if map[above][col] == "#" or _shaft(above, col):
-			return true
-	return false
+	if _first_ground.size() != map[0].length():
+		_find_first_ground()
+	return _first_ground[col] <= row
+
+
+## For each column the highest row with ground (or a ladder shaft through it). The tiles are drawn
+## every frame and ask this a lot, so it is worked out once per map.
+func _find_first_ground() -> void:
+	_first_ground.resize(map[0].length())
+	for col in map[0].length():
+		_first_ground[col] = map.size()
+		for row in map.size():
+			if col < map[row].length() and (map[row][col] == "#" or _shaft(row, col)):
+				_first_ground[col] = row
+				break
 
 
 ## A cell of a narrow hole down into a cave: ground beside it or overhead close by on the left and
