@@ -1257,10 +1257,9 @@ func _draw_background() -> void:
 		v.draw_circle(Vector2(x, 450), 60, Color("9cc58d"))
 
 
-## A dungeon wall cell: dark bricks, and a torch now and then a step above the floor.
+## A dungeon wall cell: dark bricks below the starting ground, the castle's lighter halls above it.
 func _draw_wall(v: Node2D, row: int, col: int) -> void:
 	var at := Vector2(col * TILE, row * TILE)
-	# Above the starting ground: the castle's halls, lighter, with windows and banners.
 	var hall := (row + 1) * TILE <= _horizon
 	v.draw_rect(Rect2(at, Vector2(TILE, TILE)), HALL if hall else WALL)
 	for half in 2:
@@ -1269,32 +1268,61 @@ func _draw_wall(v: Node2D, row: int, col: int) -> void:
 		v.draw_line(Vector2(at.x, y), Vector2(at.x + TILE, y), mortar, 2.0)
 		var x := at.x + (16.0 if (row * 2 + half) % 2 else 48.0)
 		v.draw_line(Vector2(x, y), Vector2(x, y + 32), mortar, 2.0)
-	var open_below := row + 2 < map.size() and map[row + 1][col] != "#" and map[row + 2][col] != "#"
-	if hall and open_below and col % 9 == 5:
-		# An arched window with the sky behind it.
-		var sky := Color("9fc6e0") if not night else Color("2a3a66")
-		v.draw_rect(Rect2(at + Vector2(14, 18), Vector2(36, 46)), Color("2a2622"))
-		v.draw_circle(at + Vector2(32, 20), 18, Color("2a2622"))
-		v.draw_rect(Rect2(at + Vector2(19, 20), Vector2(26, 44)), sky)
-		v.draw_circle(at + Vector2(32, 21), 13, sky)
-		v.draw_line(at + Vector2(32, 8), at + Vector2(32, 64), Color("2a2622"), 3.0)
-		v.draw_line(at + Vector2(19, 40), at + Vector2(45, 40), Color("2a2622"), 3.0)
-	elif hall and open_below and col % 9 == 0:
-		# A banner of the prince's house.
-		v.draw_rect(Rect2(at + Vector2(10, 4), Vector2(44, 4)), Color("4a3020"))
-		v.draw_colored_polygon(PackedVector2Array([at + Vector2(14, 8), at + Vector2(50, 8), at + Vector2(50, 60), at + Vector2(32, 50), at + Vector2(14, 60)]), Color("8a2630"))
-		v.draw_circle(at + Vector2(32, 26), 8, Color("f2c14e"))
-	var below := row + 2 < map.size() and map[row + 1][col] != "#" and map[row + 2][col] == "#"
-	if below and col % 7 == 3:
-		var flicker := 0.85 + 0.15 * sin(_anim * 9.0 + col) * sin(_anim * 5.3 + row)
-		var base := at + Vector2(32, 40)
-		v.draw_circle(base + Vector2(0, -18), 70 * flicker, Color(1.0, 0.6, 0.2, 0.08))
-		v.draw_circle(base + Vector2(0, -18), 34 * flicker, Color(1.0, 0.7, 0.3, 0.12))
-		v.draw_rect(Rect2(base + Vector2(-4, -6), Vector2(8, 22)), Color("4a3020"))
-		v.draw_rect(Rect2(base + Vector2(-9, -8), Vector2(18, 5)), Color("2a2a2a"))
-		var tip := base + Vector2(sin(_anim * 7.0 + col) * 2.0, -26 * flicker)
-		v.draw_colored_polygon(PackedVector2Array([base + Vector2(-8, -8), tip, base + Vector2(8, -8)]), Color("ff9a2e"))
-		v.draw_colored_polygon(PackedVector2Array([base + Vector2(-4, -8), base.lerp(tip, 0.7), base + Vector2(4, -8)]), Color("ffe08a"))
+
+
+## Whether these cells of a column are all open (not ground).
+func _open(col: int, from_row: int, to_row: int) -> bool:
+	if from_row < 0 or to_row >= map.size():
+		return false
+	for row in range(from_row, to_row + 1):
+		if map[row][col] == "#":
+			return false
+	return true
+
+
+## Things on the dungeon walls, drawn over the bricks: big arched windows and banners in the halls,
+## torches everywhere a step above the floor.
+func _draw_wall_things(v: Node2D, span: Vector2i) -> void:
+	for col in range(span.x, mini(span.y, map[0].length())):
+		for row in range(1, map.size() - 1):
+			if map[row][col] == "#" or not _ground_above(row, col):
+				continue
+			var at := Vector2(col * TILE, row * TILE)
+			var hall := (row + 1) * TILE <= _horizon
+			var on_floor := map[row + 1][col] == "#"
+			var under_ceiling := map[row - 1][col] == "#"
+			if hall and col % 12 == 6 and on_floor and _open(col, row - 5, row) and _open(col + 1, row - 5, row):
+				# A tall arched window, two tiles wide, a step above the floor.
+				var sky := Color("2a3a66") if night else Color("9fc6e0")
+				var frame := Color("2a2622")
+				var box := Rect2(at + Vector2(8, -4 * TILE + 40), Vector2(2 * TILE - 16, 3 * TILE))
+				v.draw_rect(box.grow(8), frame)
+				v.draw_circle(Vector2(box.get_center().x, box.position.y), box.size.x / 2 + 8, frame)
+				v.draw_rect(box, sky)
+				v.draw_circle(Vector2(box.get_center().x, box.position.y), box.size.x / 2, sky)
+				v.draw_line(Vector2(box.get_center().x, box.position.y - box.size.x / 2), Vector2(box.get_center().x, box.end.y), frame, 5.0)
+				for k in [1.0, 2.0]:
+					var y: float = box.position.y + box.size.y * k / 3.0
+					v.draw_line(Vector2(box.position.x, y), Vector2(box.end.x, y), frame, 5.0)
+				v.draw_rect(Rect2(box.position.x - 14, box.end.y + 8, box.size.x + 28, 10), Color("4a4440"))
+			elif hall and col % 12 == 0 and under_ceiling and _open(col, row, row + 3):
+				# A long banner of the prince's house, hanging from the ceiling.
+				var top := at + Vector2(32, 6)
+				v.draw_rect(Rect2(top + Vector2(-28, -4), Vector2(56, 6)), Color("4a3020"))
+				v.draw_colored_polygon(PackedVector2Array([top + Vector2(-22, 0), top + Vector2(22, 0), top + Vector2(22, 150), top + Vector2(0, 130), top + Vector2(-22, 150)]), Color("8a2630"))
+				v.draw_rect(Rect2(top + Vector2(-22, 0), Vector2(44, 6)), Color("f2c14e"))
+				v.draw_circle(top + Vector2(0, 55), 12, Color("f2c14e"))
+				v.draw_circle(top + Vector2(0, 55), 6, Color("8a2630"))
+			elif col % 7 == 3 and map[row + 1][col] != "#" and row + 2 < map.size() and map[row + 2][col] == "#":
+				var flicker := 0.85 + 0.15 * sin(_anim * 9.0 + col) * sin(_anim * 5.3 + row)
+				var base := at + Vector2(32, 40)
+				v.draw_circle(base + Vector2(0, -18), 70 * flicker, Color(1.0, 0.6, 0.2, 0.08))
+				v.draw_circle(base + Vector2(0, -18), 34 * flicker, Color(1.0, 0.7, 0.3, 0.12))
+				v.draw_rect(Rect2(base + Vector2(-4, -6), Vector2(8, 22)), Color("4a3020"))
+				v.draw_rect(Rect2(base + Vector2(-9, -8), Vector2(18, 5)), Color("2a2a2a"))
+				var tip := base + Vector2(sin(_anim * 7.0 + col) * 2.0, -26 * flicker)
+				v.draw_colored_polygon(PackedVector2Array([base + Vector2(-8, -8), tip, base + Vector2(8, -8)]), Color("ff9a2e"))
+				v.draw_colored_polygon(PackedVector2Array([base + Vector2(-4, -8), base.lerp(tip, 0.7), base + Vector2(4, -8)]), Color("ffe08a"))
 
 
 ## A dungeon floor or ceiling block: grey stones, lit on the edge that faces open air.
@@ -1320,16 +1348,16 @@ func _ground_above(row: int, col: int) -> bool:
 	return false
 
 
-## A cell of a narrow hole down into a cave: ground overhead close by on the left and on the
-## right, and ground at the bottom of the map under it.
+## A cell of a narrow hole down into a cave: ground beside it or overhead close by on the left and
+## on the right, and ground at the bottom of the map under it.
 func _in_hole(row: int, col: int) -> bool:
 	if map[map.size() - 1][col] != "#" or row == 0:
 		return false
 	var left := false
 	var right := false
 	for side in [1, 2]:
-		left = left or (col - side >= 0 and _ground_above(row - 1, col - side))
-		right = right or (col + side < map[row].length() and _ground_above(row - 1, col + side))
+		left = left or (col - side >= 0 and _ground_above(row, col - side))
+		right = right or (col + side < map[row].length() and _ground_above(row, col + side))
 	return left and right
 
 
@@ -1360,6 +1388,9 @@ func _draw_tiles() -> void:
 					_draw_wall(v, row, col)
 				else:
 					v.draw_rect(Rect2(col * TILE, row * TILE, TILE, TILE), Color("2a1d16"))
+	if dungeon:
+		# Windows a column further left still reach into view.
+		_draw_wall_things(v, Vector2i(maxi(span.x - 1, 0), span.y))
 	for row in map.size():
 		for col in range(span.x, mini(span.y, map[row].length())):
 			var at := Vector2(col * TILE, row * TILE)
