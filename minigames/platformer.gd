@@ -944,6 +944,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventKey and event.physical_keycode == KEY_L and _art_sets.size() > 1:
 		next_art_set()
 		get_viewport().set_input_as_handled()
+	elif event is InputEventKey and event.physical_keycode == KEY_K and CutoutCharacter.anim_dirs().size() > 1:
+		# Another look for Wiesław: the level starts over with him.
+		CutoutCharacter.anim_choice += 1
+		restart()
+		get_viewport().set_input_as_handled()
 	elif not shop.is_empty() and event is InputEventKey and event.physical_keycode in [KEY_1, KEY_2]:
 		buy("heart" if event.physical_keycode == KEY_1 else "mug")
 		get_viewport().set_input_as_handled()
@@ -1538,6 +1543,8 @@ func _draw_hud() -> void:
 		modes.append("M: %s" % {"silent": "cisza", "all": "muzyka i dźwięki"}.get(Game.sound, "same dźwięki"))
 	if _art_sets.size() > 1:
 		modes.append("L: grafika")
+	if CutoutCharacter.anim_dirs().size() > 1:
+		modes.append("K: postać")
 	if level_map.is_empty():
 		modes.append("N: plansza %s" % ("rycerska" if layout == "knight" else "mario"))
 	var mode := "     ".join(modes)

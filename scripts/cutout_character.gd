@@ -11,9 +11,9 @@ const OUTLINE := Color("2b1d14")
 const ART_SETS := {"smooth": "res://art/platformer/wieslaw/"}
 ## Ready-made animation frames: frames.json lists, for each pose, its fps, whether it loops and
 ## its frames, each with the point of the image that stands on the ground. The first set that is
-## there is used: the full-size frames made from the author's drawing, the side view cut from it,
-## then the chibi.
-const ANIM_DIRS := ["res://art/platformer/wieslaw_klatki/", "res://art/platformer/wieslaw_bok/", "res://art/platformer/wieslaw_chibi/"]
+## there is used (K in the platformer moves on to the next): chibi and full-size frames
+## made from the author's drawing, the side view cut from it, then the drawn chibi.
+const ANIM_DIRS := ["res://art/platformer/wieslaw_klatki_chibi/", "res://art/platformer/wieslaw_klatki/", "res://art/platformer/wieslaw_bok/", "res://art/platformer/wieslaw_chibi/"]
 ## Parts drawn behind the body.
 const ART_BEHIND := ["arm_far", "foot_far", "foot_near"]
 ## Height of the drawn Wiesław in pixels, before the scale the game gives the puppet.
@@ -143,12 +143,23 @@ static func has_frames() -> bool:
 	return anim_dir() != ""
 
 
-## The animation set in use, or "" when there is none.
-static func anim_dir() -> String:
+## Which of the sets that are there is in use.
+static var anim_choice := 0
+
+
+## The animation sets that are there.
+static func anim_dirs() -> Array[String]:
+	var found: Array[String] = []
 	for dir in ANIM_DIRS:
 		if FileAccess.file_exists(dir + "frames.json"):
-			return dir
-	return ""
+			found.append(dir)
+	return found
+
+
+## The animation set in use, or "" when there is none.
+static func anim_dir() -> String:
+	var found := anim_dirs()
+	return found[anim_choice % found.size()] if not found.is_empty() else ""
 
 
 func _build_anim(spec: Dictionary) -> void:
