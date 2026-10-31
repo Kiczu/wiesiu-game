@@ -9,6 +9,12 @@ signal pause_requested
 
 const TILE := 64
 const SCREEN := Vector2(1280, 720)
+## The camera is pulled back a little, so more of the level is in view.
+const VIEW_ZOOM := 0.8
+## Where the background pictures expect the ground: two tiles above the bottom of the screen.
+const GROUND_LINE := SCREEN.y - 2 * TILE
+## Rows of open sky the camera can show above an outdoor level.
+const SKY_ROWS := 4
 ## One character per tile:
 ## # ground   B crate   = plank (jump through from below)
 ## a apple   x thorns   V Viking   C checkpoint   P start   D the drakkar (finish)
@@ -50,6 +56,14 @@ const SOLID := "#B"
 ## Apples inside a broken crate.
 const CRATE_APPLES := 2
 const NIGHT_TINT := Color(0.5, 0.56, 0.86)
+const DUNGEON_TINT := Color(0.92, 0.86, 0.8)
+const STONE := Color("6e6a66")
+const STONE_LIGHT := Color("8d8882")
+const MORTAR := Color("3e3a37")
+const WALL := Color("2e2a2c")
+const WALL_MORTAR := Color("1f1c1e")
+const HALL := Color("5e5651")
+const HALL_MORTAR := Color("4a4440")
 ## Apples in a treasure chest; it also gives back a lost heart.
 const CHEST_APPLES := 5
 ## Apples in the royal chest; it also fills every heart.
@@ -59,6 +73,8 @@ const ROYAL_APPLES := 15
 const HEART_PRICE := 25
 const MUG_PRICE := 40
 const MUG_TIME := 2.0
+## How long he stands drinking from the mug, when that is drawn.
+const DRINK_TIME := 0.6
 const BROTHERS := ["Lesław", "Czesław"]
 const LIVES := 3
 const WALK_SPEED := 330.0
@@ -70,6 +86,12 @@ const JUMP_CUT := 0.45
 ## A second jump in the air, a little lower than the first.
 const AIR_JUMPS := 1
 const AIR_JUMP_SPEED := 900.0
+## Pressing against a wall in the air he holds on and slides down slowly; jump pushes him off it,
+## up and away, and gives the second jump back.
+const WALL_SLIDE_SPEED := 160.0
+const WALL_JUMP := Vector2(420.0, 980.0)
+## After a wall jump the keys do not steer for a moment, so he gets away from the wall.
+const WALL_LOCK := 0.18
 const COYOTE_TIME := 0.1
 const JUMP_BUFFER := 0.12
 const HURT_TIME := 1.5
@@ -78,7 +100,8 @@ const PLAYER_SIZE := Vector2(40, 92)
 ## Ready-made tiles and background layers, one set per folder: level.json names the files and how
 ## the layers scroll. L switches between the sets that are there; without any the level is drawn
 ## with plain shapes.
-const LEVEL_ART_SETS := ["res://art/platformer/level_kreskowka/", "res://art/platformer/level_piksele/"]
+## Keyed by the name kept in Game.level_art. "piksele" is the author's pixel-art sample board.
+const LEVEL_ART_SETS := {"kreskowka": "res://art/platformer/level_kreskowka/", "piksele": "res://art/platformer/level_autor/"}
 ## Music (music.ogg, looped) and sound effects (<name>.ogg) for the level, each used when present.
 const AUDIO_DIR := "res://art/platformer/audio/"
 ## Drawn pictures for things in the level (<name>.png), each used when present.
@@ -130,6 +153,9 @@ var level_map: Array = []
 var night := false
 ## Shown big for a moment when the level starts.
 var level_name := ""
+## Castle dungeons: stone walls and floors with torches instead of the outdoor art, and the
+## drakkar tile (D) is the way out, a door.
+var dungeon := false
 
 var player: CharacterBody2D
 var vikings: Array[Dictionary] = []
@@ -153,8 +179,6 @@ var _background: Node2D
 ## The art set in use: {"scale", "tiles": {name: Texture2D}, "background": [{texture, mirrored, speed, follow, top, bottom, gap}]}.
 var _art := {}
 var _art_sets: Array[Dictionary] = []
-## Kept for the next levels.
-static var _art_index := 0
 var _sounds := {}
 var _players: Array[AudioStreamPlayer] = []
 var _music: AudioStreamPlayer
@@ -166,6 +190,9 @@ var _drakkar: Node2D
 var _items := {}
 var _coyote := 0.0
 var _air_jumps := 0
+## The side of the wall he is holding on to (-1 left, 1 right), 0 when none.
+var _wall := 0
+var _wall_lock := 0.0
 var _buffered := 0.0
 var _jump_was_held := false
 var _hurt := 0.0
@@ -195,21 +222,39 @@ var _look := 0.0
 var _shield := 0.0
 ## Mugs of nalewka bought from the brothers and kept for later; Q drinks one.
 var mugs := 0
+## What Wiesław last drank. A frame set can draw a pose per drink ("drink_mug",
+## "drink_potion", ...); one without it uses the plain "drink" pose.
+var drinking := "mug"
 ## Whether Wiesław is holding on to a ladder.
 var _climbing := false
+## The top of the ground Wiesław starts on: the background stands on it, so the trees grow up
+## from there and below it there is only the underground.
+var _horizon := 0.0
+## See _find_first_ground.
+var _first_ground := PackedInt32Array()
+## The ground, walls and everything else in the level that does not move, drawn once for a stretch
+## of columns around the camera (_static_span) and again only when the camera nears its end or a
+## tile changes. Drawing every brick each frame made big levels lag, above all in the browser.
+var _static: Node2D
+var _static_span := Vector2i(-1, -1)
+## See _brick_texture.
+var _bricks := {}
 
 
 func _ready() -> void:
+	add_to_group("platformer")
 	_view = SubViewportContainer.new()
-	_view.stretch = true
-	_view.size = SCREEN
 	_view.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	add_child(_view)
 	_world = SubViewport.new()
 	# Whole pixels only: with the camera between pixels, tiles could show thin gaps between them.
 	_world.snap_2d_transforms_to_pixel = true
 	_world.snap_2d_vertices_to_pixel = true
+	_world.size_2d_override = Vector2i(SCREEN)
+	_world.size_2d_override_stretch = true
 	_view.add_child(_world)
+	_fit_view()
+	get_viewport().size_changed.connect(_fit_view)
 	_back = CanvasLayer.new()
 	_back.layer = -1
 	_world.add_child(_back)
@@ -282,9 +327,15 @@ func restart() -> void:
 		map.assign(level_map)
 	else:
 		map.assign(LEVEL_KNIGHT if layout == "knight" else LEVEL)
-	_view.modulate = NIGHT_TINT if night else Color.WHITE
+	_find_first_ground()
+	_view.modulate = NIGHT_TINT if night else (DUNGEON_TINT if dungeon else Color.WHITE)
 	_level = Node2D.new()
 	_world.add_child(_level)
+	_static = Node2D.new()
+	_static.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_static.draw.connect(_draw_static)
+	_level.add_child(_static)
+	_static_span = Vector2i(-1, -1)
 	_tiles = Node2D.new()
 	_tiles.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_tiles.draw.connect(_draw_tiles)
@@ -296,6 +347,7 @@ func restart() -> void:
 			match map[row][col]:
 				"P":
 					checkpoint = at
+					_horizon = at.y
 				"V":
 					_add_viking(at)
 				"M":
@@ -316,7 +368,12 @@ func restart() -> void:
 
 
 func _add_drakkar(at: Vector2) -> void:
-	if _items.has("drakkar"):
+	if dungeon:
+		var door := Node2D.new()
+		door.position = at
+		door.draw.connect(_draw_door.bind(door))
+		_drakkar = door
+	elif _items.has("drakkar"):
 		var sprite := Sprite2D.new()
 		sprite.texture = _items["drakkar"]
 		sprite.centered = false
@@ -333,6 +390,38 @@ func _add_drakkar(at: Vector2) -> void:
 	_level.add_child(_drakkar)
 
 
+## The way out of the dungeons: an arched wooden door with daylight around it, two tiles tall.
+func _draw_door(door: Node2D) -> void:
+	var glow := 0.5 + 0.15 * sin(_anim * 2.0)
+	door.draw_circle(Vector2(0, -70), 90, Color(1.0, 0.9, 0.6, 0.18 * glow))
+	var arch := PackedVector2Array()
+	for i in 13:
+		var angle := PI + PI * i / 12.0
+		arch.append(Vector2(cos(angle) * 46, -96 + sin(angle) * 40))
+	var frame := PackedVector2Array([Vector2(46, 0), Vector2(-46, 0)])
+	frame.append_array(arch)
+	door.draw_colored_polygon(frame, MORTAR)
+	var wood := PackedVector2Array()
+	for point in frame:
+		wood.append(point * Vector2(0.82, 1.0) + Vector2(0, 6) * signf(-point.y))
+	door.draw_colored_polygon(wood, Color("7a4a26"))
+	for x in [-24.0, -8.0, 8.0, 24.0]:
+		door.draw_line(Vector2(x, -4), Vector2(x, -120 + absf(x) * 0.6), Color("5a3418"), 3.0)
+	for y in [-30.0, -90.0]:
+		door.draw_line(Vector2(-37, y), Vector2(37, y), Color("3a2a20"), 6.0)
+	door.draw_circle(Vector2(26, -60), 5, Color("c9a24a"))
+
+
+## The level is drawn at the screen's own resolution, not at 1280x720 and blown up, so on a big
+## screen it moves in fine steps instead of jumping a few screen pixels at a time.
+func _fit_view() -> void:
+	var window := Vector2(get_window().size)
+	var zoom := Vector2.ONE * maxf(minf(window.x / SCREEN.x, window.y / SCREEN.y), 1.0)
+	_world.size = Vector2i((SCREEN * zoom).round())
+	_view.size = Vector2(_world.size)
+	_view.scale = Vector2.ONE / zoom
+
+
 func _add_player() -> void:
 	player = CharacterBody2D.new()
 	player.position = checkpoint
@@ -346,11 +435,15 @@ func _add_player() -> void:
 	player.add_child(_wieslaw)
 	_camera = Camera2D.new()
 	_camera.limit_left = 0
-	_camera.limit_top = 0
+	# Outdoors the camera may rise a little above the highest thing in the level, into open sky.
+	_camera.limit_top = 0 if dungeon else -SKY_ROWS * TILE
 	_camera.limit_right = map[0].length() * TILE
 	_camera.limit_bottom = map.size() * TILE
 	_camera.position_smoothing_enabled = true
+	# Moves with the physics steps, which physics interpolation smooths between frames.
+	_camera.process_callback = Camera2D.CAMERA2D_PROCESS_PHYSICS
 	_camera.offset = Vector2(0, -80)
+	_camera.zoom = Vector2.ONE * VIEW_ZOOM
 	player.add_child(_camera)
 	_level.add_child(player)
 	_camera.make_current()
@@ -394,12 +487,12 @@ func _build_collision() -> void:
 		var col := 0
 		while col < map[row].length():
 			var kind := map[row][col]
-			var plank := kind == "="
+			var plank := _is_plank(row, col)
 			if not (plank or kind in SOLID):
 				col += 1
 				continue
 			var start := col
-			while col < map[row].length() and (map[row][col] == "=" if plank else map[row][col] in SOLID):
+			while col < map[row].length() and (_is_plank(row, col) if plank else map[row][col] in SOLID):
 				col += 1
 			var shape := CollisionShape2D.new()
 			shape.shape = RectangleShape2D.new()
@@ -408,6 +501,16 @@ func _build_collision() -> void:
 			shape.position = Vector2((start + col) * TILE / 2.0, row * TILE + height / 2)
 			shape.one_way_collision = plank
 			body.add_child(shape)
+
+
+## Planks, and the top of a ladder that goes down through the ground, can be stood on and passed
+## from below.
+func _is_plank(row: int, col: int) -> bool:
+	if map[row][col] == "=":
+		return true
+	if map[row][col] != "H" or (row > 0 and map[row - 1][col] == "H"):
+		return false
+	return (col > 0 and map[row][col - 1] == "#") or (col + 1 < map[row].length() and map[row][col + 1] == "#")
 
 
 func tile_at(point: Vector2) -> String:
@@ -422,6 +525,8 @@ func _set_tile(point: Vector2, kind: String) -> void:
 	var row := floori(point.y / TILE)
 	var col := floori(point.x / TILE)
 	map[row] = map[row].substr(0, col) + kind + map[row].substr(col + 1)
+	_find_first_ground()
+	_static.queue_redraw()
 	_tiles.queue_redraw()
 
 
@@ -477,11 +582,21 @@ func _physics_process(delta: float) -> void:
 
 func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 	var v := player.velocity
-	v.x = move_toward(v.x, steer * WALK_SPEED, ACCELERATION * delta)
+	_wall_lock = maxf(_wall_lock - delta, 0.0)
+	if _wall_lock <= 0.0:
+		v.x = move_toward(v.x, steer * WALK_SPEED, ACCELERATION * delta)
 	v.y += GRAVITY * delta
 	_coyote = COYOTE_TIME if player.is_on_floor() else maxf(_coyote - delta, 0.0)
 	if player.is_on_floor():
 		_air_jumps = AIR_JUMPS
+	_wall = 0
+	if not player.is_on_floor() and v.y > 0.0 and absf(steer) > 0.1 and _wall_lock <= 0.0:
+		var side := 1 if steer > 0.0 else -1
+		if tile_at(player.position + Vector2(side * (PLAYER_SIZE.x / 2 + 4), -PLAYER_SIZE.y / 2)) in SOLID:
+			_wall = side
+			v.y = minf(v.y, WALL_SLIDE_SPEED)
+			if randf() < 0.15:
+				_dust(player.position + Vector2(side * PLAYER_SIZE.x / 2, -PLAYER_SIZE.y / 2), 1)
 	if _buffered > 0.0 and _coyote > 0.0:
 		v.y = -JUMP_SPEED
 		_play("jump")
@@ -489,6 +604,15 @@ func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 		_dust(player.position, 3)
 		_buffered = 0.0
 		_coyote = 0.0
+	elif _buffered > 0.0 and _wall != 0:
+		v = Vector2(-_wall * WALL_JUMP.x, -WALL_JUMP.y)
+		_wieslaw.facing = -_wall
+		_wall = 0
+		_wall_lock = WALL_LOCK
+		_air_jumps = AIR_JUMPS
+		_play("jump")
+		_stretch = Vector2(0.8, 1.2)
+		_buffered = 0.0
 	elif _buffered > 0.0 and _air_jumps > 0 and jump_held and not _jump_was_held:
 		v.y = -AIR_JUMP_SPEED
 		_air_jumps -= 1
@@ -511,16 +635,21 @@ func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 	_was_on_floor = on_floor
 	if player.is_on_ceiling():
 		_play("bump")
-	if absf(steer) > 0.1:
+	if absf(steer) > 0.1 and _wall_lock <= 0.0:
 		_wieslaw.facing = 1 if steer > 0 else -1
 	if _hurt > HURT_TIME - 0.4:
 		_wieslaw.pose = "hurt"
 	elif _attack > 0.0 and _wieslaw.has_pose("attack"):
 		_wieslaw.pose = "attack"
+	elif _shield > MUG_TIME - DRINK_TIME and _drink_pose() != "" and player.is_on_floor() and absf(player.get_real_velocity().x) < 20.0:
+		_wieslaw.pose = _drink_pose()
+	elif _wall != 0 and _wieslaw.has_drawn_pose("wall"):
+		_wieslaw.pose = "wall"
 	elif not player.is_on_floor():
 		_wieslaw.pose = "jump" if player.velocity.y < 0.0 else "fall"
 	else:
-		_wieslaw.pose = "run" if absf(player.velocity.x) > 20.0 else "idle"
+		# Pushing against a wall he stands still, so the run stops too.
+		_wieslaw.pose = "run" if absf(player.get_real_velocity().x) > 20.0 else "idle"
 	_stretch = _stretch.lerp(Vector2.ONE, minf(delta * 12.0, 1.0))
 	_wieslaw.scale = Vector2(0.84 * _stretch.x * _wieslaw.facing, 0.84 * _stretch.y)
 	# Without a drawn swing, he leans into the blow.
@@ -647,9 +776,18 @@ func drink() -> void:
 	if state != "" or mugs <= 0 or _shield > 0.0:
 		return
 	mugs -= 1
+	drinking = "mug"
 	_shield = MUG_TIME
 	_play("checkpoint")
 	_hud.queue_redraw()
+
+
+## The pose for what Wiesław is drinking, or "" when the frame set draws no drinking at all.
+func _drink_pose() -> String:
+	for name in ["drink_" + drinking, "drink"]:
+		if _wieslaw.has_drawn_pose(name):
+			return name
+	return ""
 
 
 ## A brother stands at his stall facing the way Wiesław comes from, with his name over him.
@@ -754,7 +892,9 @@ func _swing(delta: float) -> void:
 		_strike(viking, facing, sword_damage)
 	if _boss:
 		_boss.strike(blade, facing, sword_damage)
-	for point in [blade.position + blade.size * Vector2(0.75, 0.2), blade.position + blade.size * Vector2(0.75, 0.6)]:
+	# The far end of the blade, whichever way he faces.
+	var reach := 0.75 if facing > 0 else 0.25
+	for point in [blade.position + blade.size * Vector2(reach, 0.2), blade.position + blade.size * Vector2(reach, 0.6)]:
 		_break_crate(point)
 
 
@@ -893,6 +1033,7 @@ func _hit(fell: bool) -> void:
 	if fell:
 		player.position = checkpoint
 		player.velocity = Vector2.ZERO
+		player.reset_physics_interpolation()
 	else:
 		player.velocity = Vector2(-_wieslaw.facing * 300.0, -450.0)
 
@@ -911,6 +1052,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif event is InputEventKey and event.physical_keycode == KEY_L and _art_sets.size() > 1:
 		next_art_set()
+		get_viewport().set_input_as_handled()
+	elif event is InputEventKey and event.physical_keycode == KEY_K and CutoutCharacter.anim_dirs().size() > 1:
+		# Another look for Wiesław: the level starts over with him.
+		CutoutCharacter.anim_choice += 1
+		restart()
 		get_viewport().set_input_as_handled()
 	elif not shop.is_empty() and event is InputEventKey and event.physical_keycode in [KEY_1, KEY_2]:
 		buy("heart" if event.physical_keycode == KEY_1 else "mug")
@@ -942,6 +1088,10 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _redraw() -> void:
+	var span := _visible_columns()
+	if span.x < _static_span.x or span.y > _static_span.y:
+		_static_span = Vector2i(maxi(span.x - 16, 0), span.y + 16)
+		_static.queue_redraw()
 	_tiles.queue_redraw()
 	_hints.queue_redraw()
 	_hud.queue_redraw()
@@ -951,8 +1101,9 @@ func _redraw() -> void:
 
 
 func _visible_columns() -> Vector2i:
-	var left := _camera.get_screen_center_position().x - SCREEN.x / 2 if _camera else 0.0
-	return Vector2i(maxi(floori(left / TILE) - 1, 0), floori((left + SCREEN.x) / TILE) + 2)
+	var width := SCREEN.x / VIEW_ZOOM
+	var left := _camera.get_screen_center_position().x - width / 2 if _camera else 0.0
+	return Vector2i(maxi(floori(left / TILE) - 1, 0), floori((left + width) / TILE) + 2)
 
 
 func _load_audio() -> void:
@@ -993,19 +1144,37 @@ func _stop_music() -> void:
 
 func _load_art() -> void:
 	_background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	for dir in LEVEL_ART_SETS:
+	for art_name in LEVEL_ART_SETS:
+		var dir: String = LEVEL_ART_SETS[art_name]
 		if FileAccess.file_exists(dir + "level.json"):
-			_art_sets.append(_load_art_set(dir))
+			var art_set := _load_art_set(dir)
+			art_set["name"] = art_name
+			_art_sets.append(art_set)
 	if not _art_sets.is_empty():
-		_art = _art_sets[_art_index % _art_sets.size()]
+		_art = _art_sets[0]
+		for art_set in _art_sets:
+			if art_set["name"] == Game.level_art:
+				_art = art_set
 
 
-## Next art set.
+## Switches to the art set named in Game.level_art (the settings menu changed it).
+func use_level_art() -> void:
+	for art_set in _art_sets:
+		if art_set["name"] == Game.level_art:
+			_art = art_set
+	if _static:
+		_static.queue_redraw()
+	_redraw()
+
+
+## Next art set; the choice is saved with the settings.
 func next_art_set() -> void:
 	if _art_sets.is_empty():
 		return
-	_art_index = (_art_index + 1) % _art_sets.size()
-	_art = _art_sets[_art_index]
+	_art = _art_sets[(_art_sets.find(_art) + 1) % _art_sets.size()]
+	Game.level_art = _art["name"]
+	Game.save_settings()
+	_static.queue_redraw()
 	_redraw()
 
 
@@ -1025,7 +1194,8 @@ func _load_art_set(dir: String) -> Dictionary:
 		layers.append({"texture": texture, "mirrored": mirrored, "speed": layer.get("speed", 0.0), "top": layer.get("top", -1.0),
 			"bottom": layer.get("bottom", SCREEN.y), "gap": layer.get("gap", 0.0),
 			"follow": layer.get("follow", layer.get("speed", 0.0)), "haze": layer.get("haze", 0.0),
-			"fill": texture.get_image().get_pixel(0, 0)})
+			"fill": texture.get_image().get_pixel(0, 0),
+			"fill_bottom": texture.get_image().get_pixel(0, texture.get_height() - 1)})
 	var front := []
 	for layer in spec.get("foreground", []):
 		front.append({"texture": load(dir + layer["file"]), "mirrored": null, "speed": layer.get("speed", 1.4), "top": -1.0,
@@ -1041,35 +1211,77 @@ func _draw_tile(tile_name: String, at: Vector2) -> void:
 	var texture: Texture2D = _art["tiles"][tile_name]
 	var size := texture.get_size()
 	var x := fposmod(at.x, size.x) if size.x > TILE else 0.0
-	_tiles.draw_texture_rect_region(texture, Rect2(at, Vector2(minf(TILE, size.x), size.y)), Rect2(x, 0, minf(TILE, size.x), size.y))
+	# One pixel bigger than the cell, so at an uneven zoom no hairline of background shows between
+	# neighbouring tiles.
+	_static.draw_texture_rect_region(texture, Rect2(at, Vector2(minf(TILE, size.x), size.y) + Vector2.ONE), Rect2(x, 0, minf(TILE, size.x), size.y))
 
 
 ## Each layer repeats sideways and moves at its own share of the camera's speed; the first one also
-## fills the sky above it with its top colour. When the camera goes up, a layer goes down by its
-## "follow" share of that, so the nearest trees stay standing on the ground.
+## fills the sky above it with its top colour. Up and down the layers stay on the ground Wiesław
+## starts on (_horizon): "bottom" and "top" are where they sit when that ground is GROUND_LINE
+## from the top of the screen.
 ## "haze" lays a veil of the haze colour over a layer and all behind it, so far
 ## things fade into the air.
 func _draw_art_background(scroll: float) -> void:
 	_draw_layers(_background, _art["background"], scroll, true)
 
 
-func _camera_rise() -> float:
+## Where the starting ground is on the screen.
+func _ground_line() -> float:
 	if not _camera:
-		return 0.0
-	return map.size() * TILE - SCREEN.y / 2 - _camera.get_screen_center_position().y
+		return GROUND_LINE
+	return (_horizon - _camera.get_screen_center_position().y) * VIEW_ZOOM + SCREEN.y / 2
+
+
+## Where a layer's ground is on the screen. Near layers stand on the starting ground; far ones
+## (mountains, clouds) move up and down by only their "follow" share, so high up in the sky they
+## are still in view.
+func _layer_ground(follow: float) -> float:
+	var share := 1.0 if follow >= 0.75 else follow
+	return GROUND_LINE + (_ground_line() - GROUND_LINE) * share
+
+
+## Clouds high over the level (and stars at night), seen when the camera goes up above the trees.
+func _draw_sky(v: Node2D, scroll: float) -> void:
+	var ground := _layer_ground(0.35)
+	if night:
+		for k in 60:
+			var star := Vector2(fposmod(k * 397.0 - scroll * 0.02, SCREEN.x), ground - 900.0 - fposmod(k * 211.0, 900.0) * VIEW_ZOOM)
+			if star.y > -4.0 and star.y < SCREEN.y:
+				var twinkle := 0.6 + 0.4 * sin(_anim * 2.0 + k)
+				v.draw_rect(Rect2(star.round(), Vector2(3, 3)), Color(1.0, 1.0, 0.9, twinkle))
+	var light := Color("f4f1ea")
+	var shade := Color("cfd3dd")
+	for k in 9:
+		var width := 180.0 + float((k * 53) % 120)
+		var at := Vector2(fposmod(k * 433.0 - scroll * (0.04 + 0.01 * (k % 3)), SCREEN.x + width * 2) - width,
+			ground - (720.0 + float((k * 157) % 520)) * VIEW_ZOOM)
+		if at.y < -120.0 or at.y > SCREEN.y + 60.0:
+			continue
+		# A flat-bottomed cloud of a few puffs, its underside a shade darker.
+		v.draw_rect(Rect2(at + Vector2(0, -24), Vector2(width, 30)), shade)
+		for puff in 4:
+			var r := 26.0 + float((k + puff * 7) % 4) * 9.0
+			var c := at + Vector2(width * (0.18 + 0.22 * puff), -26.0 - r * 0.4)
+			v.draw_circle(c, r, light)
+		v.draw_rect(Rect2(at + Vector2(6, -32), Vector2(width - 12, 22)), light)
 
 
 func _draw_layers(v: Node2D, layers: Array, scroll: float, fill_sky: bool) -> void:
-	var rise := _camera_rise()
 	for i in layers.size():
 		var layer: Dictionary = layers[i]
 		var texture: Texture2D = layer["texture"]
 		var size: Vector2 = texture.get_size() * layer.get("scale", _art["scale"])
-		var y: float = (layer["top"] if layer["top"] >= 0.0 else layer["bottom"] - size.y) + rise * layer["follow"]
+		var y: float = (layer["top"] if layer["top"] >= 0.0 else layer["bottom"] - size.y)
+		y = _layer_ground(layer["follow"]) + (y - GROUND_LINE) * VIEW_ZOOM
+		size *= VIEW_ZOOM
 		if i == 0 and fill_sky:
 			v.draw_rect(Rect2(0, 0, SCREEN.x, y + 1), layer["fill"])
-		var step: float = size.x + layer["gap"]
-		var offset: float = scroll * layer["speed"]
+			# Below the farthest picture too, when the camera is high and it has risen off the ground.
+			v.draw_rect(Rect2(0, y + size.y - 1, SCREEN.x, maxf(SCREEN.y - y - size.y + 1, 0.0)), layer["fill_bottom"])
+			_draw_sky(v, scroll)
+		var step: float = size.x + layer["gap"] * VIEW_ZOOM
+		var offset: float = scroll * layer["speed"] * VIEW_ZOOM
 		var x := -fposmod(offset, step)
 		var index := floori(offset / step)
 		while x < SCREEN.x:
@@ -1085,6 +1297,18 @@ func _draw_layers(v: Node2D, layers: Array, scroll: float, fill_sky: bool) -> vo
 func _draw_background() -> void:
 	var v := _background
 	var scroll := _camera.get_screen_center_position().x if _camera else 0.0
+	if dungeon:
+		# A far stone wall behind the corridors, scrolling slowly.
+		v.draw_rect(Rect2(Vector2.ZERO, SCREEN), Color("1c191b"))
+		var shift := fposmod(scroll * 0.3, 96.0)
+		for row in 16:
+			var y := row * 48.0
+			var offset := 48.0 if row % 2 else 0.0
+			v.draw_line(Vector2(0, y), Vector2(SCREEN.x, y), Color("131113"), 3.0)
+			for k in 16:
+				var x := k * 96.0 - shift + offset
+				v.draw_line(Vector2(x, y), Vector2(x, y + 48), Color("131113"), 3.0)
+		return
 	if not _art.is_empty():
 		_draw_art_background(scroll)
 		return
@@ -1099,27 +1323,192 @@ func _draw_background() -> void:
 		v.draw_circle(Vector2(x, 450), 60, Color("9cc58d"))
 
 
-func _draw_tiles() -> void:
-	var v := _tiles
+## A dungeon wall cell: dark bricks below the starting ground, the castle's lighter halls above it.
+func _draw_wall(v: Node2D, row: int, col: int) -> void:
+	var hall := (row + 1) * TILE <= _horizon
+	v.draw_texture(_brick_texture("hall" if hall else "wall", 0), Vector2(col * TILE, row * TILE))
+
+
+## A 64 x 64 picture of a wall or stone cell, made once: one picture drawn per cell is far
+## cheaper than its bricks drawn line by line. "stone" comes in two, its joints offset by column.
+func _brick_texture(kind: String, variant: int) -> Texture2D:
+	var key := "%s%d" % [kind, variant]
+	if _bricks.has(key):
+		return _bricks[key]
+	var fill: Color = {"hall": HALL, "wall": WALL, "stone": STONE}[kind]
+	var mortar: Color = {"hall": HALL_MORTAR, "wall": WALL_MORTAR, "stone": MORTAR}[kind]
+	var width := 3 if kind == "stone" else 2
+	var image := Image.create(TILE, TILE, false, Image.FORMAT_RGBA8)
+	image.fill(fill)
+	for half in 2:
+		var y := half * 32
+		image.fill_rect(Rect2i(0, y, TILE, width), mortar)
+		var x: int
+		if kind == "stone":
+			x = 20 if (half + variant) % 2 else 44
+		else:
+			x = 16 if half % 2 else 48
+		image.fill_rect(Rect2i(x - width / 2, y, width, 32), mortar)
+	_bricks[key] = ImageTexture.create_from_image(image)
+	return _bricks[key]
+
+
+## Whether these cells of a column are all open (not ground).
+func _open(col: int, from_row: int, to_row: int) -> bool:
+	if from_row < 0 or to_row >= map.size():
+		return false
+	for row in range(from_row, to_row + 1):
+		if map[row][col] == "#":
+			return false
+	return true
+
+
+## Things on the dungeon walls, drawn over the bricks: big arched windows and banners in the halls.
+func _draw_wall_things(v: Node2D, span: Vector2i) -> void:
+	for col in range(span.x, mini(span.y, map[0].length())):
+		for row in range(1, map.size() - 1):
+			if map[row][col] == "#" or not _ground_above(row, col):
+				continue
+			var at := Vector2(col * TILE, row * TILE)
+			var hall := (row + 1) * TILE <= _horizon
+			var on_floor := map[row + 1][col] == "#"
+			var under_ceiling := map[row - 1][col] == "#"
+			if hall and col % 12 == 6 and on_floor and _open(col, row - 5, row) and _open(col + 1, row - 5, row):
+				# A tall arched window, two tiles wide, a step above the floor.
+				var sky := Color("2a3a66") if night else Color("9fc6e0")
+				var frame := Color("2a2622")
+				var box := Rect2(at + Vector2(8, -4 * TILE + 40), Vector2(2 * TILE - 16, 3 * TILE))
+				v.draw_rect(box.grow(8), frame)
+				v.draw_circle(Vector2(box.get_center().x, box.position.y), box.size.x / 2 + 8, frame)
+				v.draw_rect(box, sky)
+				v.draw_circle(Vector2(box.get_center().x, box.position.y), box.size.x / 2, sky)
+				v.draw_line(Vector2(box.get_center().x, box.position.y - box.size.x / 2), Vector2(box.get_center().x, box.end.y), frame, 5.0)
+				for k in [1.0, 2.0]:
+					var y: float = box.position.y + box.size.y * k / 3.0
+					v.draw_line(Vector2(box.position.x, y), Vector2(box.end.x, y), frame, 5.0)
+				v.draw_rect(Rect2(box.position.x - 14, box.end.y + 8, box.size.x + 28, 10), Color("4a4440"))
+			elif hall and col % 12 == 0 and under_ceiling and _open(col, row, row + 3):
+				# A long banner of the prince's house, hanging from the ceiling.
+				var top := at + Vector2(32, 6)
+				v.draw_rect(Rect2(top + Vector2(-28, -4), Vector2(56, 6)), Color("4a3020"))
+				v.draw_colored_polygon(PackedVector2Array([top + Vector2(-22, 0), top + Vector2(22, 0), top + Vector2(22, 150), top + Vector2(0, 130), top + Vector2(-22, 150)]), Color("8a2630"))
+				v.draw_rect(Rect2(top + Vector2(-22, 0), Vector2(44, 6)), Color("f2c14e"))
+				v.draw_circle(top + Vector2(0, 55), 12, Color("f2c14e"))
+				v.draw_circle(top + Vector2(0, 55), 6, Color("8a2630"))
+
+
+## The torches on the dungeon walls, a step above the floor; they flicker, so they are drawn every
+## frame, not with the walls.
+func _draw_torches(v: Node2D, span: Vector2i) -> void:
+	for col in range(span.x, mini(span.y, map[0].length())):
+		if col % 7 != 3:
+			continue
+		for row in range(1, map.size() - 2):
+			if map[row][col] == "#" or map[row + 1][col] == "#" or map[row + 2][col] != "#" or not _ground_above(row, col):
+				continue
+			var at := Vector2(col * TILE, row * TILE)
+			var flicker := 0.85 + 0.15 * sin(_anim * 9.0 + col) * sin(_anim * 5.3 + row)
+			var base := at + Vector2(32, 40)
+			v.draw_circle(base + Vector2(0, -18), 70 * flicker, Color(1.0, 0.6, 0.2, 0.08))
+			v.draw_circle(base + Vector2(0, -18), 34 * flicker, Color(1.0, 0.7, 0.3, 0.12))
+			v.draw_rect(Rect2(base + Vector2(-4, -6), Vector2(8, 22)), Color("4a3020"))
+			v.draw_rect(Rect2(base + Vector2(-9, -8), Vector2(18, 5)), Color("2a2a2a"))
+			var tip := base + Vector2(sin(_anim * 7.0 + col) * 2.0, -26 * flicker)
+			v.draw_colored_polygon(PackedVector2Array([base + Vector2(-8, -8), tip, base + Vector2(8, -8)]), Color("ff9a2e"))
+			v.draw_colored_polygon(PackedVector2Array([base + Vector2(-4, -8), base.lerp(tip, 0.7), base + Vector2(4, -8)]), Color("ffe08a"))
+
+
+## A dungeon floor or ceiling block: grey stones, lit on the edge that faces open air.
+func _draw_stone(v: Node2D, row: int, col: int) -> void:
+	var at := Vector2(col * TILE, row * TILE)
+	var shade := 1.0 - 0.06 * float((row * 7 + col * 13) % 3)
+	v.draw_texture(_brick_texture("stone", (row * 2 + col) % 2), at, Color(shade, shade, shade))
+	if row == 0 or map[row - 1][col] != "#":
+		v.draw_rect(Rect2(at, Vector2(TILE, 8)), STONE_LIGHT)
+
+
+## Whether there is ground in this column at or above the row.
+func _ground_above(row: int, col: int) -> bool:
+	if _first_ground.size() != map[0].length():
+		_find_first_ground()
+	return _first_ground[col] <= row
+
+
+## For each column the highest row with ground (or a ladder shaft through it). The tiles are drawn
+## every frame and ask this a lot, so it is worked out once per map.
+func _find_first_ground() -> void:
+	_first_ground.resize(map[0].length())
+	for col in map[0].length():
+		_first_ground[col] = map.size()
+		for row in map.size():
+			if col < map[row].length() and (map[row][col] == "#" or _shaft(row, col)):
+				_first_ground[col] = row
+				break
+
+
+## A cell of a narrow hole down into a cave: ground beside it or overhead close by on the left and
+## on the right, and ground at the bottom of the map under it.
+func _in_hole(row: int, col: int) -> bool:
+	if map[map.size() - 1][col] != "#" or row == 0:
+		return false
+	var left := false
+	var right := false
+	for side in [1, 2]:
+		left = left or (col - side >= 0 and _ground_above(row, col - side))
+		right = right or (col + side < map[row].length() and _ground_above(row, col + side))
+	return left and right
+
+
+## A ladder going down through the ground.
+func _shaft(row: int, col: int) -> bool:
+	return map[row][col] == "H" and col > 0 and map[row][col - 1] == "#"
+
+
+## See _static.
+func _draw_static() -> void:
+	var v := _static
 	var ink := Color("2b1d14")
-	var span := _visible_columns()
+	var span := _static_span
 	# Pits: a dark hole where the bottom row has no ground.
 	var bottom := map.size() - 1
 	for col in range(span.x, mini(span.y, map[bottom].length())):
 		if map[bottom][col] != "#":
 			v.draw_rect(Rect2(col * TILE, (bottom - 1) * TILE + 16, TILE, 3 * TILE), Color("3b2a1f"))
+	# Caves: a dark back wall wherever there is ground somewhere overhead, and down a hole into a
+	# cave (ground overhead on both sides and the bottom closed).
+	for col in range(span.x, mini(span.y, map[0].length())):
+		var under_ground := false
+		for row in map.size():
+			if map[row][col] == "#":
+				under_ground = true
+			elif under_ground or _shaft(row, col) or _in_hole(row, col):
+				under_ground = true
+				if dungeon:
+					_draw_wall(v, row, col)
+				else:
+					v.draw_rect(Rect2(col * TILE, row * TILE, TILE + 1, TILE + 1), Color("2a1d16"))
+	if dungeon:
+		# Windows a column further left still reach into view.
+		_draw_wall_things(v, Vector2i(maxi(span.x - 1, 0), span.y))
 	for row in map.size():
 		for col in range(span.x, mini(span.y, map[row].length())):
 			var at := Vector2(col * TILE, row * TILE)
 			var cell := Rect2(at, Vector2(TILE, TILE))
 			match map[row][col]:
+				"#" when dungeon:
+					_draw_stone(v, row, col)
 				"#":
-					var top := row == 0 or map[row - 1][col] != "#"
+					# Grass only under the open sky, not on a cave floor.
+					var top := row == 0 or (map[row - 1][col] != "#" and not _ground_above(row - 1, col) and not _in_hole(row - 1, col))
 					if not _art.is_empty():
 						# The deeper tile only from the third row down, where it is mostly off screen,
 						# so it does not show as a dark band in a cliff.
 						var deep := row >= 3 and map[row - 1][col] == "#" and map[row - 2][col] == "#" and map[row - 3][col] == "#"
 						var fill := "ground_deep" if deep and _art["tiles"].has("ground_deep") else "ground"
+						# Solid earth behind the tile: a drawn tile may be partly see-through, and the
+						# sky must not show through the ground.
+						var backing := Rect2(at + Vector2(0, 24 if top else 0), Vector2(TILE + 1, TILE + 1 - (24 if top else 0)))
+						v.draw_rect(backing, Color("27161a"))
 						_draw_tile("ground_top" if top else fill, at)
 						continue
 					v.draw_rect(cell, Color("8b5a2b"))
@@ -1127,17 +1516,6 @@ func _draw_tiles() -> void:
 						v.draw_rect(Rect2(at, Vector2(TILE, 16)), Color("5e9e3f"))
 				"B" when _items.has("crate"):
 					v.draw_texture(_items["crate"], at)
-				"S", "s" when _items.has("chest_royal"):
-					var texture: Texture2D = _items["chest_royal_open" if map[row][col] == "s" and _items.has("chest_royal_open") else "chest_royal"]
-					v.draw_texture(texture, at + Vector2(0, TILE - texture.get_height()))
-					if map[row][col] == "S":
-						_draw_glint(v, at + Vector2(0, TILE - texture.get_height()), texture.get_size(), col)
-				"S", "s":
-					var box := Rect2(at + Vector2(4, 16), Vector2(TILE * 2 - 8, TILE - 16))
-					v.draw_rect(box, Color("8a2630"))
-					v.draw_rect(box, Color("f2c14e"), false, 4.0)
-					if map[row][col] == "S":
-						_draw_glint(v, box.position, box.size, col)
 				"T", "t" when _items.has("chest"):
 					var texture: Texture2D = _items["chest_open" if map[row][col] == "t" and _items.has("chest_open") else "chest"]
 					v.draw_texture(texture, at + Vector2(0, TILE - texture.get_height()))
@@ -1148,9 +1526,6 @@ func _draw_tiles() -> void:
 					v.draw_rect(Rect2(at + Vector2(6, 30), Vector2(52, 34)), Color("9a5a2e"))
 					v.draw_rect(lid, Color("c08a4a"))
 					v.draw_rect(Rect2(at + Vector2(27, 28), Vector2(10, 12)), Color("f2c14e"))
-				"a" when _items.has("apple"):
-					var texture: Texture2D = _items["apple"]
-					v.draw_texture(texture, at + (Vector2(TILE, TILE) - texture.get_size()) / 2 + Vector2(0, sin(_anim * 3.0 + col) * 4.0))
 				"x" when _items.has("thorns"):
 					v.draw_texture(_items["thorns"], at + Vector2(0, TILE - _items["thorns"].get_height()))
 				"C", "c" when _items.has("flag"):
@@ -1167,16 +1542,18 @@ func _draw_tiles() -> void:
 					v.draw_rect(cell, Color("c08a4a"))
 					v.draw_rect(cell.grow(-3), ink, false, 3.0)
 					v.draw_line(at + Vector2(6, 6), at + Vector2(58, 58), ink, 3.0)
+				"=" when dungeon:
+					v.draw_rect(Rect2(at, Vector2(TILE, 14)), Color("7a4a26"))
+					v.draw_rect(Rect2(at, Vector2(TILE, 3)), Color("9a6a3a"))
+					v.draw_line(at + Vector2(0, 14), at + Vector2(TILE, 14), ink, 2.0)
+					v.draw_circle(at + Vector2(8, 7), 2, Color("3a2a20"))
+					v.draw_circle(at + Vector2(56, 7), 2, Color("3a2a20"))
 				"=":
 					if not _art.is_empty():
 						_draw_tile("plank", at)
 						continue
 					v.draw_rect(Rect2(at, Vector2(TILE, 16)), Color("a0522d"))
 					v.draw_line(at + Vector2(0, 16), at + Vector2(TILE, 16), ink, 2.0)
-				"a":
-					var center := at + Vector2(32, 34 + sin(_anim * 3.0 + col) * 4.0)
-					v.draw_circle(center, 15, Color("d62828"))
-					v.draw_line(center + Vector2(0, -13), center + Vector2(3, -21), Color("5a3a1e"), 3.0)
 				"x":
 					for i in 4:
 						var base := at + Vector2(8 + i * 16, TILE)
@@ -1187,6 +1564,36 @@ func _draw_tiles() -> void:
 					v.draw_line(pole, pole + Vector2(0, -90), ink, 4.0)
 					var flag := Color("e0a832") if map[row][col] == "c" else Color("9aa3ab")
 					v.draw_colored_polygon(PackedVector2Array([pole + Vector2(0, -90), pole + Vector2(36, -78), pole + Vector2(0, -66)]), flag)
+
+
+func _draw_tiles() -> void:
+	var v := _tiles
+	var ink := Color("2b1d14")
+	var span := _visible_columns()
+	if dungeon:
+		_draw_torches(v, span)
+	for row in map.size():
+		for col in range(span.x, mini(span.y, map[row].length())):
+			var at := Vector2(col * TILE, row * TILE)
+			match map[row][col]:
+				"S", "s" when _items.has("chest_royal"):
+					var texture: Texture2D = _items["chest_royal_open" if map[row][col] == "s" and _items.has("chest_royal_open") else "chest_royal"]
+					v.draw_texture(texture, at + Vector2(0, TILE - texture.get_height()))
+					if map[row][col] == "S":
+						_draw_glint(v, at + Vector2(0, TILE - texture.get_height()), texture.get_size(), col)
+				"S", "s":
+					var box := Rect2(at + Vector2(4, 16), Vector2(TILE * 2 - 8, TILE - 16))
+					v.draw_rect(box, Color("8a2630"))
+					v.draw_rect(box, Color("f2c14e"), false, 4.0)
+					if map[row][col] == "S":
+						_draw_glint(v, box.position, box.size, col)
+				"a" when _items.has("apple"):
+					var texture: Texture2D = _items["apple"]
+					v.draw_texture(texture, at + (Vector2(TILE, TILE) - texture.get_size()) / 2 + Vector2(0, sin(_anim * 3.0 + col) * 4.0))
+				"a":
+					var center := at + Vector2(32, 34 + sin(_anim * 3.0 + col) * 4.0)
+					v.draw_circle(center, 15, Color("d62828"))
+					v.draw_line(center + Vector2(0, -13), center + Vector2(3, -21), Color("5a3a1e"), 3.0)
 	_draw_shadows()
 	for apple in _thrown:
 		var spin: float = apple["time"] * 14.0 * signf(apple["vel"].x)
@@ -1399,10 +1806,9 @@ func _move_particles(delta: float) -> void:
 
 
 func _draw_foreground() -> void:
-	var scroll := _camera.get_screen_center_position().x if _camera else 0.0
-	if not _art.is_empty():
-		_draw_layers(_foreground, _art["foreground"], scroll, false)
 	for p in _particles:
+		if dungeon and p["leaf"]:
+			continue
 		var at: Vector2 = p["pos"] - Vector2(20, 20)
 		var depth: float = p["depth"]
 		if p["leaf"]:
@@ -1418,7 +1824,7 @@ func _draw_foreground() -> void:
 
 ## Light over the whole picture: slow sunbeams from the top left and a darker edge.
 func _draw_overlay() -> void:
-	if night:
+	if night or dungeon:
 		_overlay.draw_texture_rect(_vignette, Rect2(Vector2.ZERO, SCREEN), false)
 		return
 	var sway := sin(_anim * 0.3) * 30.0
@@ -1483,6 +1889,8 @@ func _draw_hud() -> void:
 		modes.append("M: %s" % {"silent": "cisza", "all": "muzyka i dźwięki"}.get(Game.sound, "same dźwięki"))
 	if _art_sets.size() > 1:
 		modes.append("L: grafika")
+	if CutoutCharacter.anim_dirs().size() > 1:
+		modes.append("K: postać")
 	if level_map.is_empty():
 		modes.append("N: plansza %s" % ("rycerska" if layout == "knight" else "mario"))
 	var mode := "     ".join(modes)
@@ -1503,6 +1911,8 @@ func _draw_hud() -> void:
 		message = "Ojej, Wiesław stracił wszystkie serduszka!\nSpacja albo klik: jeszcze raz"
 	elif state == "won" and _boss:
 		message = "Oko jest Wieśka! Wikingowie oddają jabłka i drakkar."
+	elif state == "won" and dungeon:
+		message = "Wiesław wydostał się z lochów!"
 	elif state == "won":
 		message = "Hop! Wiesław dogonił drakkar!"
 	if message != "":

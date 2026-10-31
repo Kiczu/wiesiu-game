@@ -83,6 +83,7 @@ func _play_trial() -> void:
 		stage.mugs = mugs
 		stage.level_map = spec["map"]
 		stage.night = spec["night"]
+		stage.dungeon = spec["dungeon"]
 		stage.level_name = spec["name"]
 		var parts: Array[Node] = [stage]
 		# A level added without comic pages starts straight away.

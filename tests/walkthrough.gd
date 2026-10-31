@@ -285,6 +285,10 @@ func _check_platformer() -> void:
 	_check(level.tile_at(royal - Vector2(PlatformerGame.TILE, 0)) == "s" and level.apples == before_apples + PlatformerGame.ROYAL_APPLES and level.lives == PlatformerGame.LIVES, "platformer: the royal chest opens from either half for many apples and all hearts")
 	level.queue_free()
 	await _brothers_shop()
+	await _crates_both_sides()
+	await _eye_grabbed_early()
+	await _wall_slide()
+	await _level_art_setting()
 	await _eye_boss()
 	# Every campaign level is a rectangle with a start and a drakkar at the end, and loads.
 	for spec in PlatformerCampaign.levels():
@@ -294,6 +298,7 @@ func _check_platformer() -> void:
 		var stage := PlatformerGame.new()
 		stage.level_map = rows
 		stage.night = spec["night"]
+		stage.dungeon = spec["dungeon"]
 		stage.auto_input = true
 		add_child(stage)
 		await _physics(5)
@@ -304,6 +309,116 @@ func _check_platformer() -> void:
 
 
 ## A brother sells a heart and a mug of nalewka for apples; with the mug a Viking does no harm.
+## Knocking the blind Viking down drops the eye, and Wiesław wins by grabbing it before the other
+## Viking gets there. Running into a wall, he stops running.
+func _eye_grabbed_early() -> void:
+	var rows: Array[String] = []
+	for i in 9:
+		rows.append(" ".repeat(30))
+	rows.append(" P            O              #")
+	rows.append("#".repeat(30))
+	rows.append("#".repeat(30))
+	var stage := PlatformerGame.new()
+	stage.level_map = rows
+	stage.auto_input = true
+	add_child(stage)
+	await _physics(5)
+	var boss: EyeBoss = stage._boss
+	stage._shield = 99.0
+	var blind: int = 1 - boss.holder
+	boss.holder = -1
+	while boss.vikings[blind]["health"] > 0:
+		boss.vikings[blind]["stun"] = 0.0
+		boss.strike(boss.rect_of(blind), 1.0, stage.sword_damage)
+	stage.player.position = boss.eye + Vector2(0, 40)
+	await _physics(3)
+	_check(boss.won and stage.state == "won", "platformer: grabbing the dropped eye wins even with a Viking still up")
+	stage.queue_free()
+	rows[9] = " P                   #        "
+	stage = PlatformerGame.new()
+	stage.level_map = rows
+	stage.auto_input = true
+	add_child(stage)
+	await _physics(5)
+	stage.input_x = 1.0
+	await _physics(240)
+	var pose: String = stage._wieslaw.pose
+	stage.input_x = 0.0
+	_check(pose == "idle" and stage.player.is_on_wall(), "platformer: pushing against a wall he stands still (%s)" % pose)
+	stage.queue_free()
+
+
+## In the air against a wall he slides down slowly, and jump pushes him up and away from it.
+## The settings page picks the level art for a level already being played.
+func _level_art_setting() -> void:
+	var stage := PlatformerGame.new()
+	stage.auto_input = true
+	add_child(stage)
+	await _physics(2)
+	var before: String = Game.level_art
+	for art in ["piksele", "kreskowka"]:
+		Game.level_art = art
+		get_tree().call_group("platformer", "use_level_art")
+		_check(stage._art.is_empty() or stage._art["name"] == art, "settings: level art %s" % art)
+	Game.level_art = before
+	stage.queue_free()
+
+
+func _wall_slide() -> void:
+	var rows: Array[String] = []
+	for i in 9:
+		rows.append("          ##        ")
+	rows.append(" P        ##     D  ")
+	rows.append("#".repeat(20))
+	rows.append("#".repeat(20))
+	var stage := PlatformerGame.new()
+	stage.level_map = rows
+	stage.auto_input = true
+	add_child(stage)
+	await _physics(5)
+	var tile := float(PlatformerGame.TILE)
+	stage.player.position = Vector2(9.5 * tile, 3 * tile)
+	stage.player.velocity = Vector2.ZERO
+	stage.input_x = 1.0
+	await _physics(40)
+	var sliding: bool = stage._wall == 1 and stage.player.velocity.y <= PlatformerGame.WALL_SLIDE_SPEED + 1.0
+	var before := stage.player.position
+	stage.input_jump = true
+	await _physics(12)
+	stage.input_jump = false
+	var jumped: bool = stage.player.position.y < before.y - 30.0 and stage.player.position.x < before.x - 30.0
+	stage.input_x = 0.0
+	_check(sliding and jumped, "platformer: he slides down a wall and jumps off it (%s %s)" % [sliding, jumped])
+	stage.queue_free()
+
+
+## The sword breaks a crate on either side of Wiesław.
+func _crates_both_sides() -> void:
+	var rows: Array[String] = []
+	for i in 9:
+		rows.append(" ".repeat(20))
+	rows.append("    B  P  B      D  ")
+	rows.append("#".repeat(20))
+	rows.append("#".repeat(20))
+	var stage := PlatformerGame.new()
+	stage.level_map = rows
+	stage.auto_input = true
+	add_child(stage)
+	await _physics(5)
+	var tile := float(PlatformerGame.TILE)
+	var broken := []
+	for side in [-1, 1]:
+		var col := 4 if side < 0 else 10
+		stage.player.position = Vector2((col + 0.5) * tile - side * (tile / 2 + 50), 10 * tile)
+		stage._wieslaw.facing = side
+		await _physics(2)
+		stage.attack()
+		await _physics(30)
+		broken.append(stage.tile_at(Vector2((col + 0.5) * tile, 9.5 * tile)) == " ")
+	_check(broken == [true, true], "platformer: the sword breaks crates on the left and on the right %s" % str(broken))
+	stage.queue_free()
+
+
 func _brothers_shop() -> void:
 	var rows: Array[String] = []
 	for i in 9:
@@ -382,25 +497,42 @@ func _eye_boss() -> void:
 	stage.queue_free()
 
 
-## In the orchard a ladder leads up to a plank with a chest: W grabs it and climbs, and at the top
-## Wiesław hops onto the plank, where F opens the chest.
+## In the orchard a ladder goes down through the ground into the cellar, where F opens a chest,
+## and another ladder leads back up: S climbs down from the top, W climbs up and hops off.
 func _climb_to_chest(stage: PlatformerGame) -> void:
 	var rows: Array = stage.level_map
-	var col: int = rows[9].find("H", 20)
-	stage.player.position = Vector2((col + 0.5) * PlatformerGame.TILE, 10 * PlatformerGame.TILE)
+	var tile := float(PlatformerGame.TILE)
+	var surface := -1
+	for row in rows.size():
+		if rows[row].contains("P"):
+			surface = row
+	var down: int = rows[surface + 1].find("H")
+	var up: int = rows[surface + 1].find("H", down + 1)
+	var floor_row := surface + 1
+	while rows[floor_row + 1][down] != "#":
+		floor_row += 1
+	stage.player.position = Vector2((down + 0.5) * tile, (surface + 1) * tile)
+	await _physics(2)
+	stage.input_climb = 1.0
+	await _physics(150)
+	stage.input_climb = 0.0
+	await _physics(20)
+	var in_cellar: bool = stage.player.position.y > (floor_row + 0.5) * tile and stage.player.is_on_floor()
+	var chest_col: int = rows[floor_row].find("T")
+	stage.player.position = Vector2((chest_col - 0.5) * tile, (floor_row + 1) * tile)
+	await _physics(5)
+	stage.use()
+	var opened := stage.tile_at(Vector2((chest_col + 0.5) * tile, (floor_row + 0.5) * tile)) == "t"
+	stage.player.position = Vector2((up + 0.5) * tile, (floor_row + 1) * tile)
 	await _physics(2)
 	stage.input_climb = -1.0
 	stage.input_jump = true
-	await _physics(2)
-	var grabbed := stage._climbing
-	await _physics(90)
+	await _physics(150)
 	stage.input_climb = 0.0
 	stage.input_jump = false
-	await _physics(30)
+	await _physics(40)
 	var top := stage.player.position.y
-	stage.use()
-	var chest := Vector2((col + 0.5) * PlatformerGame.TILE, 4.5 * PlatformerGame.TILE)
-	_check(grabbed and not stage._climbing and stage.player.is_on_floor() and top <= 5 * PlatformerGame.TILE + 1 and stage.tile_at(chest) == "t", "platformer: W climbs a ladder up to a chest that F opens (%d)" % top)
+	_check(in_cellar and opened and not stage._climbing and stage.player.is_on_floor() and top <= (surface + 1) * tile + 1, "platformer: S climbs down into the cellar, F opens its chest, W climbs back up (%d)" % top)
 
 
 func _physics(frames: int) -> void:

@@ -4,8 +4,9 @@ extends RefCounted
 ## editor (LevelMap) with its name and whether it is played at night; the comic pages shown before
 ## it go with it here. A new level is a copy of one of these scenes, added to SCENES.
 
-## Book I: the orchard at night, the chase after the drakkar, and the fight for the magic eye.
-const SCENES := ["res://levels/01_sad_noca.tscn", "res://levels/02_poscig.tscn", "res://levels/03_oko_wikingow.tscn"]
+## Book I: through the castle dungeons to the orchard, the orchard at night, and the fight for the
+## magic eye. levels/poscig.tscn (the chase after the drakkar) is kept out of the story for now.
+const SCENES := ["res://levels/01_lochy_zamku.tscn", "res://levels/02_sad_noca.tscn", "res://levels/03_oko_wikingow.tscn"]
 
 
 static func levels() -> Array[Dictionary]:

@@ -86,12 +86,8 @@ func _back() -> void:
 
 func _main_page() -> void:
 	_start_page("main", "Wiesław", "Baśnie słowiańskie")
-	var latest := Game.latest_save()
-	if latest >= 0:
-		_button("Kontynuuj", func() -> void: load_requested.emit(latest))
-	_button("Nowa gra", func() -> void: new_game_requested.emit())
-	_button("Platformówka (wersja próbna)", func() -> void: platformer_requested.emit())
-	_button("Wczytaj grę", _slots_page.bind(false), latest < 0)
+	# The platformer is the game for now; the adventure (new_game_requested, saves) is set aside.
+	_button("Nowa gra", func() -> void: platformer_requested.emit())
 	_button("Ustawienia", _settings_page)
 	if not OS.has_feature("web"):
 		_button("Wyjście", func() -> void: get_tree().quit())
@@ -143,6 +139,11 @@ func _settings_page() -> void:
 		var names := TEXT_SPEEDS.keys()
 		Game.text_speed = TEXT_SPEEDS[names[(names.find(speed_name) + 1) % names.size()]]
 		Game.save_settings()
+		_settings_page())
+	_button("Grafika: " + ("piksele" if Game.level_art == "piksele" else "kreskówka"), func() -> void:
+		Game.level_art = "kreskowka" if Game.level_art == "piksele" else "piksele"
+		Game.save_settings()
+		get_tree().call_group("platformer", "use_level_art")
 		_settings_page())
 	_button("Wstecz", _back)
 	_focus_first()
