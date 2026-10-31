@@ -72,6 +72,12 @@ const JUMP_CUT := 0.45
 ## A second jump in the air, a little lower than the first.
 const AIR_JUMPS := 1
 const AIR_JUMP_SPEED := 900.0
+## Pressing against a wall in the air he holds on and slides down slowly; jump pushes him off it,
+## up and away, and gives the second jump back.
+const WALL_SLIDE_SPEED := 160.0
+const WALL_JUMP := Vector2(420.0, 980.0)
+## After a wall jump the keys do not steer for a moment, so he gets away from the wall.
+const WALL_LOCK := 0.18
 const COYOTE_TIME := 0.1
 const JUMP_BUFFER := 0.12
 const HURT_TIME := 1.5
@@ -168,6 +174,9 @@ var _drakkar: Node2D
 var _items := {}
 var _coyote := 0.0
 var _air_jumps := 0
+## The side of the wall he is holding on to (-1 left, 1 right), 0 when none.
+var _wall := 0
+var _wall_lock := 0.0
 var _buffered := 0.0
 var _jump_was_held := false
 var _hurt := 0.0
@@ -503,11 +512,21 @@ func _physics_process(delta: float) -> void:
 
 func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 	var v := player.velocity
-	v.x = move_toward(v.x, steer * WALK_SPEED, ACCELERATION * delta)
+	_wall_lock = maxf(_wall_lock - delta, 0.0)
+	if _wall_lock <= 0.0:
+		v.x = move_toward(v.x, steer * WALK_SPEED, ACCELERATION * delta)
 	v.y += GRAVITY * delta
 	_coyote = COYOTE_TIME if player.is_on_floor() else maxf(_coyote - delta, 0.0)
 	if player.is_on_floor():
 		_air_jumps = AIR_JUMPS
+	_wall = 0
+	if not player.is_on_floor() and v.y > 0.0 and absf(steer) > 0.1 and _wall_lock <= 0.0:
+		var side := 1 if steer > 0.0 else -1
+		if tile_at(player.position + Vector2(side * (PLAYER_SIZE.x / 2 + 4), -PLAYER_SIZE.y / 2)) in SOLID:
+			_wall = side
+			v.y = minf(v.y, WALL_SLIDE_SPEED)
+			if randf() < 0.15:
+				_dust(player.position + Vector2(side * PLAYER_SIZE.x / 2, -PLAYER_SIZE.y / 2), 1)
 	if _buffered > 0.0 and _coyote > 0.0:
 		v.y = -JUMP_SPEED
 		_play("jump")
@@ -515,6 +534,15 @@ func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 		_dust(player.position, 3)
 		_buffered = 0.0
 		_coyote = 0.0
+	elif _buffered > 0.0 and _wall != 0:
+		v = Vector2(-_wall * WALL_JUMP.x, -WALL_JUMP.y)
+		_wieslaw.facing = -_wall
+		_wall = 0
+		_wall_lock = WALL_LOCK
+		_air_jumps = AIR_JUMPS
+		_play("jump")
+		_stretch = Vector2(0.8, 1.2)
+		_buffered = 0.0
 	elif _buffered > 0.0 and _air_jumps > 0 and jump_held and not _jump_was_held:
 		v.y = -AIR_JUMP_SPEED
 		_air_jumps -= 1
@@ -537,7 +565,7 @@ func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 	_was_on_floor = on_floor
 	if player.is_on_ceiling():
 		_play("bump")
-	if absf(steer) > 0.1:
+	if absf(steer) > 0.1 and _wall_lock <= 0.0:
 		_wieslaw.facing = 1 if steer > 0 else -1
 	if _hurt > HURT_TIME - 0.4:
 		_wieslaw.pose = "hurt"
@@ -545,6 +573,8 @@ func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 		_wieslaw.pose = "attack"
 	elif _shield > MUG_TIME - DRINK_TIME and _wieslaw.has_drawn_pose("drink") and player.is_on_floor() and absf(player.get_real_velocity().x) < 20.0:
 		_wieslaw.pose = "drink"
+	elif _wall != 0 and _wieslaw.has_drawn_pose("wall"):
+		_wieslaw.pose = "wall"
 	elif not player.is_on_floor():
 		_wieslaw.pose = "jump" if player.velocity.y < 0.0 else "fall"
 	else:

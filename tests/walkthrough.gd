@@ -287,6 +287,7 @@ func _check_platformer() -> void:
 	await _brothers_shop()
 	await _crates_both_sides()
 	await _eye_grabbed_early()
+	await _wall_slide()
 	await _eye_boss()
 	# Every campaign level is a rectangle with a start and a drakkar at the end, and loads.
 	for spec in PlatformerCampaign.levels():
@@ -342,6 +343,35 @@ func _eye_grabbed_early() -> void:
 	var pose: String = stage._wieslaw.pose
 	stage.input_x = 0.0
 	_check(pose == "idle" and stage.player.is_on_wall(), "platformer: pushing against a wall he stands still (%s)" % pose)
+	stage.queue_free()
+
+
+## In the air against a wall he slides down slowly, and jump pushes him up and away from it.
+func _wall_slide() -> void:
+	var rows: Array[String] = []
+	for i in 9:
+		rows.append("          ##        ")
+	rows.append(" P        ##     D  ")
+	rows.append("#".repeat(20))
+	rows.append("#".repeat(20))
+	var stage := PlatformerGame.new()
+	stage.level_map = rows
+	stage.auto_input = true
+	add_child(stage)
+	await _physics(5)
+	var tile := float(PlatformerGame.TILE)
+	stage.player.position = Vector2(9.5 * tile, 3 * tile)
+	stage.player.velocity = Vector2.ZERO
+	stage.input_x = 1.0
+	await _physics(40)
+	var sliding: bool = stage._wall == 1 and stage.player.velocity.y <= PlatformerGame.WALL_SLIDE_SPEED + 1.0
+	var before := stage.player.position
+	stage.input_jump = true
+	await _physics(12)
+	stage.input_jump = false
+	var jumped: bool = stage.player.position.y < before.y - 30.0 and stage.player.position.x < before.x - 30.0
+	stage.input_x = 0.0
+	_check(sliding and jumped, "platformer: he slides down a wall and jumps off it (%s %s)" % [sliding, jumped])
 	stage.queue_free()
 
 
