@@ -1170,7 +1170,8 @@ func _load_art_set(dir: String) -> Dictionary:
 		layers.append({"texture": texture, "mirrored": mirrored, "speed": layer.get("speed", 0.0), "top": layer.get("top", -1.0),
 			"bottom": layer.get("bottom", SCREEN.y), "gap": layer.get("gap", 0.0),
 			"follow": layer.get("follow", layer.get("speed", 0.0)), "haze": layer.get("haze", 0.0),
-			"fill": texture.get_image().get_pixel(0, 0)})
+			"fill": texture.get_image().get_pixel(0, 0),
+			"fill_bottom": texture.get_image().get_pixel(0, texture.get_height() - 1)})
 	var front := []
 	for layer in spec.get("foreground", []):
 		front.append({"texture": load(dir + layer["file"]), "mirrored": null, "speed": layer.get("speed", 1.4), "top": -1.0,
@@ -1208,17 +1209,53 @@ func _ground_line() -> float:
 	return (_horizon - _camera.get_screen_center_position().y) * VIEW_ZOOM + SCREEN.y / 2
 
 
+## Where a layer's ground is on the screen. Near layers stand on the starting ground; far ones
+## (mountains, clouds) move up and down by only their "follow" share, so high up in the sky they
+## are still in view.
+func _layer_ground(follow: float) -> float:
+	var share := 1.0 if follow >= 0.75 else follow
+	return GROUND_LINE + (_ground_line() - GROUND_LINE) * share
+
+
+## Clouds high over the level (and stars at night), seen when the camera goes up above the trees.
+func _draw_sky(v: Node2D, scroll: float) -> void:
+	var ground := _layer_ground(0.35)
+	if night:
+		for k in 60:
+			var star := Vector2(fposmod(k * 397.0 - scroll * 0.02, SCREEN.x), ground - 900.0 - fposmod(k * 211.0, 900.0) * VIEW_ZOOM)
+			if star.y > -4.0 and star.y < SCREEN.y:
+				var twinkle := 0.6 + 0.4 * sin(_anim * 2.0 + k)
+				v.draw_rect(Rect2(star.round(), Vector2(3, 3)), Color(1.0, 1.0, 0.9, twinkle))
+	var light := Color("f4f1ea")
+	var shade := Color("cfd3dd")
+	for k in 9:
+		var width := 180.0 + float((k * 53) % 120)
+		var at := Vector2(fposmod(k * 433.0 - scroll * (0.04 + 0.01 * (k % 3)), SCREEN.x + width * 2) - width,
+			ground - (720.0 + float((k * 157) % 520)) * VIEW_ZOOM)
+		if at.y < -120.0 or at.y > SCREEN.y + 60.0:
+			continue
+		# A flat-bottomed cloud of a few puffs, its underside a shade darker.
+		v.draw_rect(Rect2(at + Vector2(0, -24), Vector2(width, 30)), shade)
+		for puff in 4:
+			var r := 26.0 + float((k + puff * 7) % 4) * 9.0
+			var c := at + Vector2(width * (0.18 + 0.22 * puff), -26.0 - r * 0.4)
+			v.draw_circle(c, r, light)
+		v.draw_rect(Rect2(at + Vector2(6, -32), Vector2(width - 12, 22)), light)
+
+
 func _draw_layers(v: Node2D, layers: Array, scroll: float, fill_sky: bool) -> void:
-	var ground := _ground_line()
 	for i in layers.size():
 		var layer: Dictionary = layers[i]
 		var texture: Texture2D = layer["texture"]
 		var size: Vector2 = texture.get_size() * layer.get("scale", _art["scale"])
 		var y: float = (layer["top"] if layer["top"] >= 0.0 else layer["bottom"] - size.y)
-		y = ground + (y - GROUND_LINE) * VIEW_ZOOM
+		y = _layer_ground(layer["follow"]) + (y - GROUND_LINE) * VIEW_ZOOM
 		size *= VIEW_ZOOM
 		if i == 0 and fill_sky:
 			v.draw_rect(Rect2(0, 0, SCREEN.x, y + 1), layer["fill"])
+			# Below the farthest picture too, when the camera is high and it has risen off the ground.
+			v.draw_rect(Rect2(0, y + size.y - 1, SCREEN.x, maxf(SCREEN.y - y - size.y + 1, 0.0)), layer["fill_bottom"])
+			_draw_sky(v, scroll)
 		var step: float = size.x + layer["gap"] * VIEW_ZOOM
 		var offset: float = scroll * layer["speed"] * VIEW_ZOOM
 		var x := -fposmod(offset, step)
@@ -1700,10 +1737,6 @@ func _move_particles(delta: float) -> void:
 
 
 func _draw_foreground() -> void:
-	var scroll := _camera.get_screen_center_position().x if _camera else 0.0
-	# The bushes in front only near the surface, not over the underground.
-	if not _art.is_empty() and not dungeon and _ground_line() > SCREEN.y * 0.5:
-		_draw_layers(_foreground, _art["foreground"], scroll, false)
 	for p in _particles:
 		if dungeon and p["leaf"]:
 			continue
