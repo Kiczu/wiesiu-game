@@ -9,6 +9,10 @@ signal pause_requested
 
 const TILE := 64
 const SCREEN := Vector2(1280, 720)
+## The camera is pulled back a little, so more of the level is in view.
+const VIEW_ZOOM := 0.8
+## Where the background pictures expect the ground: two tiles above the bottom of the screen.
+const GROUND_LINE := SCREEN.y - 2 * TILE
 ## One character per tile:
 ## # ground   B crate   = plank (jump through from below)
 ## a apple   x thorns   V Viking   C checkpoint   P start   D the drakkar (finish)
@@ -56,6 +60,8 @@ const STONE_LIGHT := Color("8d8882")
 const MORTAR := Color("3e3a37")
 const WALL := Color("2e2a2c")
 const WALL_MORTAR := Color("1f1c1e")
+const HALL := Color("5e5651")
+const HALL_MORTAR := Color("4a4440")
 ## Apples in a treasure chest; it also gives back a lost heart.
 const CHEST_APPLES := 5
 ## Apples in the royal chest; it also fills every heart.
@@ -219,6 +225,9 @@ var mugs := 0
 var drinking := "mug"
 ## Whether Wiesław is holding on to a ladder.
 var _climbing := false
+## The top of the ground Wiesław starts on: the background stands on it, so the trees grow up
+## from there and below it there is only the underground.
+var _horizon := 0.0
 
 
 func _ready() -> void:
@@ -321,6 +330,7 @@ func restart() -> void:
 			match map[row][col]:
 				"P":
 					checkpoint = at
+					_horizon = at.y
 				"V":
 					_add_viking(at)
 				"M":
@@ -415,6 +425,7 @@ func _add_player() -> void:
 	# Moves with the physics steps, which physics interpolation smooths between frames.
 	_camera.process_callback = Camera2D.CAMERA2D_PROCESS_PHYSICS
 	_camera.offset = Vector2(0, -80)
+	_camera.zoom = Vector2.ONE * VIEW_ZOOM
 	player.add_child(_camera)
 	_level.add_child(player)
 	_camera.make_current()
@@ -1066,8 +1077,9 @@ func _redraw() -> void:
 
 
 func _visible_columns() -> Vector2i:
-	var left := _camera.get_screen_center_position().x - SCREEN.x / 2 if _camera else 0.0
-	return Vector2i(maxi(floori(left / TILE) - 1, 0), floori((left + SCREEN.x) / TILE) + 2)
+	var width := SCREEN.x / VIEW_ZOOM
+	var left := _camera.get_screen_center_position().x - width / 2 if _camera else 0.0
+	return Vector2i(maxi(floori(left / TILE) - 1, 0), floori((left + width) / TILE) + 2)
 
 
 func _load_audio() -> void:
@@ -1175,31 +1187,35 @@ func _draw_tile(tile_name: String, at: Vector2) -> void:
 
 
 ## Each layer repeats sideways and moves at its own share of the camera's speed; the first one also
-## fills the sky above it with its top colour. When the camera goes up, a layer goes down by its
-## "follow" share of that, so the nearest trees stay standing on the ground.
+## fills the sky above it with its top colour. Up and down the layers stay on the ground Wiesław
+## starts on (_horizon): "bottom" and "top" are where they sit when that ground is GROUND_LINE
+## from the top of the screen.
 ## "haze" lays a veil of the haze colour over a layer and all behind it, so far
 ## things fade into the air.
 func _draw_art_background(scroll: float) -> void:
 	_draw_layers(_background, _art["background"], scroll, true)
 
 
-func _camera_rise() -> float:
+## Where the starting ground is on the screen.
+func _ground_line() -> float:
 	if not _camera:
-		return 0.0
-	return map.size() * TILE - SCREEN.y / 2 - _camera.get_screen_center_position().y
+		return GROUND_LINE
+	return (_horizon - _camera.get_screen_center_position().y) * VIEW_ZOOM + SCREEN.y / 2
 
 
 func _draw_layers(v: Node2D, layers: Array, scroll: float, fill_sky: bool) -> void:
-	var rise := _camera_rise()
+	var ground := _ground_line()
 	for i in layers.size():
 		var layer: Dictionary = layers[i]
 		var texture: Texture2D = layer["texture"]
 		var size: Vector2 = texture.get_size() * layer.get("scale", _art["scale"])
-		var y: float = (layer["top"] if layer["top"] >= 0.0 else layer["bottom"] - size.y) + rise * layer["follow"]
+		var y: float = (layer["top"] if layer["top"] >= 0.0 else layer["bottom"] - size.y)
+		y = ground + (y - GROUND_LINE) * VIEW_ZOOM
+		size *= VIEW_ZOOM
 		if i == 0 and fill_sky:
 			v.draw_rect(Rect2(0, 0, SCREEN.x, y + 1), layer["fill"])
-		var step: float = size.x + layer["gap"]
-		var offset: float = scroll * layer["speed"]
+		var step: float = size.x + layer["gap"] * VIEW_ZOOM
+		var offset: float = scroll * layer["speed"] * VIEW_ZOOM
 		var x := -fposmod(offset, step)
 		var index := floori(offset / step)
 		while x < SCREEN.x:
@@ -1244,12 +1260,30 @@ func _draw_background() -> void:
 ## A dungeon wall cell: dark bricks, and a torch now and then a step above the floor.
 func _draw_wall(v: Node2D, row: int, col: int) -> void:
 	var at := Vector2(col * TILE, row * TILE)
-	v.draw_rect(Rect2(at, Vector2(TILE, TILE)), WALL)
+	# Above the starting ground: the castle's halls, lighter, with windows and banners.
+	var hall := (row + 1) * TILE <= _horizon
+	v.draw_rect(Rect2(at, Vector2(TILE, TILE)), HALL if hall else WALL)
 	for half in 2:
 		var y := at.y + half * 32.0
-		v.draw_line(Vector2(at.x, y), Vector2(at.x + TILE, y), WALL_MORTAR, 2.0)
+		var mortar := HALL_MORTAR if hall else WALL_MORTAR
+		v.draw_line(Vector2(at.x, y), Vector2(at.x + TILE, y), mortar, 2.0)
 		var x := at.x + (16.0 if (row * 2 + half) % 2 else 48.0)
-		v.draw_line(Vector2(x, y), Vector2(x, y + 32), WALL_MORTAR, 2.0)
+		v.draw_line(Vector2(x, y), Vector2(x, y + 32), mortar, 2.0)
+	var open_below := row + 2 < map.size() and map[row + 1][col] != "#" and map[row + 2][col] != "#"
+	if hall and open_below and col % 9 == 5:
+		# An arched window with the sky behind it.
+		var sky := Color("9fc6e0") if not night else Color("2a3a66")
+		v.draw_rect(Rect2(at + Vector2(14, 18), Vector2(36, 46)), Color("2a2622"))
+		v.draw_circle(at + Vector2(32, 20), 18, Color("2a2622"))
+		v.draw_rect(Rect2(at + Vector2(19, 20), Vector2(26, 44)), sky)
+		v.draw_circle(at + Vector2(32, 21), 13, sky)
+		v.draw_line(at + Vector2(32, 8), at + Vector2(32, 64), Color("2a2622"), 3.0)
+		v.draw_line(at + Vector2(19, 40), at + Vector2(45, 40), Color("2a2622"), 3.0)
+	elif hall and open_below and col % 9 == 0:
+		# A banner of the prince's house.
+		v.draw_rect(Rect2(at + Vector2(10, 4), Vector2(44, 4)), Color("4a3020"))
+		v.draw_colored_polygon(PackedVector2Array([at + Vector2(14, 8), at + Vector2(50, 8), at + Vector2(50, 60), at + Vector2(32, 50), at + Vector2(14, 60)]), Color("8a2630"))
+		v.draw_circle(at + Vector2(32, 26), 8, Color("f2c14e"))
 	var below := row + 2 < map.size() and map[row + 1][col] != "#" and map[row + 2][col] == "#"
 	if below and col % 7 == 3:
 		var flicker := 0.85 + 0.15 * sin(_anim * 9.0 + col) * sin(_anim * 5.3 + row)
@@ -1335,7 +1369,7 @@ func _draw_tiles() -> void:
 					_draw_stone(v, row, col)
 				"#":
 					# Grass only under the open sky, not on a cave floor.
-					var top := row == 0 or (map[row - 1][col] != "#" and not _ground_above(row - 1, col))
+					var top := row == 0 or (map[row - 1][col] != "#" and not _ground_above(row - 1, col) and not _in_hole(row - 1, col))
 					if not _art.is_empty():
 						# The deeper tile only from the third row down, where it is mostly off screen,
 						# so it does not show as a dark band in a cliff.
@@ -1627,7 +1661,8 @@ func _move_particles(delta: float) -> void:
 
 func _draw_foreground() -> void:
 	var scroll := _camera.get_screen_center_position().x if _camera else 0.0
-	if not _art.is_empty() and not dungeon:
+	# The bushes in front only near the surface, not over the underground.
+	if not _art.is_empty() and not dungeon and _ground_line() > SCREEN.y * 0.5:
 		_draw_layers(_foreground, _art["foreground"], scroll, false)
 	for p in _particles:
 		if dungeon and p["leaf"]:
