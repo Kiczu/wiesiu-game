@@ -161,8 +161,6 @@ var _background: Node2D
 ## The art set in use: {"scale", "tiles": {name: Texture2D}, "background": [{texture, mirrored, speed, follow, top, bottom, gap}]}.
 var _art := {}
 var _art_sets: Array[Dictionary] = []
-## Kept for the next levels.
-static var _art_index := 0
 var _sounds := {}
 var _players: Array[AudioStreamPlayer] = []
 var _music: AudioStreamPlayer
@@ -214,6 +212,7 @@ var _climbing := false
 
 
 func _ready() -> void:
+	add_to_group("platformer")
 	_view = SubViewportContainer.new()
 	_view.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	add_child(_view)
@@ -1074,17 +1073,31 @@ func _load_art() -> void:
 	_background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	for dir in LEVEL_ART_SETS:
 		if FileAccess.file_exists(dir + "level.json"):
-			_art_sets.append(_load_art_set(dir))
+			var art_set := _load_art_set(dir)
+			art_set["name"] = dir.trim_suffix("/").get_file().trim_prefix("level_")
+			_art_sets.append(art_set)
 	if not _art_sets.is_empty():
-		_art = _art_sets[_art_index % _art_sets.size()]
+		_art = _art_sets[0]
+		for art_set in _art_sets:
+			if art_set["name"] == Game.level_art:
+				_art = art_set
 
 
-## Next art set.
+## Switches to the art set named in Game.level_art (the settings menu changed it).
+func use_level_art() -> void:
+	for art_set in _art_sets:
+		if art_set["name"] == Game.level_art:
+			_art = art_set
+	_redraw()
+
+
+## Next art set; the choice is saved with the settings.
 func next_art_set() -> void:
 	if _art_sets.is_empty():
 		return
-	_art_index = (_art_index + 1) % _art_sets.size()
-	_art = _art_sets[_art_index]
+	_art = _art_sets[(_art_sets.find(_art) + 1) % _art_sets.size()]
+	Game.level_art = _art["name"]
+	Game.save_settings()
 	_redraw()
 
 

@@ -288,6 +288,7 @@ func _check_platformer() -> void:
 	await _crates_both_sides()
 	await _eye_grabbed_early()
 	await _wall_slide()
+	await _level_art_setting()
 	await _eye_boss()
 	# Every campaign level is a rectangle with a start and a drakkar at the end, and loads.
 	for spec in PlatformerCampaign.levels():
@@ -347,6 +348,21 @@ func _eye_grabbed_early() -> void:
 
 
 ## In the air against a wall he slides down slowly, and jump pushes him up and away from it.
+## The settings page picks the level art for a level already being played.
+func _level_art_setting() -> void:
+	var stage := PlatformerGame.new()
+	stage.auto_input = true
+	add_child(stage)
+	await _physics(2)
+	var before: String = Game.level_art
+	for art in ["piksele", "kreskowka"]:
+		Game.level_art = art
+		get_tree().call_group("platformer", "use_level_art")
+		_check(stage._art.is_empty() or stage._art["name"] == art, "settings: level art %s" % art)
+	Game.level_art = before
+	stage.queue_free()
+
+
 func _wall_slide() -> void:
 	var rows: Array[String] = []
 	for i in 9:
