@@ -21,6 +21,17 @@ const SKY_ROWS := 4
 ## T treasure chest (open it with F)   S royal chest, two tiles wide (leave the tile on its right empty)
 ## H ladder (W and S climb it, A or D steps off)   M one of Wiesław's brothers, who sells things for apples (F)
 ## O the two Vikings with one eye (catch the eye to win; no drakkar needed)
+## Castle furniture, only pictures: k hearth with a cauldron   p wall shelf   j throne   w weapon rack
+## h sacks and barrels   i bed   m heap of coins   n feast table   r carved pillar   v barred door
+## y brazier (lights the room)   E chest   g shield and antlers on the wall   q roots from the ceiling
+## F hanging banner   G bread oven   I sausages and garlic on a pole (hangs from the top)
+## J mail shirt on a stand   N loom
+## Castle walls, placed by hand (a map with none of a letter spreads them out itself): o window (its left half, on the floor)   f torch   b banner
+## K a key   L a locked door (paint it up to the ceiling, or it can be jumped over; F with a key opens it)
+## Z a trapdoor in the floor (paint it through the whole floor)   d a lever: F opens the nearest
+## trapdoor
+## u a hidden room: paint the room with it, things inside go in as usual; it looks like solid stone
+## until Wiesław steps in
 ## Crates break under the sword or a thrown apple and give apples.
 const LEVEL := [
 	"                                                                                                                                                                          ",
@@ -52,7 +63,11 @@ const LEVEL_KNIGHT := [
 	"########################xxxxx##############            ##################             ##########xx#xx#xxx#######################",
 	"###########################################            ##################             ##########################################",
 ]
-const SOLID := "#B"
+const SOLID := "#BLZ"
+## How long a found hidden room takes to crumble open (seconds, about).
+const SECRET_REVEAL := 1.5
+## How long each drawn step of a door swinging open shows (seconds).
+const DOOR_STEP := 0.16
 ## Apples inside a broken crate.
 const CRATE_APPLES := 2
 const NIGHT_TINT := Color(0.5, 0.56, 0.86)
@@ -120,8 +135,14 @@ const TORCH_LIGHT := Color(1.0, 0.78, 0.5)
 ## Drawn castle pieces in CASTLE_DIR (<name>.png), each used when present: the back walls (tiled),
 ## windows, banners, barred windows, cells and chains on the walls, the exit door, ladders, planks,
 ## spikes and the torch frames (torch_0.png, torch_1.png, ...).
-const CASTLE_PIECES := ["wall_hall", "wall_dungeon", "window", "banner", "bars", "cell", "chains", "door", "ladder", "plank", "spikes"]
+const CASTLE_PIECES := ["wall_hall", "wall_dungeon", "wall_deep", "window", "banner", "door", "ladder", "plank", "spikes", "kociol", "polka", "tron", "stojak", "worki", "lozko", "monety", "stol", "slup", "krata", "ogien", "kufer", "trofeum", "korzenie", "sztandar", "piec", "wedzarnia", "kolczuga", "krosno", "klucz", "drzwi_zamkniete", "drzwi_1", "drzwi_2", "drzwi_3", "drzwi_4", "drzwi_5", "drzwi_6", "drzwi_7", "drzwi_8", "drzwi_otwarte", "zapadnia", "zapadnia_otwarta", "dzwignia"]
 ## How much darker the hall's back wall is drawn than its picture, so the floor stands out.
+## Castle furniture by map letter: a hearth with a cauldron, a wall shelf, the prince's throne and a
+## weapon rack. They are only pictures; Wiesław walks past them.
+const CASTLE_FURNITURE := {"k": "kociol", "j": "tron", "w": "stojak", "h": "worki", "i": "lozko", "m": "monety", "n": "stol", "r": "slup", "v": "krata", "y": "ogien", "E": "kufer", "G": "piec", "J": "kolczuga", "N": "krosno"}
+## Pictures on the wall, centred on their cell, and pictures hanging from the top of their cell.
+const CASTLE_WALL_PICTURES := {"p": "polka", "g": "trofeum"}
+const CASTLE_HANGING := {"q": "korzenie", "F": "sztandar", "I": "wedzarnia"}
 const HALL_WALL_SHADE := Color(0.72, 0.72, 0.78)
 const ITEMS := ["apple", "crate", "thorns", "flag", "flag_on", "drakkar", "heart", "heart_empty", "chest", "chest_open", "chest_royal", "chest_royal_open", "ladder"]
 ## Drawn hearts are small pixel art, shown this many times bigger.
@@ -131,8 +152,8 @@ const KEY_DIR := "res://art/platformer/ui/"
 ## How big the key cap is drawn, and how often it is pressed (seconds) while it is shown.
 const KEY_SCALE := 2.0
 const KEY_PRESS_EVERY := 1.4
-## How much the view through the windows follows the camera: below 1 it lags, so it looks far away.
-const OUTSIDE_PARALLAX := 0.75
+## How far past the castle's side walls the camera may look out, in tiles.
+const OUTSIDE_SIDES := 3
 ## How far the camera looks ahead in the running direction.
 const LOOK_AHEAD := 140.0
 ## Sword: how long a swing lasts, how soon the next one can start, how far it reaches.
@@ -220,15 +241,37 @@ var _castle := {}
 ## See CASTLE_PIECES: the drawn pieces by name, and the torch frames.
 var _pieces := {}
 var _torch_frames: Array[Texture2D] = []
-## The night landscape seen through the hall windows, and the outline of the window's glass in
-## the window picture. One long picture runs behind all the windows, so each shows its own part.
-var _outside: Texture2D
+## The exit door opening, from shut (door_0) to open, when there are drawn frames for it.
+var _door_frames: Array[Texture2D] = []
+## The night landscape around the castle, seen through the hall windows, over the roof and past
+## the side walls: layers from the sky to the meadow, each {"texture", "speed", "horizon"}. Speed 1
+## moves with the world and 0 stays on the screen, so the slower a layer, the farther it seems.
+## Its "horizon" row lines up with the castle's base when the camera is on the starting floor.
+var _outside: Array[Dictionary] = []
+## The outline of the window's glass in the window picture.
 var _window_glass := PackedVector2Array()
+## The colours above the farthest layer and below the nearest one.
+var _outside_sky := Color.BLACK
+var _outside_ground := Color.BLACK
+## How much the landscape moves up and down with the world, like a layer's speed sideways.
+var _outside_rise := 0.25
+## The earth in front, under the castle's base: a tile repeated every way, and its grassy top
+## edge, which stands this many pixels above the base.
+var _soil: Texture2D
+var _soil_top: Texture2D
+var _soil_top_above := 0.0
 ## Draws the hall windows over the static layer every frame, so the view outside can scroll.
 var _windows: Node2D
 ## See DUNGEON_DARK.
 var _darkness: CanvasModulate
 var _torch_lights: Array[PointLight2D] = []
+var _hand_placed := {}
+## The hidden rooms: each a rectangle of cells covered with stone, and how long ago it was found
+## (below zero while still hidden).
+var _secrets: Array[Dictionary] = []
+var _secret_cover: Node2D
+## Doors swinging open right now: the lowest cell of each, and the time it started.
+var _doors_opening := {}
 var _player_light: PointLight2D
 var _coyote := 0.0
 var _air_jumps := 0
@@ -264,6 +307,8 @@ var _look := 0.0
 var _shield := 0.0
 ## Mugs of nalewka bought from the brothers and kept for later; Q drinks one.
 var mugs := 0
+## Keys picked up and not yet used on a locked door.
+var keys := 0
 ## What Wiesław last drank. A frame set can draw a pose per drink ("drink_mug",
 ## "drink_potion", ...); one without it uses the plain "drink" pose.
 var drinking := "mug"
@@ -358,6 +403,8 @@ func restart() -> void:
 		_level.queue_free()
 	lives = LIVES
 	apples = 0
+	keys = 0
+	_doors_opening.clear()
 	state = ""
 	_hurt = 0.0
 	_end_time = 0.0
@@ -417,6 +464,7 @@ func restart() -> void:
 				"D":
 					_add_drakkar(at)
 	_add_player()
+	_add_secrets()
 	_add_dungeon_lights()
 	# The hints sit in the level but on their own layer, so the night and the castle's darkness
 	# do not dim them.
@@ -453,7 +501,7 @@ func _add_dungeon_lights() -> void:
 	glow.height = 128
 	for row in map.size():
 		for col in map[row].length():
-			if _torch_here(row, col):
+			if _torch_here(row, col) or (map[row][col] == "y" and _pieces.has("ogien")):
 				var light := PointLight2D.new()
 				light.texture = glow
 				light.texture_scale = 4.5
@@ -502,10 +550,18 @@ func _draw_door(door: Node2D) -> void:
 		var size := picture.get_size()
 		var left := -size.x / 2.0
 		# Once Wiesław is out, the door swings open on its left hinge onto daylight.
-		var open := clampf(_end_time / 0.6, 0.0, 1.0) if state == "won" else 0.0
+		var open := clampf(_end_time / 0.8, 0.0, 1.0) if state == "won" else 0.0
 		if open > 0.0:
-			door.draw_rect(Rect2(left + 8, -size.y + 14, size.x - 16, size.y - 14), Color(1.0, 0.95, 0.75, open))
+			# Daylight in the doorway: a box under a half circle, so it follows the arch.
+			var arch_top := -size.y + size.x / 2.0
+			var light := Color(1.0, 0.95, 0.75, open)
+			door.draw_rect(Rect2(left + 12, arch_top, size.x - 24, -arch_top), light)
+			door.draw_circle(Vector2(0, arch_top), size.x / 2.0 - 12, light)
 			door.draw_circle(Vector2(0, -size.y / 2.0), 120, Color(1.0, 0.9, 0.6, 0.3 * open))
+		if not _door_frames.is_empty():
+			var frame := _door_frames[mini(int(open * _door_frames.size()), _door_frames.size() - 1)]
+			door.draw_texture(frame, Vector2(-frame.get_width() / 2.0, -frame.get_height()))
+			return
 		var width := size.x * (1.0 - 0.8 * open)
 		door.draw_texture_rect(picture, Rect2(left, -size.y, width, size.y), false, Color(1, 1, 1).darkened(0.35 * open))
 		return
@@ -551,8 +607,11 @@ func _add_player() -> void:
 	_camera = Camera2D.new()
 	_camera.limit_left = 0
 	# Outdoors the camera may rise a little above the highest thing in the level, into open sky.
-	_camera.limit_top = 0 if dungeon else -SKY_ROWS * TILE
-	_camera.limit_right = map[0].length() * TILE
+	# Over the castle's roof the camera may show a little night sky, when there is a view outside.
+	_camera.limit_top = 0 if dungeon and _outside.is_empty() else -SKY_ROWS * TILE
+	if dungeon and not _outside.is_empty():
+		_camera.limit_left = -OUTSIDE_SIDES * TILE
+	_camera.limit_right = map[0].length() * TILE + (OUTSIDE_SIDES * TILE if dungeon and not _outside.is_empty() else 0)
 	_camera.limit_bottom = map.size() * TILE
 	_camera.position_smoothing_enabled = true
 	# Moves with the physics steps, which physics interpolation smooths between frames.
@@ -694,6 +753,7 @@ func _physics_process(delta: float) -> void:
 	_move_vikings(delta)
 	if _boss:
 		_boss.step(delta)
+	_update_secrets(delta)
 	_check_touches()
 	_redraw()
 
@@ -849,8 +909,275 @@ func use() -> void:
 	if chest != Vector2.INF:
 		_open_chest(chest)
 		return
+	var locked := _locked_door_near()
+	if locked != Vector2i(-1, -1):
+		_unlock(locked)
+		return
+	var lever := _lever_near()
+	if lever != Vector2i(-1, -1):
+		_pull(lever)
+		return
 	if _door_near():
 		_win()
+
+
+## The cell of a locked door right in front of Wiesław (either side), or (-1, -1).
+func _locked_door_near() -> Vector2i:
+	for dx in [TILE * 0.7, -TILE * 0.7]:
+		for dy in [-TILE * 0.5, -TILE * 1.2]:
+			var point: Vector2 = player.position + Vector2(dx, dy)
+			if tile_at(point) == "L":
+				return Vector2i(floori(point.x / TILE), floori(point.y / TILE))
+	return Vector2i(-1, -1)
+
+
+## A key opens the whole locked door (every L above and below this cell); without one it only rattles.
+func _unlock(cell: Vector2i) -> void:
+	if keys <= 0:
+		_play("bump")
+		_shake = maxf(_shake, 0.05)
+		_effects.append({"kind": "nokey", "pos": Vector2((cell.x + 0.5) * TILE, cell.y * TILE), "time": 0.0})
+		return
+	keys -= 1
+	var top := cell.y
+	while top > 0 and map[top - 1][cell.x] == "L":
+		top -= 1
+	var row := top
+	while row < map.size() and map[row][cell.x] == "L":
+		map[row] = map[row].substr(0, cell.x) + "l" + map[row].substr(cell.x + 1)
+		row += 1
+	_doors_opening[Vector2i(cell.x, row - 1)] = _anim
+	_build_collision()
+	_static.queue_redraw()
+	_tiles.queue_redraw()
+	_hud.queue_redraw()
+	_play("checkpoint")
+	_dust(Vector2((cell.x + 0.5) * TILE, row * TILE), 4)
+
+
+## Each group of u cells (touching, corners too) is one hidden room: the rectangle around it is
+## covered with stone until Wiesław steps into it.
+func _add_secrets() -> void:
+	_secrets.clear()
+	var seen := {}
+	for row in map.size():
+		for col in map[row].length():
+			if map[row][col] != "u" or seen.has(Vector2i(col, row)):
+				continue
+			var box := Rect2i(col, row, 1, 1)
+			var todo: Array[Vector2i] = [Vector2i(col, row)]
+			seen[Vector2i(col, row)] = true
+			while not todo.is_empty():
+				var cell: Vector2i = todo.pop_back()
+				box = box.expand(cell).expand(cell + Vector2i.ONE)
+				for dy in [-1, 0, 1]:
+					for dx in [-1, 0, 1]:
+						var next: Vector2i = cell + Vector2i(dx, dy)
+						if next.y >= 0 and next.y < map.size() and next.x >= 0 and next.x < map[next.y].length() and map[next.y][next.x] == "u" and not seen.has(next):
+							seen[next] = true
+							todo.append(next)
+			_secrets.append({"box": box, "found": -1.0, "from": Vector2.ZERO})
+	if _secrets.is_empty():
+		return
+	_secret_cover = Node2D.new()
+	_secret_cover.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_secret_cover.draw.connect(_draw_secrets)
+	_level.add_child(_secret_cover)
+
+
+## Finds a hidden room when Wiesław steps in, and plays the stone crumbling away from where he
+## came in.
+func _update_secrets(delta: float) -> void:
+	if _secrets.is_empty():
+		return
+	var cell := Vector2i(floori(player.position.x / TILE), floori((player.position.y - TILE / 2.0) / TILE))
+	for secret in _secrets:
+		if secret["found"] < 0.0:
+			if secret["box"].has_point(cell):
+				secret["found"] = 0.0
+				secret["from"] = Vector2(cell)
+				_play("win" if _sounds.has("win") else "checkpoint")
+				_shake = maxf(_shake, 0.15)
+		elif secret["found"] < SECRET_REVEAL + 2.0:
+			secret["found"] += delta
+	_secret_cover.queue_redraw()
+
+
+func _draw_secrets() -> void:
+	for secret in _secrets:
+		var box: Rect2i = secret["box"]
+		var found: float = secret["found"]
+		for row in range(box.position.y, box.end.y):
+			for col in range(box.position.x, box.end.x):
+				if map[row][col] == "#":
+					continue
+				var fade := 0.0
+				if found >= 0.0:
+					# Stones nearer to where he came in go first; each falls a little as it fades.
+					var delay := Vector2(col, row).distance_to(secret["from"]) * 0.06
+					fade = clampf((found - delay) / 0.4, 0.0, 1.0)
+					if fade >= 1.0:
+						continue
+				var at := Rect2(col * TILE, row * TILE + fade * fade * 40.0, TILE, TILE)
+				var tint := Color(1, 1, 1, 1.0 - fade)
+				var part := _castle_part(row)
+				if _castle.has(part) and _castle[part]["masks"].get(15, []).size() == 4:
+					var rects: Array = _castle[part]["masks"][15]
+					_secret_cover.draw_texture_rect_region(_castle[part]["sheet"], at, rects[(row % 2) * 2 + col % 2], tint)
+				else:
+					_secret_cover.draw_rect(at, Color(0.42, 0.4, 0.38, tint.a))
+					_secret_cover.draw_rect(Rect2(at.position + Vector2(0, 30), Vector2(TILE, 3)), Color(0.3, 0.28, 0.26, tint.a))
+
+
+## The cell of an unpulled lever Wiesław stands at, or (-1, -1).
+func _lever_near() -> Vector2i:
+	for dx in [0.0, TILE * 0.6, -TILE * 0.6]:
+		for dy in [-TILE * 0.5, -TILE * 1.2]:
+			var point: Vector2 = player.position + Vector2(dx, dy)
+			if tile_at(point) == "d":
+				return Vector2i(floori(point.x / TILE), floori(point.y / TILE))
+	return Vector2i(-1, -1)
+
+
+## Pulling a lever opens the trapdoor nearest to it: every Z cell joined to that one.
+func _pull(lever: Vector2i) -> void:
+	map[lever.y] = map[lever.y].substr(0, lever.x) + "e" + map[lever.y].substr(lever.x + 1)
+	var nearest := Vector2i(-1, -1)
+	for row in map.size():
+		for col in map[row].length():
+			if map[row][col] == "Z" and (nearest.x < 0 or Vector2(col, row).distance_to(Vector2(lever)) < Vector2(nearest).distance_to(Vector2(lever))):
+				nearest = Vector2i(col, row)
+	if nearest.x >= 0:
+		var todo: Array[Vector2i] = [nearest]
+		while not todo.is_empty():
+			var cell: Vector2i = todo.pop_back()
+			if cell.y < 0 or cell.y >= map.size() or cell.x < 0 or cell.x >= map[cell.y].length() or map[cell.y][cell.x] != "Z":
+				continue
+			map[cell.y] = map[cell.y].substr(0, cell.x) + "z" + map[cell.y].substr(cell.x + 1)
+			todo.append_array([cell + Vector2i.LEFT, cell + Vector2i.RIGHT, cell + Vector2i.UP, cell + Vector2i.DOWN])
+		_dust(Vector2((nearest.x + 0.5) * TILE, nearest.y * TILE), 6)
+		_shake = maxf(_shake, 0.12)
+	_build_collision()
+	_static.queue_redraw()
+	_play("bump")
+
+
+## A lever on the wall (d up, e pulled down), or its picture dzwignia, turned upside down once pulled.
+func _draw_lever(v: Node2D, at: Vector2, pulled: bool) -> void:
+	var base := at + Vector2(TILE / 2.0, TILE - 18)
+	if _pieces.has("dzwignia"):
+		var texture: Texture2D = _pieces["dzwignia"]
+		v.draw_set_transform(base + Vector2(0, -texture.get_height() / 2.0 + 18), 0.0, Vector2(1, -1 if pulled else 1))
+		v.draw_texture(texture, -texture.get_size() / 2.0)
+		v.draw_set_transform(Vector2.ZERO)
+		return
+	v.draw_rect(Rect2(base + Vector2(-12, -10), Vector2(24, 20)), Color("5a5a60"))
+	var tip := base + (Vector2(14, 26) if pulled else Vector2(14, -34))
+	v.draw_line(base, tip, Color("3a3a40"), 6.0)
+	v.draw_circle(tip, 7, Color("8a2630"))
+
+
+## A trapdoor: planks across the floor while shut (Z); once open (z) a dark hole with the door
+## hanging down from its hinge in the top cell. Pictures zapadnia and zapadnia_otwarta, when drawn,
+## sit in the top cell.
+func _draw_trapdoor(v: Node2D, row: int, col: int, at: Vector2) -> void:
+	var open := map[row][col] == "z"
+	var top := row == 0 or map[row - 1][col] != map[row][col]
+	var picture := "zapadnia_otwarta" if open else "zapadnia"
+	if open:
+		v.draw_rect(Rect2(at, Vector2(TILE, TILE)), Color(0.04, 0.03, 0.03))
+	if top and _pieces.has(picture):
+		# One picture across the whole trapdoor, from its leftmost cell, as wide as the trapdoor.
+		if col > 0 and map[row][col - 1] == map[row][col]:
+			return
+		var width := 1
+		while col + width < map[row].length() and map[row][col + width] == map[row][col]:
+			width += 1
+		var texture: Texture2D = _pieces[picture]
+		var size := Vector2(width * TILE, texture.get_height() * width * TILE / float(texture.get_width()))
+		v.draw_texture_rect(texture, Rect2(at, size), false)
+		return
+	if open:
+		if top and (col == 0 or map[row][col - 1] != "z"):
+			v.draw_rect(Rect2(at + Vector2(2, 0), Vector2(10, TILE + 30)), Color("6b4423"))
+		return
+	if top:
+		v.draw_rect(Rect2(at, Vector2(TILE, 18)), Color("6b4423"))
+		for x in [0.0, 21.0, 42.0]:
+			v.draw_rect(Rect2(at + Vector2(x, 0), Vector2(2, 18)), Color("3a2414"))
+		v.draw_rect(Rect2(at + Vector2(0, 6), Vector2(TILE, 3)), Color("3a3a40"))
+	else:
+		v.draw_rect(Rect2(at, Vector2(TILE, TILE)), Color("2a2622"))
+
+
+## A door just unlocked swings open through its drawn steps (drzwi_1, drzwi_2, ...), then stays
+## open with the walls.
+func _draw_opening_doors(v: Node2D) -> void:
+	for cell: Vector2i in _doors_opening.keys():
+		var steps: Array[Texture2D] = []
+		for picture in ["drzwi_zamkniete", "drzwi_1", "drzwi_2", "drzwi_3", "drzwi_4", "drzwi_5", "drzwi_6", "drzwi_7", "drzwi_8", "drzwi_otwarte"]:
+			if _pieces.has(picture):
+				steps.append(_pieces[picture])
+		var step := int((_anim - _doors_opening[cell]) / DOOR_STEP)
+		if steps.is_empty():
+			_doors_opening.erase(cell)
+			continue
+		if step >= steps.size():
+			# The open door is drawn with the walls from now on; this frame still shows it here.
+			_doors_opening.erase(cell)
+			_static_span = Vector2i(-1, -1)
+		var texture := steps[mini(step, steps.size() - 1)]
+		var at := Vector2(cell.x * TILE, cell.y * TILE)
+		v.draw_texture(texture, at + Vector2(TILE / 2.0 - texture.get_width() / 2.0, TILE - texture.get_height()))
+
+
+## A plain golden key lying on its side, centred on the point.
+func _draw_door_key(v: CanvasItem, center: Vector2, scale: float) -> void:
+	var gold := Color("e8b93c")
+	var dark := Color("7a5a14")
+	v.draw_set_transform(center, 0.0, Vector2(scale, scale))
+	v.draw_circle(Vector2(-14, 0), 10, dark)
+	v.draw_circle(Vector2(-14, 0), 7, gold)
+	v.draw_circle(Vector2(-14, 0), 3, dark)
+	v.draw_rect(Rect2(-5, -3, 26, 6), gold)
+	v.draw_rect(Rect2(12, 3, 4, 7), gold)
+	v.draw_rect(Rect2(18, 3, 3, 5), gold)
+	v.draw_set_transform(Vector2.ZERO)
+
+
+## A locked door (L) is a thick slab of oak with iron bands across the doorway, seen from the side;
+## an opened one (l) is swung back towards the viewer, so only its hinges and edge show. A drawn
+## picture (drzwi_zamkniete, drzwi_otwarte) stands on the door's lowest cell instead.
+func _draw_door_cell(v: Node2D, row: int, col: int, at: Vector2) -> void:
+	var open := map[row][col] == "l"
+	var picture := "drzwi_otwarte" if open else "drzwi_zamkniete"
+	if _pieces.has(picture):
+		if row + 1 < map.size() and map[row + 1][col] == map[row][col]:
+			return
+		if _doors_opening.has(Vector2i(col, row)):
+			return  # Drawn swinging by _draw_opening_doors.
+		var texture: Texture2D = _pieces[picture]
+		v.draw_texture(texture, at + Vector2(TILE / 2.0 - texture.get_width() / 2.0, TILE - texture.get_height()))
+		return
+	var top := row == 0 or map[row - 1][col] != map[row][col]
+	var wood := Color("6b4423")
+	var iron := Color("3a3a40")
+	if open:
+		v.draw_rect(Rect2(at + Vector2(4, 0), Vector2(10, TILE)), Color("4a2e18"))
+		for y in [12.0, 44.0]:
+			v.draw_rect(Rect2(at + Vector2(2, y), Vector2(16, 6)), iron)
+		return
+	var slab := Rect2(at + Vector2(20, 4 if top else 0), Vector2(24, TILE - (4 if top else 0)))
+	v.draw_rect(slab, wood)
+	v.draw_rect(Rect2(slab.position, Vector2(4, slab.size.y)), Color("8a5a30"))
+	for y in [14.0, 46.0]:
+		v.draw_rect(Rect2(at + Vector2(18, y), Vector2(28, 6)), iron)
+	if top:
+		v.draw_rect(Rect2(at + Vector2(16, 0), Vector2(32, 6)), iron)
+	elif row + 1 < map.size() and map[row + 1][col] != "L":
+		# The lock, low on the door.
+		v.draw_rect(Rect2(at + Vector2(24, 22), Vector2(16, 18)), iron)
+		v.draw_circle(at + Vector2(32, 29), 3, Color("e8b93c"))
 
 
 ## Whether Wiesław stands at the castle's exit door, so F opens it.
@@ -1116,6 +1443,11 @@ func _check_touches() -> void:
 				_set_tile(corner, " ")
 				apples += 1
 				_play("apple")
+			"K":
+				_set_tile(corner, " ")
+				keys += 1
+				_play("checkpoint")
+				_hud.queue_redraw()
 			"x":
 				_hit(false)
 			"C":
@@ -1231,7 +1563,7 @@ func _redraw() -> void:
 	_hud.queue_redraw()
 	_background.queue_redraw()
 	_foreground.queue_redraw()
-	if dungeon and _outside:
+	if dungeon and not _outside.is_empty():
 		_windows.queue_redraw()
 	_overlay.queue_redraw()
 	if dungeon and _drakkar:
@@ -1450,6 +1782,11 @@ func _draw_layers(v: Node2D, layers: Array, scroll: float, fill_sky: bool) -> vo
 func _draw_background() -> void:
 	var v := _background
 	var scroll := _camera.get_screen_center_position().x if _camera else 0.0
+	if dungeon and not _outside.is_empty() and _camera:
+		# The castle stands in the landscape seen through its windows: it shows over the roof and
+		# past the side walls.
+		_draw_sky_over_castle(v, scroll)
+		return
 	if dungeon:
 		# A far stone wall behind the corridors, scrolling slowly.
 		v.draw_rect(Rect2(Vector2.ZERO, SCREEN), Color("1c191b"))
@@ -1476,11 +1813,75 @@ func _draw_background() -> void:
 		v.draw_circle(Vector2(x, 450), 60, Color("9cc58d"))
 
 
+## Where a landscape layer's top left corner is in the level now. A layer lags behind the camera
+## sideways by (1 - its speed). Up and down all layers lag the same, so they stay stacked as drawn
+## and no gaps open between them, unless a layer has its own "vertical_speed" (1 keeps a near
+## layer standing on the ground); at the starting camera height their horizon row is the castle's
+## base.
+func _layer_origin(layer: Dictionary) -> Vector2:
+	var camera := _camera.get_screen_center_position() if _camera else Vector2(0, _horizon - 80.0)
+	var lag := 1.0 - float(layer["speed"])
+	var rise: float = layer["rise"] if layer["rise"] >= 0.0 else _outside_rise
+	return Vector2(lag * camera.x, (1.0 - rise) * (camera.y - (_horizon - 80.0)) + _horizon - float(layer["horizon"]))
+
+
+## The landscape around the castle, over its roof and past its side walls: the layers far to near,
+## each repeated sideways, then the earth in front from the castle's base down.
+func _draw_sky_over_castle(v: Node2D, _scroll: float) -> void:
+	var zoom := _camera.zoom.x
+	var center := _camera.get_screen_center_position()
+	var to_screen := func(at: Vector2) -> Vector2: return (at - center) * zoom + SCREEN / 2.0
+	v.draw_rect(Rect2(Vector2.ZERO, SCREEN), _outside_sky)
+	var bottom := SCREEN.y
+	for layer in _outside:
+		var texture: Texture2D = layer["texture"]
+		var size := texture.get_size() * zoom
+		var corner: Vector2 = to_screen.call(_layer_origin(layer))
+		var x := fposmod(corner.x, size.x) - size.x
+		while x < SCREEN.x:
+			v.draw_texture_rect(texture, Rect2(x, corner.y, size.x, size.y), false)
+			x += size.x
+		bottom = corner.y + size.y
+	if bottom < SCREEN.y:
+		v.draw_rect(Rect2(0, bottom, SCREEN.x, SCREEN.y - bottom), _outside_ground)
+	if not _soil:
+		return
+	var top: Vector2 = to_screen.call(Vector2(0, _horizon))
+	if top.y - _soil_top_above * zoom >= SCREEN.y:
+		return
+	var tile := _soil.get_size() * zoom
+	var y := maxf(top.y, top.y + floorf((0.0 - top.y) / tile.y) * tile.y)
+	while y < SCREEN.y:
+		var x := fposmod(top.x, tile.x) - tile.x
+		while x < SCREEN.x:
+			v.draw_texture_rect(_soil, Rect2(x, y, tile.x, tile.y), false)
+			x += tile.x
+		y += tile.y
+	if _soil_top:
+		var edge := _soil_top.get_size() * zoom
+		var x := fposmod(top.x, edge.x) - edge.x
+		while x < SCREEN.x:
+			v.draw_texture_rect(_soil_top, Rect2(x, top.y - _soil_top_above * zoom, edge.x, edge.y), false)
+			x += edge.x
+
+
+## Which part of the castle a row of tile corners is in: the halls above the starting ground, the
+## dungeons under it, and the deep dungeons in the lower half of what is under it, when they have
+## their own sheet.
+func _castle_part(row: int) -> String:
+	if row * TILE <= _horizon:
+		return "hall"
+	if _castle.has("deep") and row * TILE > (_horizon + map.size() * TILE) / 2.0:
+		return "deep"
+	return "dungeon"
+
+
 ## A dungeon wall cell: dark bricks below the starting ground, the castle's lighter halls above it.
 func _draw_wall(v: Node2D, row: int, col: int) -> void:
 	var hall := (row + 1) * TILE <= _horizon
 	var at := Vector2(col * TILE, row * TILE)
-	var picture: Texture2D = _pieces.get("wall_hall" if hall else "wall_dungeon")
+	var deep := not hall and _castle_part(row + 1) == "deep" and _pieces.has("wall_deep")
+	var picture: Texture2D = _pieces.get("wall_hall" if hall else ("wall_deep" if deep else "wall_dungeon"))
 	if picture:
 		# The picture repeats every few cells; each cell shows its own part of it.
 		var size := picture.get_size()
@@ -1528,19 +1929,19 @@ func _open(col: int, from_row: int, to_row: int) -> bool:
 func _draw_wall_things(v: Node2D, span: Vector2i) -> void:
 	for col in range(span.x, mini(span.y, map[0].length())):
 		for row in range(1, map.size() - 1):
-			if map[row][col] == "#" or not _ground_above(row, col):
+			if map[row][col] == "#" or not (_ground_above(row, col) or map[row][col] in ["o", "b"]):
 				continue
 			var at := Vector2(col * TILE, row * TILE)
 			var hall := (row + 1) * TILE <= _horizon
+			var banner_here := map[row][col] == "b" if _by_hand("b") else hall and col % 12 == 0 and map[row - 1][col] == "#" and _open(col, row, row + 3)
 			var on_floor := map[row + 1][col] == "#"
-			var under_ceiling := map[row - 1][col] == "#"
-			if _hall_window(row, col) and _outside:
+			if _hall_window(row, col) and not _outside.is_empty():
 				pass  # Drawn by _draw_windows, with the view outside.
 			elif _hall_window(row, col) and _pieces.has("window"):
 				var window: Texture2D = _pieces["window"]
 				# The picture already shows the night outside, so it is not tinted.
 				v.draw_texture(window, at + Vector2(TILE - window.get_width() / 2.0, TILE - 40 - window.get_height()))
-			elif hall and col % 12 == 6 and on_floor and _open(col, row - 5, row) and _open(col + 1, row - 5, row):
+			elif hall and col % 12 == 6 and on_floor and not _by_hand("o") and _open(col, row - 5, row) and _open(col + 1, row - 5, row):
 				# A tall arched window, two tiles wide, a step above the floor.
 				var sky := Color("2a3a66") if night else Color("9fc6e0")
 				var frame := Color("2a2622")
@@ -1554,22 +1955,11 @@ func _draw_wall_things(v: Node2D, span: Vector2i) -> void:
 					var y: float = box.position.y + box.size.y * k / 3.0
 					v.draw_line(Vector2(box.position.x, y), Vector2(box.end.x, y), frame, 5.0)
 				v.draw_rect(Rect2(box.position.x - 14, box.end.y + 8, box.size.x + 28, 10), Color("4a4440"))
-			elif hall and col % 12 == 0 and under_ceiling and _open(col, row, row + 3) and _pieces.has("banner"):
+			elif banner_here and _pieces.has("banner"):
 				var banner: Texture2D = _pieces["banner"]
 				# Hung a little below the ceiling, so the rod is not hidden in the stone.
 				v.draw_texture(banner, at + Vector2(TILE / 2.0 - banner.get_width() / 2.0, 40))
-			elif not hall and col % 14 == 0 and on_floor and _pieces.has("cell") and col + 2 < map[row].length() and _open(col, row - 1, row) and _open(col + 1, row - 1, row) and _open(col + 2, row - 1, row) and map[row + 1][col + 2] == "#":
-				# A prison cell set into the dungeon wall, standing on the floor.
-				var cell: Texture2D = _pieces["cell"]
-				v.draw_texture(cell, at + Vector2(1.5 * TILE - cell.get_width() / 2.0, TILE - cell.get_height()))
-			elif not hall and col % 14 == 12 and on_floor and _pieces.has("bars") and _open(col, row - 2, row):
-				# A small barred window high up on the dungeon wall.
-				var bars: Texture2D = _pieces["bars"]
-				v.draw_texture(bars, at + Vector2(TILE / 2.0 - bars.get_width() / 2.0, -TILE - bars.get_height() / 2.0))
-			elif not hall and col % 9 == 5 and under_ceiling and _pieces.has("chains") and _open(col, row, row + 2):
-				# Chains with shackles hanging from the dungeon ceiling.
-				v.draw_texture(_pieces["chains"], at + Vector2(TILE / 2.0 - _pieces["chains"].get_width() / 2.0, 0))
-			elif hall and col % 12 == 0 and under_ceiling and _open(col, row, row + 3):
+			elif banner_here:
 				# A long banner of the prince's house, hanging from the ceiling.
 				var top := at + Vector2(32, 6)
 				v.draw_rect(Rect2(top + Vector2(-28, -4), Vector2(56, 6)), Color("4a3020"))
@@ -1582,6 +1972,8 @@ func _draw_wall_things(v: Node2D, span: Vector2i) -> void:
 ## The torches on the dungeon walls, a step above the floor; they flicker, so they are drawn every
 ## frame, not with the walls.
 func _torch_here(row: int, col: int) -> bool:
+	if _by_hand("f"):
+		return map[row][col] == "f"
 	if col % 7 != 3 or row < 1 or row + 2 >= map.size():
 		return false
 	if map[row][col] == "#" or map[row + 1][col] == "#" or map[row + 2][col] != "#" or not _ground_above(row, col):
@@ -1592,11 +1984,9 @@ func _torch_here(row: int, col: int) -> bool:
 
 func _draw_torches(v: Node2D, span: Vector2i) -> void:
 	for col in range(span.x, mini(span.y, map[0].length())):
-		if col % 7 != 3:
+		if col % 7 != 3 and not _by_hand("f"):
 			continue
 		for row in range(1, map.size() - 2):
-			if map[row][col] == "#" or map[row + 1][col] == "#" or map[row + 2][col] != "#" or not _ground_above(row, col):
-				continue
 			if not _torch_here(row, col):
 				continue
 			var at := Vector2(col * TILE, row * TILE)
@@ -1616,17 +2006,23 @@ func _draw_torches(v: Node2D, span: Vector2i) -> void:
 
 
 func _load_castle() -> void:
+	_hand_placed.clear()
 	_castle.clear()
 	_pieces.clear()
 	_torch_frames.clear()
-	_outside = null
+	_door_frames.clear()
+	_outside.clear()
+	_soil = null
+	_soil_top = null
+	_soil_top_above = 0.0
 	_window_glass.clear()
 	var dir := CASTLE_DIR
 	if Game.castle_detail == "drobne" and ResourceLoader.exists(CASTLE_DIR_FINE + "tileset.png"):
 		dir = CASTLE_DIR_FINE
-	for set_name in ["hall", "dungeon"]:
-		var file: String = "tileset" if set_name == "hall" else "lochy"
-		var spec_path: String = dir + ("tiles" if set_name == "hall" else "lochy") + ".json"
+	# The halls, the dungeons under them and, when there is a sheet for it, the deepest dungeons.
+	for set_name in ["hall", "dungeon", "deep"]:
+		var file: String = {"hall": "tileset", "dungeon": "lochy", "deep": "gleboko"}[set_name]
+		var spec_path: String = dir + ("tiles" if set_name == "hall" else file) + ".json"
 		if not ResourceLoader.exists(dir + file + ".png") or not FileAccess.file_exists(spec_path):
 			continue
 		var spec = JSON.parse_string(FileAccess.get_file_as_string(spec_path))
@@ -1643,22 +2039,60 @@ func _load_castle() -> void:
 	for piece in CASTLE_PIECES:
 		if ResourceLoader.exists(dir + piece + ".png"):
 			_pieces[piece] = load(dir + piece + ".png")
+	while ResourceLoader.exists(dir + "door_%d.png" % _door_frames.size()):
+		_door_frames.append(load(dir + "door_%d.png" % _door_frames.size()))
 	while ResourceLoader.exists(dir + "torch_%d.png" % _torch_frames.size()):
 		_torch_frames.append(load(dir + "torch_%d.png" % _torch_frames.size()))
-	if _pieces.has("window") and ResourceLoader.exists(dir + "outside.png") and FileAccess.file_exists(dir + "window.json"):
-		var spec = JSON.parse_string(FileAccess.get_file_as_string(dir + "window.json"))
-		if spec is Dictionary and spec.has("glass"):
-			for point in spec["glass"]:
-				_window_glass.append(Vector2(point[0], point[1]))
-			_outside = load(dir + "outside.png")
+	_load_outside(dir)
 	if _castle.has("hall") and not _castle.has("dungeon"):
 		_castle["dungeon"] = _castle["hall"]
 	elif _castle.has("dungeon") and not _castle.has("hall"):
 		_castle["hall"] = _castle["dungeon"]
 
 
+## The landscape layers listed in outside.json, and the window glass they show through.
+func _load_outside(dir: String) -> void:
+	if not _pieces.has("window") or not FileAccess.file_exists(dir + "window.json") or not FileAccess.file_exists(dir + "outside.json"):
+		return
+	var glass = JSON.parse_string(FileAccess.get_file_as_string(dir + "window.json"))
+	var spec = JSON.parse_string(FileAccess.get_file_as_string(dir + "outside.json"))
+	if not glass is Dictionary or not glass.has("glass") or not spec is Dictionary:
+		return
+	for layer in spec.get("layers", []):
+		var path: String = dir + str(layer.get("file", "")) + ".png"
+		if ResourceLoader.exists(path):
+			_outside.append({"texture": load(path), "speed": float(layer.get("speed", 0.25)), "horizon": float(layer.get("horizon", 0)), "rise": float(layer.get("vertical_speed", -1.0))})
+	if _outside.is_empty():
+		return
+	for point in glass["glass"]:
+		_window_glass.append(Vector2(point[0], point[1]))
+	var far: Image = _outside[0]["texture"].get_image()
+	var near: Image = _outside[-1]["texture"].get_image()
+	_outside_sky = far.get_pixel(0, 0)
+	_outside_ground = near.get_pixel(0, near.get_height() - 1)
+	for key in ["soil", "soil_top"]:
+		var path: String = dir + str(spec.get(key, "")) + ".png"
+		if spec.has(key) and ResourceLoader.exists(path):
+			if key == "soil":
+				_soil = load(path)
+			else:
+				_soil_top = load(path)
+	_soil_top_above = float(spec.get("soil_top_above", 0))
+	_outside_rise = float(spec.get("vertical_speed", 0.25))
+
+
+## Whether the map places this kind of wall thing by hand (o window, f torch, b banner); a map
+## without any of that letter gets them spread out on its own.
+func _by_hand(letter: String) -> bool:
+	if not _hand_placed.has(letter):
+		_hand_placed[letter] = map.any(func(line: String) -> bool: return line.contains(letter))
+	return _hand_placed[letter]
+
+
 ## Whether a hall window, two tiles wide, stands on the floor at this cell.
 func _hall_window(row: int, col: int) -> bool:
+	if _by_hand("o"):
+		return map[row][col] == "o"
 	return (row + 1) * TILE <= _horizon and col % 12 == 6 and map[row + 1][col] == "#" and _open(col, row - 5, row) and _open(col + 1, row - 5, row)
 
 
@@ -1666,24 +2100,29 @@ func _hall_window(row: int, col: int) -> bool:
 ## The landscape lags behind the camera, so it seems far away.
 func _draw_windows() -> void:
 	var window: Texture2D = _pieces.get("window")
-	if not dungeon or not _outside or not window or _window_glass.size() < 3:
+	if not dungeon or _outside.is_empty() or not window or _window_glass.size() < 3:
 		return
 	var span := _visible_columns()
-	var shift := _camera.get_screen_center_position().x * OUTSIDE_PARALLAX if _camera else 0.0
-	var size := _outside.get_size()
+	var origins: Array[Vector2] = []
+	for layer in _outside:
+		origins.append(_layer_origin(layer))
 	for col in range(maxi(span.x - 3, 0), mini(span.y + 2, map[0].length())):
-		if col % 12 != 6:
+		if col % 12 != 6 and not _by_hand("o"):
 			continue
 		for row in range(1, map.size() - 1):
 			if map[row][col] == "#" or not _hall_window(row, col):
 				continue
 			var at := Vector2(col * TILE, row * TILE) + Vector2(TILE - window.get_width() / 2.0, TILE - 40 - window.get_height())
 			var points := PackedVector2Array()
-			var uvs := PackedVector2Array()
 			for point in _window_glass:
 				points.append(at + point)
-				uvs.append(Vector2((at.x + point.x - shift) / size.x, point.y / size.y))
-			_windows.draw_colored_polygon(points, Color.WHITE, uvs, _outside)
+			_windows.draw_colored_polygon(points, _outside_sky)
+			for i in _outside.size():
+				var texture: Texture2D = _outside[i]["texture"]
+				var uvs := PackedVector2Array()
+				for point in points:
+					uvs.append((point - origins[i]) / texture.get_size())
+				_windows.draw_colored_polygon(points, Color.WHITE, uvs, texture)
 			_windows.draw_texture(window, at)
 
 
@@ -1697,16 +2136,28 @@ func _stone_at(row: int, col: int) -> bool:
 ## which of the four cells around it are ground. A missing mask falls back to plain stone.
 func _draw_castle(v: Node2D, span: Vector2i) -> void:
 	for row in map.size() + 1:
-		for col in range(span.x, span.y + 1):
+		for col in range(span.x, mini(span.y, map[0].length()) + 1):
 			var mask := int(_stone_at(row - 1, col - 1)) + 2 * int(_stone_at(row - 1, col)) + 4 * int(_stone_at(row, col - 1)) + 8 * int(_stone_at(row, col))
 			if mask == 0:
 				continue
-			var tiles: Dictionary = _castle["dungeon" if row * TILE > _horizon else "hall"]
+			var tiles: Dictionary = _castle[_castle_part(row)]
 			var rects: Array = tiles["masks"].get(mask, tiles["masks"].get(15, []))
 			if rects.is_empty():
 				continue
-			var region: Rect2 = rects[(row * 7 + col * 13) % rects.size()]
-			v.draw_texture_rect_region(tiles["sheet"], Rect2(col * TILE - TILE / 2.0, row * TILE - TILE / 2.0, TILE, TILE), region)
+			var at := Rect2(col * TILE - TILE / 2.0, row * TILE - TILE / 2.0, TILE, TILE)
+			if mask == 15 and rects.size() == 4:
+				# The middle of the sheet is one block of 2 x 2 tiles: laid in order its stones join
+				# up. Some blocks are mirrored sideways, so the wall does not look stamped; mirrored
+				# sideways the rows of stones still meet the next block's.
+				var flip_x := posmod(floori(col / 2.0) * 73 + floori(row / 2.0) * 151, 4) >= 2
+				var flip_y := false
+				var part := ((row % 2) ^ int(flip_y)) * 2 + ((col % 2) ^ int(flip_x))
+				var mirror := Vector2(-1.0 if flip_x else 1.0, -1.0 if flip_y else 1.0)
+				v.draw_set_transform(at.get_center(), 0.0, mirror)
+				v.draw_texture_rect_region(tiles["sheet"], Rect2(-TILE / 2.0, -TILE / 2.0, TILE, TILE), rects[part])
+				v.draw_set_transform(Vector2.ZERO)
+				continue
+			v.draw_texture_rect_region(tiles["sheet"], at, rects[(row * 7 + col * 13) % rects.size()])
 
 
 ## A dungeon floor or ceiling block: grey stones, lit on the edge that faces open air.
@@ -1820,6 +2271,27 @@ func _draw_static() -> void:
 					v.draw_rect(Rect2(at + Vector2(6, 30), Vector2(52, 34)), Color("9a5a2e"))
 					v.draw_rect(lid, Color("c08a4a"))
 					v.draw_rect(Rect2(at + Vector2(27, 28), Vector2(10, 12)), Color("f2c14e"))
+				_ when dungeon and _pieces.has(CASTLE_FURNITURE.get(map[row][col], "")):
+					# Furniture stands on the floor, centred on its cell.
+					var piece: Texture2D = _pieces[CASTLE_FURNITURE[map[row][col]]]
+					v.draw_texture(piece, at + Vector2(TILE / 2.0 - piece.get_width() / 2.0, TILE - piece.get_height()))
+				_ when dungeon and _pieces.has(CASTLE_WALL_PICTURES.get(map[row][col], "")):
+					var on_wall: Texture2D = _pieces[CASTLE_WALL_PICTURES[map[row][col]]]
+					v.draw_texture(on_wall, at + (Vector2(TILE, TILE) - on_wall.get_size()) / 2.0)
+				_ when dungeon and _pieces.has(CASTLE_HANGING.get(map[row][col], "")):
+					var hanging: Texture2D = _pieces[CASTLE_HANGING[map[row][col]]]
+					v.draw_texture(hanging, at + Vector2(TILE / 2.0 - hanging.get_width() / 2.0, 0))
+				"K" when _pieces.has("klucz"):
+					var key_picture: Texture2D = _pieces["klucz"]
+					v.draw_texture(key_picture, at + (Vector2(TILE, TILE) - key_picture.get_size()) / 2.0)
+				"K":
+					_draw_door_key(v, at + Vector2(TILE / 2.0, TILE / 2.0), 1.0)
+				"L", "l":
+					_draw_door_cell(v, row, col, at)
+				"Z", "z":
+					_draw_trapdoor(v, row, col, at)
+				"d", "e":
+					_draw_lever(v, at, map[row][col] == "e")
 				"x" when dungeon and _pieces.has("spikes"):
 					v.draw_texture(_pieces["spikes"], at + Vector2(0, TILE - _pieces["spikes"].get_height()))
 				"x" when _items.has("thorns"):
@@ -1873,6 +2345,7 @@ func _draw_tiles() -> void:
 	var span := _visible_columns()
 	if dungeon:
 		_draw_torches(v, span)
+	_draw_opening_doors(v)
 	for row in map.size():
 		for col in range(span.x, mini(span.y, map[row].length())):
 			var at := Vector2(col * TILE, row * TILE)
@@ -1914,6 +2387,12 @@ func _draw_tiles() -> void:
 					v.draw_texture(texture, rise - texture.get_size() / 2, Color(1, 1, 1, 1.0 - effect["time"] * 2.0))
 				else:
 					v.draw_circle(rise, 14, Color(Color("d62828"), 1.0 - effect["time"] * 2.0))
+			"nokey":
+				var t: float = effect["time"] / 1.5
+				var at: Vector2 = effect["pos"] + Vector2(-90, -30 - t * 20.0)
+				var fade := Color(1, 1, 1, 1.0 - t * t)
+				v.draw_string_outline(ThemeDB.fallback_font, at, "Potrzebny klucz!", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, 6, Color(1, 1, 1, 0.85 * fade.a))
+				v.draw_string(ThemeDB.fallback_font, at, "Potrzebny klucz!", HORIZONTAL_ALIGNMENT_LEFT, -1, 24, Color(Color("2b1d14"), fade.a))
 			"viking":
 				var flat: Vector2 = effect["pos"]
 				v.draw_string(ThemeDB.fallback_font, flat + Vector2(-30, -24), "BĘC!", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, ink)
@@ -1950,7 +2429,7 @@ func _draw_tiles() -> void:
 func _process(delta: float) -> void:
 	for effect in _effects.duplicate():
 		effect["time"] += delta
-		if effect["time"] > 0.5:
+		if effect["time"] > (1.5 if effect["kind"] == "nokey" else 0.5):
 			_effects.erase(effect)
 	_move_particles(delta)
 
@@ -1975,6 +2454,15 @@ func _draw_key_hints() -> void:
 	if chest != Vector2.INF:
 		# Over the chest, or over Wiesław's head when he stands in front of it.
 		hints.append(["F", Vector2((floori(chest.x / TILE) + 0.5) * TILE, minf(floori(chest.y / TILE) * TILE - 20, player.position.y - 150))])
+	elif _lever_near() != Vector2i(-1, -1):
+		var lever := _lever_near()
+		hints.append(["F", Vector2((lever.x + 0.5) * TILE, lever.y * TILE - 20)])
+	elif _locked_door_near() != Vector2i(-1, -1):
+		var cell := _locked_door_near()
+		var top := cell.y
+		while top > 0 and map[top - 1][cell.x] == "L":
+			top -= 1
+		hints.append(["F", Vector2((cell.x + 0.5) * TILE, top * TILE - 30)])
 	elif _door_near():
 		var door: Texture2D = _pieces.get("door")
 		hints.append(["F", _drakkar.position + Vector2(0, -(door.get_height() if door else 140) - 30)])
@@ -2311,6 +2799,12 @@ func _draw_hud() -> void:
 	var apples_at := Vector2(40 + LIVES * 54, 50) if _items.has("heart") else Vector2(170, 50)
 	v.draw_string_outline(font, apples_at, "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, 6, halo)
 	v.draw_string(font, apples_at, "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, ink)
+	if keys > 0:
+		# The keys in hand, under the apples.
+		var key_at := apples_at + Vector2(20, 34)
+		_draw_door_key(v, key_at, 0.8)
+		v.draw_string_outline(font, key_at + Vector2(26, 9), "x%d" % keys, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, 6, halo)
+		v.draw_string(font, key_at + Vector2(26, 9), "x%d" % keys, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, ink)
 	if mugs > 0:
 		# A little mug with its foam, and how many are in the bag.
 		var mug := apples_at + Vector2(170, -26)
