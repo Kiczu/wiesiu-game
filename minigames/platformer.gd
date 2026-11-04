@@ -11,6 +11,33 @@ const TILE := 64
 const SCREEN := Vector2(1280, 720)
 ## The camera is pulled back a little, so more of the level is in view.
 const VIEW_ZOOM := 0.8
+## In the castle the camera stands further back, so the rooms look taller around Wiesław; at 2/3
+## the castle pictures, drawn three times bigger, keep whole pixels.
+const DUNGEON_ZOOM := 2.0 / 3.0
+## In the castle Wiesław stands this far below the middle of the screen (a share of its height),
+## with the room above him in view.
+const FRAME_LOW := 0.2
+## How far the camera looks down ahead of a fall, at most.
+const FALL_LOOK := 2.5 * 64.0
+## How long the game stands still when a blow lands, in seconds.
+const HIT_FREEZE := 0.06
+## Darkness over castle stone by how deep it is from open air: the edge stays as drawn and the
+## inside fades to black, so only the places Wiesław can reach catch the eye.
+const ROCK_DARK := [0.0, 0.0, 0.6, 0.88, 0.97]
+const ROCK_INK := Color(0.02, 0.015, 0.025)
+## Dark shapes close to the camera, in front of the castle: hanging chains.
+## They slide past faster than the level (NEAR_PARALLAX times), which gives the castle depth.
+const NEAR_PARALLAX := 1.5
+const NEAR_INK := Color(0.035, 0.03, 0.045)
+const NEAR_RIM := Color(0.2, 0.13, 0.1)
+## One near shape about every this many tiles.
+const NEAR_EVERY := Vector2i(10, 16)
+## The back wall is dimmed a little and shaded where it meets the stone, so the stone Wiesław walks
+## on stands out in front of it.
+const WALL_DIM := 0.18
+## How dark the shade on the wall is under a ceiling, over a floor and beside a wall, and how far
+## it reaches in tiles.
+const WALL_SHADE := {"under": [0.6, 1.1], "over": [0.35, 0.7], "beside": [0.45, 0.8]}
 ## Where the background pictures expect the ground: two tiles above the bottom of the screen.
 const GROUND_LINE := SCREEN.y - 2 * TILE
 ## Rows of open sky the camera can show above an outdoor level.
@@ -24,6 +51,7 @@ const SKY_ROWS := 4
 ## Castle furniture, only pictures: k hearth with a cauldron   p wall shelf   j throne   w weapon rack
 ## h sacks and barrels   i bed   m heap of coins   n feast table   r carved pillar   v barred door
 ## y brazier (lights the room)   E chest   g shield and antlers on the wall   q roots from the ceiling
+## R a rat (runs fast, one hit)
 ## F hanging banner   G bread oven   I sausages and garlic on a pole (hangs from the top)
 ## J mail shirt on a stand   N loom
 ## Castle walls, placed by hand (a map with none of a letter spreads them out itself): o window (its left half, on the floor)   f torch   b banner
@@ -111,6 +139,8 @@ const COYOTE_TIME := 0.1
 const JUMP_BUFFER := 0.12
 const HURT_TIME := 1.5
 const VIKING_SPEED := 70.0
+## Rats run fast and go down with one hit.
+const RAT_SPEED := 190.0
 const PLAYER_SIZE := Vector2(40, 92)
 ## Ready-made tiles and background layers, one set per folder: level.json names the files and how
 ## the layers scroll. L switches between the sets that are there; without any the level is drawn
@@ -295,6 +325,15 @@ var _stretch := Vector2.ONE
 var _fall_speed := 0.0
 var _was_on_floor := true
 var _shake := 0.0
+## While above zero the game stands still for a moment, so a blow lands with weight.
+var _freeze := 0.0
+## How many cells deep each castle stone cell is from the nearest open cell (1 = on the edge).
+var _rock_depth: Array[PackedByteArray] = []
+## The near shapes: {"kind": "chain", "pos": where in the level, ...}.
+var _near_things: Array[Dictionary] = []
+## The wall shading and the stone darkness, each one mesh for the whole level (made when first drawn).
+var _wall_mesh: ArrayMesh
+var _rock_mesh: ArrayMesh
 var _attack := 0.0
 var _attack_cooldown := 0.0
 var _struck: Array[Node2D] = []
@@ -303,6 +342,10 @@ var _solid: StaticBody2D
 ## Apples in flight: position, velocity, time in the air.
 var _thrown: Array[Dictionary] = []
 var _look := 0.0
+## The height of the floor Wiesław last stood on: in the castle the camera keeps to it during a
+## jump instead of bobbing up and down with him.
+var _floor_y := 0.0
+var _look_down := 0.0
 ## Time left on the mug of nalewka: nothing hurts Wiesław.
 var _shield := 0.0
 ## Mugs of nalewka bought from the brothers and kept for later; Q drinks one.
@@ -325,11 +368,16 @@ var _first_viking_at := Vector2.INF
 var _horizon := 0.0
 ## See _find_first_ground.
 var _first_ground := PackedInt32Array()
-## The ground, walls and everything else in the level that does not move, drawn once for a stretch
-## of columns around the camera (_static_span) and again only when the camera nears its end or a
-## tile changes. Drawing every brick each frame made big levels lag, above all in the browser.
+## The ground, walls and everything else in the level that does not move. It is drawn in strips of
+## STATIC_CHUNK columns (_chunks), each drawn once and again only when a tile changes and it is in
+## view: drawing every brick each frame made big levels lag, and redrawing all in view at once
+## made the game stutter.
 var _static: Node2D
-var _static_span := Vector2i(-1, -1)
+const STATIC_CHUNK := 16
+## {"span": its columns, "nodes": its layers, "dirty": to be drawn again when in view}.
+var _chunks: Array[Dictionary] = []
+## The strip being drawn.
+var _drawing: Node2D
 ## See _brick_texture.
 var _bricks := {}
 
@@ -431,10 +479,8 @@ func restart() -> void:
 	_level = Node2D.new()
 	_world.add_child(_level)
 	_static = Node2D.new()
-	_static.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	_static.draw.connect(_draw_static)
 	_level.add_child(_static)
-	_static_span = Vector2i(-1, -1)
+	_make_chunks()
 	_windows = Node2D.new()
 	_windows.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_windows.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
@@ -455,6 +501,8 @@ func restart() -> void:
 					_horizon = at.y
 				"V":
 					_add_viking(at)
+				"R":
+					_add_rat(at)
 				"M":
 					_add_merchant(at)
 				"O":
@@ -463,6 +511,10 @@ func restart() -> void:
 					_boss.caught.connect(_win)
 				"D":
 					_add_drakkar(at)
+	_measure_rock()
+	_wall_mesh = null
+	_rock_mesh = null
+	_place_near_things()
 	_add_player()
 	_add_secrets()
 	_add_dungeon_lights()
@@ -617,7 +669,9 @@ func _add_player() -> void:
 	# Moves with the physics steps, which physics interpolation smooths between frames.
 	_camera.process_callback = Camera2D.CAMERA2D_PROCESS_PHYSICS
 	_camera.offset = Vector2(0, -80)
-	_camera.zoom = Vector2.ONE * VIEW_ZOOM
+	_camera.zoom = Vector2.ONE * (DUNGEON_ZOOM if dungeon else VIEW_ZOOM)
+	_floor_y = player.position.y
+	_look_down = 0.0
 	player.add_child(_camera)
 	_level.add_child(player)
 	_camera.make_current()
@@ -650,6 +704,23 @@ func _add_viking(at: Vector2) -> void:
 	body.set("facing", -1)
 	_level.add_child(body)
 	vikings.append({"node": body, "dir": -1.0, "color": color, "health": VIKING_HEALTH, "stun": 0.0, "push": 0.0})
+
+
+## A rat runs along like a Viking, only faster and low to the ground; one hit is enough.
+func _add_rat(at: Vector2) -> void:
+	var body := Rat.new()
+	body.position = at
+	body.facing = -1
+	_level.add_child(body)
+	vikings.append({"node": body, "dir": -1.0, "color": Color.GRAY, "health": 1, "stun": 0.0, "push": 0.0, "kind": "rat"})
+
+
+## Where an enemy can be hit and can hurt: a tall box for a Viking, a low one for a rat.
+func _enemy_box(viking: Dictionary) -> Rect2:
+	var node: Node2D = viking["node"]
+	if viking.get("kind", "") == "rat":
+		return Rect2(node.position - Vector2(34, 44), Vector2(68, 44))
+	return Rect2(node.position - Vector2(24, 80), Vector2(48, 80))
 
 
 ## Rows of solid tiles become one static box each; planks become one-way boxes.
@@ -702,11 +773,14 @@ func _set_tile(point: Vector2, kind: String) -> void:
 	var col := floori(point.x / TILE)
 	map[row] = map[row].substr(0, col) + kind + map[row].substr(col + 1)
 	_find_first_ground()
-	_static.queue_redraw()
+	_redraw_static()
 	_tiles.queue_redraw()
 
 
 func _physics_process(delta: float) -> void:
+	if _freeze > 0.0:
+		_freeze -= delta
+		return
 	_anim += delta
 	_hurt = maxf(_hurt - delta, 0.0)
 	_buffered = maxf(_buffered - delta, 0.0)
@@ -948,7 +1022,7 @@ func _unlock(cell: Vector2i) -> void:
 		row += 1
 	_doors_opening[Vector2i(cell.x, row - 1)] = _anim
 	_build_collision()
-	_static.queue_redraw()
+	_redraw_static()
 	_tiles.queue_redraw()
 	_hud.queue_redraw()
 	_play("checkpoint")
@@ -1058,7 +1132,7 @@ func _pull(lever: Vector2i) -> void:
 		_dust(Vector2((nearest.x + 0.5) * TILE, nearest.y * TILE), 6)
 		_shake = maxf(_shake, 0.12)
 	_build_collision()
-	_static.queue_redraw()
+	_redraw_static()
 	_play("bump")
 
 
@@ -1125,7 +1199,7 @@ func _draw_opening_doors(v: Node2D) -> void:
 		if step >= steps.size():
 			# The open door is drawn with the walls from now on; this frame still shows it here.
 			_doors_opening.erase(cell)
-			_static_span = Vector2i(-1, -1)
+			_redraw_static()
 		var texture := steps[mini(step, steps.size() - 1)]
 		var at := Vector2(cell.x * TILE, cell.y * TILE)
 		v.draw_texture(texture, at + Vector2(TILE / 2.0 - texture.get_width() / 2.0, TILE - texture.get_height()))
@@ -1345,7 +1419,7 @@ func _swing(delta: float) -> void:
 	var blade := Rect2(player.position + Vector2(-20.0 if facing > 0 else 20.0 - ATTACK_REACH - 20.0, -PLAYER_SIZE.y), Vector2(ATTACK_REACH + 20.0, PLAYER_SIZE.y - 6))
 	for viking in vikings.duplicate():
 		var node: Node2D = viking["node"]
-		if node in _struck or not blade.intersects(Rect2(node.position - Vector2(24, 80), Vector2(48, 80))):
+		if node in _struck or not blade.intersects(_enemy_box(viking)):
 			continue
 		_struck.append(node)
 		_strike(viking, facing, sword_damage)
@@ -1362,6 +1436,7 @@ func _strike(viking: Dictionary, from_dir: float, damage: int) -> void:
 	var node: Node2D = viking["node"]
 	viking["health"] -= damage
 	_shake = maxf(_shake, 0.1)
+	_freeze = HIT_FREEZE
 	_play("stomp")
 	node.modulate = Color(3, 3, 3)
 	node.create_tween().tween_property(node, "modulate", Color.WHITE, 0.2)
@@ -1400,7 +1475,7 @@ func _fly_apples(delta: float) -> void:
 		var at: Vector2 = apple["pos"]
 		var spent: bool = apple["time"] > APPLE_FLIGHT
 		for viking in vikings.duplicate():
-			if not spent and Rect2(viking["node"].position - Vector2(24, 80), Vector2(48, 80)).grow(10).has_point(at):
+			if not spent and _enemy_box(viking).grow(10).has_point(at):
 				_strike(viking, signf(apple["vel"].x), APPLE_DAMAGE)
 				spent = true
 		if not spent and _boss and not _boss.won:
@@ -1431,7 +1506,7 @@ func _move_vikings(delta: float) -> void:
 		var floor_tile := tile_at(ahead + Vector2(0, 10))
 		if wall or not (floor_tile in SOLID or floor_tile == "="):
 			viking["dir"] *= -1.0
-		node.position.x += viking["dir"] * VIKING_SPEED * delta
+		node.position.x += viking["dir"] * (RAT_SPEED if viking.get("kind", "") == "rat" else VIKING_SPEED) * delta
 		node.set("facing", int(viking["dir"]))
 
 
@@ -1461,7 +1536,7 @@ func _check_touches() -> void:
 					return
 	for viking in vikings.duplicate():
 		var node: Node2D = viking["node"]
-		var them := Rect2(node.position - Vector2(24, 80), Vector2(48, 80))
+		var them := _enemy_box(viking)
 		if not me.intersects(them) or viking["stun"] > 0.0:
 			continue
 		_hit(false)
@@ -1488,6 +1563,8 @@ func _hit(fell: bool) -> void:
 	lives -= 1
 	_hurt = HURT_TIME
 	_shake = 0.35
+	if not fell:
+		_freeze = HIT_FREEZE * 1.5
 	if lives <= 0:
 		state = "lost"
 		_wieslaw.pose = "death"
@@ -1555,9 +1632,11 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _redraw() -> void:
 	var span := _visible_columns()
-	if span.x < _static_span.x or span.y > _static_span.y:
-		_static_span = Vector2i(maxi(span.x - 16, 0), span.y + 16)
-		_static.queue_redraw()
+	for chunk in _chunks:
+		if chunk["dirty"] and chunk["span"].y > span.x - STATIC_CHUNK and chunk["span"].x < span.y + STATIC_CHUNK:
+			chunk["dirty"] = false
+			for node in chunk["nodes"]:
+				node.queue_redraw()
 	_tiles.queue_redraw()
 	_hints.queue_redraw()
 	_hud.queue_redraw()
@@ -1576,7 +1655,7 @@ func _redraw() -> void:
 
 
 func _visible_columns() -> Vector2i:
-	var width := SCREEN.x / VIEW_ZOOM
+	var width := SCREEN.x / (_camera.zoom.x if _camera else VIEW_ZOOM)
 	var left := _camera.get_screen_center_position().x - width / 2 if _camera else 0.0
 	return Vector2i(maxi(floori(left / TILE) - 1, 0), floori((left + width) / TILE) + 2)
 
@@ -1642,7 +1721,7 @@ func use_level_art() -> void:
 		if _drakkar:
 			_drakkar.queue_redraw()
 	if _static:
-		_static.queue_redraw()
+		_redraw_static()
 	_redraw()
 
 
@@ -1659,7 +1738,7 @@ func next_art_set() -> void:
 	_art = _art_sets[(_art_sets.find(_art) + 1) % _art_sets.size()]
 	Game.level_art = _art["name"]
 	Game.save_settings()
-	_static.queue_redraw()
+	_redraw_static()
 	_redraw()
 
 
@@ -1698,7 +1777,7 @@ func _draw_tile(tile_name: String, at: Vector2) -> void:
 	var x := fposmod(at.x, size.x) if size.x > TILE else 0.0
 	# One pixel bigger than the cell, so at an uneven zoom no hairline of background shows between
 	# neighbouring tiles.
-	_static.draw_texture_rect_region(texture, Rect2(at, Vector2(minf(TILE, size.x), size.y) + Vector2.ONE), Rect2(x, 0, minf(TILE, size.x), size.y))
+	_drawing.draw_texture_rect_region(texture, Rect2(at, Vector2(minf(TILE, size.x), size.y) + Vector2.ONE), Rect2(x, 0, minf(TILE, size.x), size.y))
 
 
 ## Each layer repeats sideways and moves at its own share of the camera's speed; the first one also
@@ -1863,6 +1942,16 @@ func _draw_sky_over_castle(v: Node2D, _scroll: float) -> void:
 		while x < SCREEN.x:
 			v.draw_texture_rect(_soil_top, Rect2(x, top.y - _soil_top_above * zoom, edge.x, edge.y), false)
 			x += edge.x
+	# Like the castle stone, the earth fades to black a little under the grass.
+	var fade_from := top.y + 1.0 * TILE * zoom
+	var fade_to := top.y + 3.5 * TILE * zoom
+	if fade_from < SCREEN.y:
+		var clear := Color(ROCK_INK, 0.0)
+		var dark := Color(ROCK_INK, ROCK_DARK[-1])
+		v.draw_polygon(PackedVector2Array([Vector2(0, fade_from), Vector2(SCREEN.x, fade_from), Vector2(SCREEN.x, fade_to), Vector2(0, fade_to)]),
+			PackedColorArray([clear, clear, dark, dark]))
+		if fade_to < SCREEN.y:
+			v.draw_rect(Rect2(0, fade_to, SCREEN.x, SCREEN.y - fade_to), dark)
 
 
 ## Which part of the castle a row of tile corners is in: the halls above the starting ground, the
@@ -1877,6 +1966,25 @@ func _castle_part(row: int) -> String:
 
 
 ## A dungeon wall cell: dark bricks below the starting ground, the castle's lighter halls above it.
+## Which castle wall picture a row has ("" when the castle has no drawn walls).
+func _wall_picture(row: int) -> String:
+	var hall := (row + 1) * TILE <= _horizon
+	var deep := not hall and _castle_part(row + 1) == "deep" and _pieces.has("wall_deep")
+	var kind := "wall_hall" if hall else ("wall_deep" if deep else "wall_dungeon")
+	return kind if _pieces.has(kind) else ""
+
+
+## A column of castle wall cells from row run.x to run.y, all with the same picture.
+func _draw_wall_run(v: Node2D, col: int, run: Vector2i) -> void:
+	var kind := _wall_picture(run.x)
+	var picture: Texture2D = _pieces[kind]
+	var at := Vector2(col * TILE, run.x * TILE)
+	var size := picture.get_size()
+	var height := (run.y - run.x + 1) * TILE
+	var region := Rect2(fposmod(at.x, size.x), fposmod(at.y, size.y), TILE, height)
+	v.draw_texture_rect_region(picture, Rect2(at, Vector2(TILE + 1, height + 1)), region, HALL_WALL_SHADE if kind == "wall_hall" else Color.WHITE)
+
+
 func _draw_wall(v: Node2D, row: int, col: int) -> void:
 	var hall := (row + 1) * TILE <= _horizon
 	var at := Vector2(col * TILE, row * TILE)
@@ -2136,7 +2244,7 @@ func _stone_at(row: int, col: int) -> bool:
 ## which of the four cells around it are ground. A missing mask falls back to plain stone.
 func _draw_castle(v: Node2D, span: Vector2i) -> void:
 	for row in map.size() + 1:
-		for col in range(span.x, mini(span.y, map[0].length()) + 1):
+		for col in range(span.x, mini(span.y, map[0].length() + 1)):
 			var mask := int(_stone_at(row - 1, col - 1)) + 2 * int(_stone_at(row - 1, col)) + 4 * int(_stone_at(row, col - 1)) + 8 * int(_stone_at(row, col))
 			if mask == 0:
 				continue
@@ -2158,6 +2266,145 @@ func _draw_castle(v: Node2D, span: Vector2i) -> void:
 				v.draw_set_transform(Vector2.ZERO)
 				continue
 			v.draw_texture_rect_region(tiles["sheet"], at, rects[(row * 7 + col * 13) % rects.size()])
+
+
+## Dims the back wall and shades it next to the stone (see WALL_DIM and WALL_SHADE).
+func _draw_wall_depth(v: Node2D) -> void:
+	if not _wall_mesh:
+		_wall_mesh = _shade_mesh(_wall_shapes())
+	v.draw_mesh(_wall_mesh, null)
+
+
+## The shapes of the wall shading as [corners, colours] pairs. They are worked out once per level
+## and drawn as one mesh: drawn one by one they made the game stutter when the view moved on.
+func _wall_shapes() -> Array:
+	var shapes := []
+	var clear := Color(ROCK_INK, 0.0)
+	for col in map[0].length():
+		for row in map.size():
+			if _stone_or_hidden(row, col) or not _ground_above(row, col):
+				continue
+			var cell := Rect2(col * TILE, row * TILE, TILE, TILE)
+			var dim := Color(ROCK_INK, WALL_DIM)
+			shapes.append([PackedVector2Array([cell.position, Vector2(cell.end.x, cell.position.y), cell.end, Vector2(cell.position.x, cell.end.y)]),
+				PackedColorArray([dim, dim, dim, dim])])
+			var sides := {"under": _stone_or_hidden(row - 1, col), "over": _stone_or_hidden(row + 1, col)}
+			for side in ["under", "over"]:
+				if not sides[side]:
+					continue
+				var dark := Color(ROCK_INK, WALL_SHADE[side][0])
+				var reach: float = WALL_SHADE[side][1] * TILE
+				var edge := cell.position.y if side == "under" else cell.end.y
+				var far: float = edge + reach if side == "under" else edge - reach
+				shapes.append([PackedVector2Array([Vector2(cell.position.x, edge), Vector2(cell.end.x, edge), Vector2(cell.end.x, far), Vector2(cell.position.x, far)]),
+					PackedColorArray([dark, dark, clear, clear])])
+			for dir in [-1, 1]:
+				if not _stone_or_hidden(row, col + dir):
+					continue
+				var dark := Color(ROCK_INK, WALL_SHADE["beside"][0])
+				var edge := cell.position.x if dir < 0 else cell.end.x
+				var far: float = edge - dir * WALL_SHADE["beside"][1] * TILE
+				shapes.append([PackedVector2Array([Vector2(edge, cell.position.y), Vector2(far, cell.position.y), Vector2(far, cell.end.y), Vector2(edge, cell.end.y)]),
+					PackedColorArray([dark, clear, clear, dark])])
+	return shapes
+
+
+## One mesh from four-cornered shapes with a colour on each corner.
+func _shade_mesh(shapes: Array) -> ArrayMesh:
+	var points := PackedVector2Array()
+	var colors := PackedColorArray()
+	for shape in shapes:
+		var corners: PackedVector2Array = shape[0]
+		var tints: PackedColorArray = shape[1]
+		for k in [0, 1, 2, 0, 2, 3]:
+			points.append(corners[k])
+			colors.append(tints[k])
+	var mesh := ArrayMesh.new()
+	if points.is_empty():
+		return mesh
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = points
+	arrays[Mesh.ARRAY_COLOR] = colors
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	return mesh
+
+
+## Castle stone, or a hidden room that looks like it; outside the map counts as stone.
+func _stone_or_hidden(row: int, col: int) -> bool:
+	if row < 0 or row >= map.size() or col < 0 or col >= map[row].length():
+		return true
+	return map[row][col] == "#" or map[row][col] == "u"
+
+
+## Works out _rock_depth: how far each stone cell is from open air, counting a hidden room as stone
+## (it must not give itself away) and the land outside the map as stone below the starting ground.
+func _measure_rock() -> void:
+	_rock_depth.clear()
+	var deepest := ROCK_DARK.size() - 1
+	var open: Array[Vector2i] = []
+	for row in map.size():
+		var depths := PackedByteArray()
+		depths.resize(map[row].length())
+		for col in map[row].length():
+			var rock: bool = map[row][col] == "#" or map[row][col] == "u"
+			depths[col] = deepest if rock else 0
+			if not rock:
+				open.append(Vector2i(col, row))
+		_rock_depth.append(depths)
+	for row in map.size():
+		if row * TILE < _horizon:
+			for col in [-1, map[row].length()]:
+				open.append(Vector2i(col, row))
+	for step in range(1, deepest):
+		var next: Array[Vector2i] = []
+		for cell in open:
+			for side in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+				var at: Vector2i = cell + side
+				if at.y >= 0 and at.y < map.size() and at.x >= 0 and at.x < map[at.y].length() and _rock_depth[at.y][at.x] > step:
+					_rock_depth[at.y][at.x] = step
+					next.append(at)
+		open = next
+
+
+## How dark the stone is at a cell corner: the four cells around it averaged, so the darkness
+## changes smoothly from cell to cell.
+func _rock_dark_at(row: int, col: int) -> float:
+	var sum := 0.0
+	for cell in [Vector2i(col - 1, row - 1), Vector2i(col, row - 1), Vector2i(col - 1, row), Vector2i(col, row)]:
+		var r: int = clampi(cell.y, 0, map.size() - 1)
+		var c: int = cell.x
+		if c < 0 or c >= map[r].length():
+			sum += 0.0 if r * TILE < _horizon else ROCK_DARK[-1]
+		else:
+			sum += ROCK_DARK[_rock_depth[r][c]]
+	return sum / 4.0
+
+
+## Darkens the inside of the castle stone (see ROCK_DARK).
+func _draw_rock_dark(v: Node2D) -> void:
+	if _rock_depth.size() != map.size():
+		return
+	if not _rock_mesh:
+		var shapes := []
+		for row in map.size():
+			for col in map[row].length():
+				if _rock_depth[row][col] == 0:
+					continue
+				var corners := PackedVector2Array([Vector2(col, row), Vector2(col + 1, row), Vector2(col + 1, row + 1), Vector2(col, row + 1)])
+				var colors := PackedColorArray()
+				var darkest := 0.0
+				for corner in corners:
+					var dark := _rock_dark_at(int(corner.y), int(corner.x))
+					darkest = maxf(darkest, dark)
+					colors.append(Color(ROCK_INK, dark))
+				if darkest <= 0.0:
+					continue
+				for k in 4:
+					corners[k] *= TILE
+				shapes.append([corners, colors])
+		_rock_mesh = _shade_mesh(shapes)
+	v.draw_mesh(_rock_mesh, null)
 
 
 ## A dungeon floor or ceiling block: grey stones, lit on the edge that faces open air.
@@ -2206,11 +2453,66 @@ func _shaft(row: int, col: int) -> bool:
 	return map[row][col] == "H" and col > 0 and map[row][col - 1] == "#"
 
 
-## See _static.
-func _draw_static() -> void:
-	var v := _static
-	var ink := Color("2b1d14")
-	var span := _static_span
+## Draws one strip of the level's unmoving pictures (see _chunks): "back" the pits and the back
+## walls, "middle" the things on the walls and the castle stone, "front" everything else.
+## Fills _static: every strip's back layer, the wall shading, every strip's middle layer, the
+## stone darkness, then every strip's front layer, so all walls are under all wall things.
+func _make_chunks() -> void:
+	_chunks.clear()
+	var spans: Array[Vector2i] = []
+	var col := 0
+	while col < map[0].length():
+		spans.append(Vector2i(col, col + STATIC_CHUNK))
+		_chunks.append({"span": spans[-1], "nodes": [], "dirty": false})
+		col += STATIC_CHUNK
+	for part in ["back", "shade", "middle", "dark", "front"]:
+		if part in ["shade", "dark"]:
+			var whole := Node2D.new()
+			whole.draw.connect(_draw_whole_level.bind(whole, part))
+			_static.add_child(whole)
+			continue
+		for k in spans.size():
+			var strip := Node2D.new()
+			strip.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+			# A run of castle wall repeats its picture downwards.
+			strip.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+			strip.draw.connect(_draw_static_part.bind(strip, part, spans[k]))
+			_static.add_child(strip)
+			_chunks[k]["nodes"].append(strip)
+
+
+## The wall shading or the stone darkness, each one mesh over the whole level.
+func _draw_whole_level(v: Node2D, part: String) -> void:
+	if not dungeon:
+		return
+	if part == "shade":
+		_draw_wall_depth(v)
+	else:
+		_draw_rock_dark(v)
+
+
+## Marks every strip to be drawn again, as soon as it is in view.
+func _redraw_static() -> void:
+	for chunk in _chunks:
+		chunk["dirty"] = true
+
+
+func _draw_static_part(v: Node2D, part: String, span: Vector2i) -> void:
+	_drawing = v
+	match part:
+		"back":
+			_draw_static_back(v, span)
+		"middle":
+			if dungeon:
+				# A window or banner reaching into the next strip is drawn whole by its own strip.
+				_draw_wall_things(v, span)
+			if dungeon and not _castle.is_empty():
+				_draw_castle(v, span)
+		"front":
+			_draw_static_front(v, span)
+
+
+func _draw_static_back(v: Node2D, span: Vector2i) -> void:
 	# Pits: a dark hole where the bottom row has no ground.
 	var bottom := map.size() - 1
 	for col in range(span.x, mini(span.y, map[bottom].length())):
@@ -2220,20 +2522,31 @@ func _draw_static() -> void:
 	# cave (ground overhead on both sides and the bottom closed).
 	for col in range(span.x, mini(span.y, map[0].length())):
 		var under_ground := false
+		# Castle wall cells one above the other are drawn as one run.
+		var run := Vector2i(-1, -1)
 		for row in map.size():
 			if map[row][col] == "#":
 				under_ground = true
 			elif under_ground or _shaft(row, col) or _in_hole(row, col):
 				under_ground = true
+				if dungeon and _wall_picture(row) != "":
+					if run.x >= 0 and run.y == row - 1 and _wall_picture(run.x) == _wall_picture(row):
+						run.y = row
+						continue
+					if run.x >= 0:
+						_draw_wall_run(v, col, run)
+					run = Vector2i(row, row)
+					continue
 				if dungeon:
 					_draw_wall(v, row, col)
 				else:
 					v.draw_rect(Rect2(col * TILE, row * TILE, TILE + 1, TILE + 1), Color("2a1d16"))
-	if dungeon:
-		# Windows and banners are wider than a tile, so ones just outside the span still reach into view.
-		_draw_wall_things(v, Vector2i(maxi(span.x - 3, 0), span.y + 2))
-	if dungeon and not _castle.is_empty():
-		_draw_castle(v, span)
+		if run.x >= 0:
+			_draw_wall_run(v, col, run)
+
+
+func _draw_static_front(v: Node2D, span: Vector2i) -> void:
+	var ink := Color("2b1d14")
 	for row in map.size():
 		for col in range(span.x, mini(span.y, map[row].length())):
 			var at := Vector2(col * TILE, row * TILE)
@@ -2441,7 +2754,7 @@ func _draw_key_hints() -> void:
 		return
 	# A health bar over every Viking who has been hit.
 	for viking in vikings:
-		if viking["health"] < VIKING_HEALTH:
+		if viking["health"] < VIKING_HEALTH and viking.get("kind", "") != "rat":
 			draw_health_bar(_hints, viking["node"].position + Vector2(0, -100), float(viking["health"]) / VIKING_HEALTH)
 	if _shield > 0.0:
 		var glow := player.position + Vector2(0, -PLAYER_SIZE.y / 2)
@@ -2705,7 +3018,24 @@ func _move_camera(delta: float) -> void:
 		_look = move_toward(_look, signf(player.velocity.x) * LOOK_AHEAD, delta * 260.0)
 	_shake = maxf(_shake - delta, 0.0)
 	var jolt := Vector2(randf_range(-1, 1), randf_range(-1, 1)) * 14.0 * _shake / 0.35 if _shake > 0.0 else Vector2.ZERO
-	_camera.offset = Vector2(_look, -80) + jolt
+	if not dungeon:
+		_camera.offset = Vector2(_look, -80) + jolt
+		return
+	# In the castle: kept to the floor, looking down ahead of a fall, Wiesław low in the frame.
+	var on_floor := player.is_on_floor() or _climbing
+	# Stepping up onto a shelf, a crate or a chest does not move the camera; only stone floor does,
+	# or going higher than that.
+	var on_stone := tile_at(player.position + Vector2(0, 8)) == "#" or _climbing
+	if on_floor and (on_stone or player.position.y > _floor_y or player.position.y < _floor_y - 3.0 * TILE):
+		_floor_y = player.position.y
+	elif player.position.y < _floor_y - 3.0 * TILE:
+		_floor_y = player.position.y + 3.0 * TILE
+	var falling := not on_floor and player.position.y > _floor_y + 8.0
+	var look := clampf(player.velocity.y / 900.0, 0.0, 1.0) * FALL_LOOK if falling else 0.0
+	_look_down = move_toward(_look_down, look, delta * 600.0)
+	var target := (player.position.y if falling else _floor_y) + _look_down
+	_camera.position = Vector2(0, target - player.position.y)
+	_camera.offset = Vector2(_look, -FRAME_LOW * SCREEN.y / _camera.zoom.y) + jolt
 
 
 ## Leaves and pollen drift through the air in front of and behind the level, at different depths.
@@ -2730,7 +3060,57 @@ func _move_particles(delta: float) -> void:
 		p["pos"] = Vector2(fposmod(p["pos"].x, SCREEN.x + 40.0), fposmod(p["pos"].y, SCREEN.y + 40.0))
 
 
+## Spreads the near shapes along the level: a chain hangs from one of the ceilings in the column
+## it is placed at. The same level always gets the same shapes.
+func _place_near_things() -> void:
+	_near_things.clear()
+	if not dungeon:
+		return
+	var dice := RandomNumberGenerator.new()
+	dice.seed = map[0].length() * 31 + map.size()
+	var col := dice.randi_range(4, NEAR_EVERY.y)
+	while col < map[0].length():
+		var ceilings: Array[float] = []
+		for row in range(1, map.size() - 1):
+			if map[row][col] == "#" and map[row + 1][col] != "#":
+				ceilings.append((row + 1) * TILE)
+		if not ceilings.is_empty():
+			_near_things.append({"kind": "chain", "pos": Vector2((col + 0.5) * TILE, ceilings[dice.randi() % ceilings.size()]),
+				"seed": dice.randi(), "size": dice.randf_range(0.8, 1.25)})
+		col += dice.randi_range(NEAR_EVERY.x, NEAR_EVERY.y)
+
+
+## The near shapes, drawn on the screen over the level (see NEAR_PARALLAX).
+func _draw_near_things() -> void:
+	var v := _foreground
+	var zoom := _camera.zoom.x * NEAR_PARALLAX
+	var center := _camera.get_screen_center_position()
+	for thing in _near_things:
+		var at: Vector2 = (thing["pos"] - center) * zoom + SCREEN / 2.0
+		var size: float = thing["size"] * zoom
+		if at.x < -300.0 * size or at.x > SCREEN.x + 300.0 * size:
+			continue
+		var dice := RandomNumberGenerator.new()
+		dice.seed = thing["seed"]
+		match thing["kind"]:
+			"chain":
+				var links := dice.randi_range(7, 14)
+				var sway := sin(_anim * 0.9 + float(thing["seed"] % 100)) * 0.05
+				# Near chains are thick, so they read as close to the camera.
+				v.draw_set_transform(at, sway, Vector2.ONE * size * 2.0)
+				for k in links:
+					var link := Rect2(-5.0, k * 16.0, 10.0, 20.0) if k % 2 == 0 else Rect2(-2.0, k * 16.0, 4.0, 20.0)
+					v.draw_rect(link, NEAR_INK)
+					v.draw_rect(Rect2(link.position.x + link.size.x - 2.0, link.position.y + 2.0, 2.0, link.size.y - 4.0), NEAR_RIM)
+				# A hook at the end of the chain.
+				var end := links * 16.0 + 4.0
+				v.draw_arc(Vector2(0, end + 10.0), 10.0, -PI * 0.1, PI * 1.2, 10, NEAR_INK, 5.0)
+				v.draw_set_transform(Vector2.ZERO)
+
+
 func _draw_foreground() -> void:
+	if dungeon and _camera:
+		_draw_near_things()
 	for p in _particles:
 		if dungeon and p["leaf"]:
 			continue
