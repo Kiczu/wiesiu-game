@@ -3,17 +3,15 @@ extends Node2D
 ## A character built from separate parts (cutout animation), like a paper puppet: the author
 ## draws each part once and the poses are made here by turning the parts at their joints.
 ## When the author's parts are in one of ART_SETS (PNGs plus rig.json with each part's place and
-## joint), they are used; otherwise placeholder shapes. Frame-by-frame animations in ANIM_DIRS
+## joint), they are used; otherwise placeholder shapes. Frame-by-frame animations in ANIM_DIR
 ## (PNGs plus frames.json) take over from all of them. The origin is at the feet; drawn facing right.
 
 const OUTLINE := Color("2b1d14")
 ## Drawn versions of Wiesław made of parts.
 const ART_SETS := {"smooth": "res://art/platformer/wieslaw/"}
 ## Ready-made animation frames: frames.json lists, for each pose, its fps, whether it loops and
-## its frames, each with the point of the image that stands on the ground. The first set that is
-## there is used (K in the platformer moves on to the next): chibi and full-size frames
-## made from the author's drawing, the side view cut from it, then the drawn chibi.
-const ANIM_DIRS := ["res://art/platformer/wieslaw_klatki_chibi/", "res://art/platformer/wieslaw_klatki/", "res://art/platformer/wieslaw_bok/", "res://art/platformer/wieslaw_chibi/"]
+## its frames, each with the point of the image that stands on the ground.
+const ANIM_DIR := "res://art/platformer/wieslaw_klatki_chibi/"
 ## Parts drawn behind the body.
 const ART_BEHIND := ["arm_far", "foot_far", "foot_near"]
 ## Height of the drawn Wiesław in pixels, before the scale the game gives the puppet.
@@ -143,23 +141,9 @@ static func has_frames() -> bool:
 	return anim_dir() != ""
 
 
-## Which of the sets that are there is in use.
-static var anim_choice := 0
-
-
-## The animation sets that are there.
-static func anim_dirs() -> Array[String]:
-	var found: Array[String] = []
-	for dir in ANIM_DIRS:
-		if FileAccess.file_exists(dir + "frames.json"):
-			found.append(dir)
-	return found
-
-
-## The animation set in use, or "" when there is none.
+## The animation frames' folder, or "" when they are not there.
 static func anim_dir() -> String:
-	var found := anim_dirs()
-	return found[anim_choice % found.size()] if not found.is_empty() else ""
+	return ANIM_DIR if FileAccess.file_exists(ANIM_DIR + "frames.json") else ""
 
 
 func _build_anim(spec: Dictionary) -> void:

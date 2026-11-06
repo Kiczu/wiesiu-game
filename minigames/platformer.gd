@@ -11,19 +11,28 @@ const TILE := 64
 const SCREEN := Vector2(1280, 720)
 ## The camera is pulled back a little, so more of the level is in view.
 const VIEW_ZOOM := 0.8
-## In the castle the camera stands further back, so the rooms look taller around Wiesław; at 2/3
-## the castle pictures, drawn three times bigger, keep whole pixels.
-const DUNGEON_ZOOM := 2.0 / 3.0
+## The castle camera is close, with Wiesław drawn smaller (DUNGEON_WIESLAW) so the rooms and the
+## things in them look big around him.
+const DUNGEON_ZOOM := 1.0
 ## In the castle Wiesław stands this far below the middle of the screen (a share of its height),
 ## with the room above him in view.
 const FRAME_LOW := 0.2
+## How big Wiesław is drawn: in the castle smaller, outdoors as before.
+const WIESLAW_SIZE := 0.84
+const DUNGEON_WIESLAW := 0.66
 ## How far the camera looks down ahead of a fall, at most.
 const FALL_LOOK := 2.5 * 64.0
+## How quickly the castle camera catches up with a new height (higher is quicker).
+const CAMERA_FALL_RATE := 9.0
+const CAMERA_RISE_RATE := 4.0
 ## How long the game stands still when a blow lands, in seconds.
 const HIT_FREEZE := 0.06
 ## Darkness over castle stone by how deep it is from open air: the edge stays as drawn and the
 ## inside fades to black, so only the places Wiesław can reach catch the eye.
 const ROCK_DARK := [0.0, 0.0, 0.6, 0.88, 0.97]
+## Around a flame the stone is not darkened: fully lit up to this many tiles, then darker out to
+## the edge of the flame's light.
+const LAMP_CLEAR := 0.5
 const ROCK_INK := Color(0.02, 0.015, 0.025)
 ## Dark shapes close to the camera, in front of the castle: hanging chains.
 ## They slide past faster than the level (NEAR_PARALLAX times), which gives the castle depth.
@@ -32,6 +41,14 @@ const NEAR_INK := Color(0.035, 0.03, 0.045)
 const NEAR_RIM := Color(0.2, 0.13, 0.1)
 ## One near shape about every this many tiles.
 const NEAR_EVERY := Vector2i(10, 16)
+## In the castle the rooms Wiesław is not in are dark (this much black over them); the room he is
+## in is the open space he can walk to without going through the stone between floors. Climbing a
+## ladder shaft or going down a hole, the room ahead lights up as the one behind goes dark.
+const ROOM_DARK := 0.97
+## How fast a room lights up or goes dark, in shares of the darkness per second.
+const ROOM_FADE := 2.5
+## Wiesław's own glow lifts the darkness around him this far, in tiles.
+const GLOW_REACH := 2.0
 ## The back wall is dimmed a little and shaded where it meets the stone, so the stone Wiesław walks
 ## on stands out in front of it.
 const WALL_DIM := 0.18
@@ -159,9 +176,81 @@ const ITEMS_DIR := "res://art/platformer/items/"
 const CASTLE_DIR := "res://art/platformer/zamek/"
 ## The same castle pieces drawn finer, used when Game.castle_detail is "drobne".
 const CASTLE_DIR_FINE := "res://art/platformer/zamek_drobne/"
+## Odds and ends scattered at random (the same every time) on the castle's ceilings, floors and
+## dungeon walls, listed in ozdoby.json there: see _load_decor and _place_decor.
+const DECOR_DIR := CASTLE_DIR + "ozdoby/"
+## No two scattered things closer than this many cells in a row.
+const DECOR_GAP := 3
+## Shades the near chain pictures to dark shapes close to the camera.
+const NEAR_TINT := Color(0.16, 0.14, 0.18)
+## Near chains show only while the camera is in their storey, fading in over this many px.
+const NEAR_FADE := 96.0
+## Near chains hang only in dungeon rooms at least this many cells high.
+const NEAR_MIN_ROOM := 5
+## Near chains swing from a point this far above the screen, the end by about NEAR_SWING px each
+## way, once in about NEAR_SWING_TIME seconds.
+const NEAR_SWING_FROM := 400.0
+const NEAR_SWING := 22.0
+const NEAR_SWING_TIME := 4.0
+## Seconds between drops of water from a dungeon ceiling (random in this range), how fast they fall
+## and how long a splash lasts.
+const DRIP_EVERY := Vector2(2.2, 4.5)
+const DRIP_FALL := 1800.0
+const DRIP_SPLASH := 0.25
 ## The dungeons are dim; torches and a small glow around Wiesław light them.
-const DUNGEON_DARK := Color(0.32, 0.3, 0.38)
+const DUNGEON_DARK := Color(0.035, 0.03, 0.05)
 const TORCH_LIGHT := Color(1.0, 0.78, 0.5)
+## How far the castle lights reach, in tiles, and how strong they are: torches, braziers, the
+## moonlight through a window and Wiesław's own small glow.
+const LIGHT_TORCH := Vector2(5.5, 1.5)
+## The brazier's flame: picture pixels to game pixels, and seconds per frame.
+const FIRE_SCALE := 3.0
+const FIRE_FRAME := 0.15
+## Where the flame is in a wall torch picture (torch_N.png), which is put where the torch's light
+## is and drawn TORCH_SCALE times its size.
+const TORCH_FLAME := Vector2(93, 33)
+const TORCH_SCALE := 0.75
+## A torch on a hall column (pochodnia_slup_N.png), drawn this many times its size with its flame
+## at PILLAR_FLAME in the picture, in the ring around the column (pochodnia_slup_obrecz.png, drawn
+## as big as the column, its middle PILLAR_RING_DROP under the flame).
+const PILLAR_TORCH_SCALE := 3.0
+## kladka.png drawn this many times bigger, and the parts of it (in its pixels): the board's left
+## end, a plain middle, its right end (each as wide as one map cell) and a bracket under the board.
+const PLANK_SCALE := 4.0
+## The board is drawn grey; this warms it to old wood.
+const PLANK_TINT := Color(0.92, 0.74, 0.56)
+const PLANK_PARTS := {"left": Rect2(12, 0, 16, 5), "middle": Rect2(22, 0, 16, 5), "right": Rect2(39, 0, 16, 5), "bracket": Rect2(16, 5, 11, 10)}
+const PILLAR_FLAME := Vector2(7.5, 18)
+const PILLAR_RING_SCALE := 4.0
+const PILLAR_RING_DROP := 36.0
+## A torch on the wall (pochodnia_sciana_N.png), drawn WALL_TORCH_SCALE times its size with its
+## flame at WALL_TORCH_FLAME; beside a dungeon entrance it hangs this far off the arch's edge, when
+## painted no further than ENTRANCE_TORCH_REACH from there.
+const WALL_TORCH_SCALE := 2.5
+const WALL_TORCH_FLAME := Vector2(9.5, 20)
+const ENTRANCE_TORCH_GAP := 44.0
+const ENTRANCE_TORCH_REACH := 5.0 * TILE
+## How many screen pixels a castle window picture's pixel takes, unless window.json gives "scale".
+const WINDOW_SCALE := 0.75
+## How much lower the landscape shows in a window for each pixel the window is above the start
+## ground: from upstairs the village sinks and more sky shows.
+const WINDOW_HIGHER_VIEW := 0.06
+## The window glass repeats the landscape sideways but stretches its top and bottom rows on,
+## so a window up high shows sky above the picture and not its repeat.
+const WINDOW_VIEW_SHADER := "shader_type canvas_item;\nvarying vec4 tint;\nvoid vertex() {\n\ttint = COLOR;\n}\nvoid fragment() {\n\tCOLOR = tint * texture(TEXTURE, vec2(fract(UV.x), clamp(UV.y, 0.0, 1.0)));\n}\n"
+## With backdrop layers the back wall and what hangs on it (windows, banners, torches, shelves)
+## slide this much slower than the level, so the rooms get depth; each wall thing sits where the
+## map puts it when the camera is right in front of it.
+const WALL_PLANE := 0.85
+## Whether the land around the castle shows past its walls and over its roof; when not, all
+## around the castle is dark stone and the land is only seen through the windows.
+const LAND_AROUND_CASTLE := false
+const LIGHT_FIRE := Vector2(11.0, 3.0)
+const LIGHT_MOON := Vector2(6.0, 1.2)
+const MOON_LIGHT := Color(0.55, 0.66, 1.0)
+const LIGHT_PLAYER := Vector2(2.0, 0.35)
+## Light goes this many pixels into stone; thicker stone stops it (see _add_occluders).
+const LIT_EDGE := 96.0
 ## Drawn castle pieces in CASTLE_DIR (<name>.png), each used when present: the back walls (tiled),
 ## windows, banners, barred windows, cells and chains on the walls, the exit door, ladders, planks,
 ## spikes and the torch frames (torch_0.png, torch_1.png, ...).
@@ -174,7 +263,7 @@ const CASTLE_FURNITURE := {"k": "kociol", "j": "tron", "w": "stojak", "h": "work
 const CASTLE_WALL_PICTURES := {"p": "polka", "g": "trofeum"}
 const CASTLE_HANGING := {"q": "korzenie", "F": "sztandar", "I": "wedzarnia"}
 const HALL_WALL_SHADE := Color(0.72, 0.72, 0.78)
-const ITEMS := ["apple", "crate", "thorns", "flag", "flag_on", "drakkar", "heart", "heart_empty", "chest", "chest_open", "chest_royal", "chest_royal_open", "ladder"]
+const ITEMS := ["apple", "crate", "thorns", "flag", "flag_on", "drakkar", "heart", "heart_empty", "chest", "chest_open", "chest_royal", "chest_royal_open", "ladder", "mug"]
 ## Drawn hearts are small pixel art, shown this many times bigger.
 const HEART_SCALE := 3.0
 const SOUNDS := ["jump", "apple", "bump", "stomp", "hurt", "checkpoint", "win", "lose"]
@@ -271,6 +360,8 @@ var _castle := {}
 ## See CASTLE_PIECES: the drawn pieces by name, and the torch frames.
 var _pieces := {}
 var _torch_frames: Array[Texture2D] = []
+## The brazier's flame, frame by frame (ogien_N.png), drawn FIRE_SCALE times bigger.
+var _fire_frames: Array[Texture2D] = []
 ## The exit door opening, from shut (door_0) to open, when there are drawn frames for it.
 var _door_frames: Array[Texture2D] = []
 ## The night landscape around the castle, seen through the hall windows, over the roof and past
@@ -279,7 +370,19 @@ var _door_frames: Array[Texture2D] = []
 ## Its "horizon" row lines up with the castle's base when the camera is on the starting floor.
 var _outside: Array[Dictionary] = []
 ## The outline of the window's glass in the window picture.
-var _window_glass := PackedVector2Array()
+var _window_glass: Array[PackedVector2Array] = []
+var _window_scale := WINDOW_SCALE
+## The colour the window picture is multiplied by (window.json "tint"), like the wall behind it.
+var _window_tint := Color.WHITE
+## Per backdrop part, where its columns stand: Vector2(spacing, middle of the first one), in the level.
+var _pillars := {}
+## The parts whose standing layer is columns that reach floor to ceiling (torches go on them).
+var _pillar_parts := {}
+var _wall_torch_frames: Array[Texture2D] = []
+var _pillar_torch_frames: Array[Texture2D] = []
+var _pillar_ring: Texture2D
+## The plank platform picture (kladka.png): a board on two brackets, cut by PLANK_PARTS.
+var _plank_board: Texture2D
 ## The colours above the farthest layer and below the nearest one.
 var _outside_sky := Color.BLACK
 var _outside_ground := Color.BLACK
@@ -329,10 +432,56 @@ var _shake := 0.0
 var _freeze := 0.0
 ## How many cells deep each castle stone cell is from the nearest open cell (1 = on the edge).
 var _rock_depth: Array[PackedByteArray] = []
+## Flames as (column, row, reach) in tiles.
+var _lamps: Array[Vector3] = []
+## For each lamp, the cells its light reaches: open cells, and stone only near the open side.
+var _lamp_cells: Array[Dictionary] = []
 ## The near shapes: {"kind": "chain", "pos": where in the level, ...}.
 var _near_things: Array[Dictionary] = []
+## Pictures for the near chains, and how many times bigger they are drawn (ozdoby.json "blisko").
+var _near_pictures: Array[Texture2D] = []
+var _near_scale := 3.0
+## One link of the chain that low-hanging decorations hang on, tiled down from the ceiling.
+var _hang_link: Texture2D
+var _hang_scale := 2.0
+## The kinds of scattered things in ozdoby.json, each with its loaded "pictures".
+var _decor_kinds: Array[Dictionary] = []
+## The scattered things: {"picture", "rect" in the level, "on" (sufit, podloga, sciana), "col",
+## "kind", "seed", "eyes"}.
+var _decor: Array[Dictionary] = []
+## Where water drips ("kapanie" in ozdoby.json), and the drops: {"x", "from", "to", "period", "phase"}.
+var _drip_spec := {}
+var _drips: Array[Dictionary] = []
+## Things that shine through the dark (candle flames, eyes, water drops), over the dimmed level.
+var _glow: Node2D
 ## The wall shading and the stone darkness, each one mesh for the whole level (made when first drawn).
 var _wall_mesh: ArrayMesh
+## The half-dark over the other rooms: a small picture with one pixel per cell around the camera,
+## drawn stretched and smoothed over the level.
+var _room_shade: Node2D
+## The castle's backdrop layers by part ("hall", "dungeon"), from tlo/tlo.json (see _load_backdrops).
+var _backdrops := {}
+## Each backdrop layer's node and its settings, redrawn as the camera moves.
+var _backdrop_nodes: Array[Dictionary] = []
+## Each room's cells as a rectangle in cells (see _label_rooms).
+var _room_boxes := {}
+## The back wall's things, drawn every frame at the wall's pace (see WALL_PLANE).
+var _wall_decor: Node2D
+## The lights of wall torches and windows, which follow the wall.
+var _wall_lights: Array[PointLight2D] = []
+## Every castle light: only those near the view are on, as a picture takes only so many lights and
+## the rest would come and go as Wiesław walks.
+var _castle_lights: Array[PointLight2D] = []
+var _room_image: Image
+var _room_texture: ImageTexture
+var _room_window := Rect2i()
+## How dark each cell of the level is now.
+var _room_dark := PackedFloat32Array()
+## Which room or passage each cell is in (-1 for stone), the passages ({"rows", "rooms": {room:
+## where it meets it}}) and the room or passage Wiesław is in.
+var _room_of := PackedInt32Array()
+var _passages := {}
+var _room_here := -1
 var _rock_mesh: ArrayMesh
 var _attack := 0.0
 var _attack_cooldown := 0.0
@@ -346,6 +495,8 @@ var _look := 0.0
 ## jump instead of bobbing up and down with him.
 var _floor_y := 0.0
 var _look_down := 0.0
+## The height the castle camera is at now, gliding to where it should be.
+var _camera_y := 0.0
 ## Time left on the mug of nalewka: nothing hurts Wiesław.
 var _shield := 0.0
 ## Mugs of nalewka bought from the brothers and kept for later; Q drinks one.
@@ -484,6 +635,10 @@ func restart() -> void:
 	_windows = Node2D.new()
 	_windows.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_windows.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+	var view := Shader.new()
+	view.code = WINDOW_VIEW_SHADER
+	_windows.material = ShaderMaterial.new()
+	_windows.material.shader = view
 	_windows.draw.connect(_draw_windows)
 	_level.add_child(_windows)
 	_tiles = Node2D.new()
@@ -515,14 +670,20 @@ func restart() -> void:
 	_wall_mesh = null
 	_rock_mesh = null
 	_place_near_things()
+	_place_decor()
 	_add_player()
 	_add_secrets()
 	_add_dungeon_lights()
+	_add_room_shade()
+	_add_backdrops()
 	# The hints sit in the level but on their own layer, so the night and the castle's darkness
 	# do not dim them.
 	var hint_layer := CanvasLayer.new()
 	hint_layer.follow_viewport_enabled = true
 	_level.add_child(hint_layer)
+	_glow = Node2D.new()
+	_glow.draw.connect(_draw_glow)
+	hint_layer.add_child(_glow)
 	_hints = Node2D.new()
 	_hints.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_hints.draw.connect(_draw_key_hints)
@@ -535,39 +696,116 @@ func restart() -> void:
 ## The dim dungeon (see DUNGEON_DARK): only with the drawn castle pieces, which are made for it.
 func _add_dungeon_lights() -> void:
 	_torch_lights.clear()
+	_wall_lights.clear()
+	_castle_lights.clear()
 	_player_light = null
 	if not dungeon or _pieces.is_empty():
 		return
 	_darkness = CanvasModulate.new()
 	_darkness.color = DUNGEON_DARK
 	_level.add_child(_darkness)
-	var glow := GradientTexture2D.new()
-	var gradient := Gradient.new()
-	gradient.set_color(0, Color.WHITE)
-	gradient.set_color(1, Color(1, 1, 1, 0))
-	glow.gradient = gradient
-	glow.fill = GradientTexture2D.FILL_RADIAL
-	glow.fill_from = Vector2(0.5, 0.5)
-	glow.fill_to = Vector2(1.0, 0.5)
-	glow.width = 128
-	glow.height = 128
+	var glow := _light_texture()
 	for row in map.size():
 		for col in map[row].length():
-			if _torch_here(row, col) or (map[row][col] == "y" and _pieces.has("ogien")):
-				var light := PointLight2D.new()
-				light.texture = glow
-				light.texture_scale = 4.5
-				light.color = TORCH_LIGHT
-				light.energy = 1.3
-				light.position = Vector2(col * TILE + 32, row * TILE + 10)
-				_level.add_child(light)
-				_torch_lights.append(light)
+			if map[row][col] == "y" and _pieces.has("ogien"):
+				_add_light(glow, Vector2(col * TILE + 32, row * TILE + 10), LIGHT_FIRE, TORCH_LIGHT, true)
+			elif _torch_here(row, col):
+				_add_wall_light(_add_light(glow, Vector2(_torch_x(row, col), row * TILE + 10), LIGHT_TORCH, TORCH_LIGHT, true), row, col)
+			elif _pieces.has("window") and _hall_window(row, col):
+				_add_wall_light(_add_light(glow, Vector2((col + 1) * TILE, (row + 1) * TILE - 150), LIGHT_MOON, MOON_LIGHT, false), row, col)
+	for thing in _decor:
+		if thing["kind"].has("flames"):
+			_add_light(glow, thing["rect"].get_center(), LIGHT_TORCH, TORCH_LIGHT, true)
 	_player_light = PointLight2D.new()
 	_player_light.texture = glow
-	_player_light.texture_scale = 3.0
-	_player_light.color = Color(0.9, 0.85, 1.0)
-	_player_light.energy = 0.55
+	_player_light.texture_scale = LIGHT_PLAYER.x * TILE * 2.0 / glow.get_width()
+	_player_light.color = Color(1.0, 0.92, 0.85)
+	_player_light.energy = LIGHT_PLAYER.y
 	_level.add_child(_player_light)
+	_add_occluders()
+
+
+## A light in the castle; a flickering one is a flame. It shines all around, a little into the stone.
+func _add_light(glow: Texture2D, at: Vector2, reach: Vector2, color: Color, flame: bool) -> PointLight2D:
+	var light := PointLight2D.new()
+	light.texture = glow
+	light.texture_scale = reach.x * TILE * 2.0 / glow.get_width()
+	light.color = color
+	light.energy = reach.y
+	light.position = at
+	light.shadow_enabled = true
+	light.shadow_filter = Light2D.SHADOW_FILTER_PCF5
+	light.shadow_filter_smooth = 3.0
+	light.set_meta("energy", reach.y)
+	_level.add_child(light)
+	_castle_lights.append(light)
+	if flame:
+		_torch_lights.append(light)
+	return light
+
+
+## A light on the back wall, which moves with it (see _wall_shift).
+func _add_wall_light(light: PointLight2D, row: int, col: int) -> void:
+	light.set_meta("home", light.position)
+	light.set_meta("anchor", light.position.x if _torch_here(row, col) else (col + 0.5) * TILE)
+	var on_pillar := _torch_here(row, col) and not is_nan(_torch_pillar(row, col))
+	light.set_meta("plane", _pillar_parts[_backdrop_part(row)] if on_pillar else WALL_PLANE)
+	_wall_lights.append(light)
+
+
+## Light that fades like real light: bright near the flame, then slowly out to nothing at the edge.
+func _light_texture() -> Texture2D:
+	var size := 256
+	var image := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	for y in size:
+		for x in size:
+			var away := Vector2(x + 0.5 - size / 2.0, y + 0.5 - size / 2.0).length() / (size / 2.0)
+			var fade := clampf(1.0 - away, 0.0, 1.0)
+			var value := pow(fade, 1.6)
+			image.set_pixel(x, y, Color(1, 1, 1, value))
+	return ImageTexture.create_from_image(image)
+
+
+## Thick stone blocks light, so it never gets through a floor: one occluder per block of stone
+## cells, pulled in from the open air by LIT_EDGE so the stone near a flame is still lit.
+func _add_occluders() -> void:
+	var width := map[0].length()
+	var used := PackedByteArray()
+	used.resize(map.size() * width)
+	for row in map.size():
+		for col in width:
+			if used[row * width + col] or map[row][col] != "#":
+				continue
+			var right := col
+			while right + 1 < width and map[row][right + 1] == "#" and not used[row * width + right + 1]:
+				right += 1
+			var bottom := row
+			while bottom + 1 < map.size():
+				var full := true
+				for c in range(col, right + 1):
+					if map[bottom + 1][c] != "#" or used[(bottom + 1) * width + c]:
+						full = false
+						break
+				if not full:
+					break
+				bottom += 1
+			for r in range(row, bottom + 1):
+				for c in range(col, right + 1):
+					used[r * width + c] = 1
+			var box := Rect2(col * TILE, row * TILE, (right - col + 1) * TILE, (bottom - row + 1) * TILE)
+			# Pull each side in where open air is next to it.
+			var top_open := row > 0 and range(col, right + 1).any(func(c: int) -> bool: return map[row - 1][c] != "#")
+			var bottom_open := bottom + 1 < map.size() and range(col, right + 1).any(func(c: int) -> bool: return map[bottom + 1][c] != "#")
+			var left_open := col > 0 and range(row, bottom + 1).any(func(r: int) -> bool: return map[r][col - 1] != "#")
+			var right_open := right + 1 < width and range(row, bottom + 1).any(func(r: int) -> bool: return map[r][right + 1] != "#")
+			box = box.grow_individual(-LIT_EDGE if left_open else 0.0, -LIT_EDGE if top_open else 0.0, -LIT_EDGE if right_open else 0.0, -LIT_EDGE if bottom_open else 0.0)
+			if box.size.x <= 0.0 or box.size.y <= 0.0:
+				continue
+			var shape := OccluderPolygon2D.new()
+			shape.polygon = PackedVector2Array([box.position, Vector2(box.end.x, box.position.y), box.end, Vector2(box.position.x, box.end.y)])
+			var occluder := LightOccluder2D.new()
+			occluder.occluder = shape
+			_level.add_child(occluder)
 
 
 func _add_drakkar(at: Vector2) -> void:
@@ -654,7 +892,7 @@ func _add_player() -> void:
 	shape.position = Vector2(0, -PLAYER_SIZE.y / 2)
 	player.add_child(shape)
 	_wieslaw = CutoutCharacter.new()
-	_wieslaw.scale = Vector2(0.84, 0.84)
+	_wieslaw.scale = Vector2.ONE * _wieslaw_size()
 	player.add_child(_wieslaw)
 	_camera = Camera2D.new()
 	_camera.limit_left = 0
@@ -671,6 +909,7 @@ func _add_player() -> void:
 	_camera.offset = Vector2(0, -80)
 	_camera.zoom = Vector2.ONE * (DUNGEON_ZOOM if dungeon else VIEW_ZOOM)
 	_floor_y = player.position.y
+	_camera_y = player.position.y
 	_look_down = 0.0
 	player.add_child(_camera)
 	_level.add_child(player)
@@ -903,7 +1142,7 @@ func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 		# Pushing against a wall he stands still, so the run stops too.
 		_wieslaw.pose = "run" if absf(player.get_real_velocity().x) > 20.0 else "idle"
 	_stretch = _stretch.lerp(Vector2.ONE, minf(delta * 12.0, 1.0))
-	_wieslaw.scale = Vector2(0.84 * _stretch.x * _wieslaw.facing, 0.84 * _stretch.y)
+	_wieslaw.scale = Vector2(_wieslaw_size() * _stretch.x * _wieslaw.facing, _wieslaw_size() * _stretch.y)
 	# Without a drawn swing, he leans into the blow.
 	_wieslaw.rotation = _wieslaw.facing * 0.18 * sin(_attack / ATTACK_TIME * PI) if not _wieslaw.has_pose("attack") else 0.0
 	_move_camera(delta)
@@ -949,7 +1188,7 @@ func _climb(delta: float, steer: float, up_down: float) -> void:
 		_wieslaw.facing = 1 if steer > 0 else -1
 	_wieslaw.pose = "climb" if _wieslaw.has_drawn_pose("climb") else ("run" if step != Vector2.ZERO else "idle")
 	_wieslaw.paused = _wieslaw.pose == "climb" and step.y == 0.0
-	_wieslaw.scale = Vector2(0.84 * _wieslaw.facing, 0.84)
+	_wieslaw.scale = Vector2(_wieslaw_size() * _wieslaw.facing, _wieslaw_size())
 	_wieslaw.rotation = 0.0
 	_wieslaw.visible = _hurt > HURT_TIME - 0.4 or fmod(_hurt, 0.2) < 0.12
 	_move_camera(delta)
@@ -1596,11 +1835,6 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventKey and event.physical_keycode == KEY_L and (_art_sets.size() > 1 or (dungeon and not _pieces.is_empty())):
 		next_art_set()
 		get_viewport().set_input_as_handled()
-	elif event is InputEventKey and event.physical_keycode == KEY_K and CutoutCharacter.anim_dirs().size() > 1:
-		# Another look for Wiesław: the level starts over with him.
-		CutoutCharacter.anim_choice += 1
-		restart()
-		get_viewport().set_input_as_handled()
 	elif not shop.is_empty() and event is InputEventKey and event.physical_keycode in [KEY_1, KEY_2]:
 		buy("heart" if event.physical_keycode == KEY_1 else "mug")
 		get_viewport().set_input_as_handled()
@@ -1639,11 +1873,21 @@ func _redraw() -> void:
 				node.queue_redraw()
 	_tiles.queue_redraw()
 	_hints.queue_redraw()
+	if is_instance_valid(_glow):
+		_glow.queue_redraw()
 	_hud.queue_redraw()
 	_background.queue_redraw()
 	_foreground.queue_redraw()
 	if dungeon and not _outside.is_empty():
 		_windows.queue_redraw()
+	for light in _wall_lights:
+		light.position = light.get_meta("home") + Vector2(_plane_shift_at(light.get_meta("anchor"), light.get_meta("plane")), 0)
+	if _camera and not _castle_lights.is_empty():
+		var half := SCREEN / _camera.zoom / 2.0
+		var view := Rect2(_camera.get_screen_center_position() - half, half * 2.0)
+		for light in _castle_lights:
+			var reach := light.texture_scale * light.texture.get_width() / 2.0
+			light.enabled = view.grow(reach).has_point(light.position)
 	_overlay.queue_redraw()
 	if dungeon and _drakkar:
 		_drakkar.queue_redraw()
@@ -1651,7 +1895,7 @@ func _redraw() -> void:
 		_player_light.position = player.position + Vector2(0, -50)
 		var flicker := 0.9 + 0.1 * sin(_anim * 9.0) * sin(_anim * 5.3)
 		for light in _torch_lights:
-			light.energy = 1.3 * flicker
+			light.energy = float(light.get_meta("energy")) * flicker
 
 
 func _visible_columns() -> Vector2i:
@@ -1861,6 +2105,9 @@ func _draw_layers(v: Node2D, layers: Array, scroll: float, fill_sky: bool) -> vo
 func _draw_background() -> void:
 	var v := _background
 	var scroll := _camera.get_screen_center_position().x if _camera else 0.0
+	if dungeon and not _outside.is_empty() and not LAND_AROUND_CASTLE:
+		v.draw_rect(Rect2(Vector2.ZERO, SCREEN), Color(ROCK_INK, 1.0))
+		return
 	if dungeon and not _outside.is_empty() and _camera:
 		# The castle stands in the landscape seen through its windows: it shows over the roof and
 		# past the side walls.
@@ -2040,6 +2287,8 @@ func _draw_wall_things(v: Node2D, span: Vector2i) -> void:
 			if map[row][col] == "#" or not (_ground_above(row, col) or map[row][col] in ["o", "b"]):
 				continue
 			var at := Vector2(col * TILE, row * TILE)
+			if v == _wall_decor:
+				v.draw_set_transform(Vector2(_wall_shift(row, col), 0))
 			var hall := (row + 1) * TILE <= _horizon
 			var banner_here := map[row][col] == "b" if _by_hand("b") else hall and col % 12 == 0 and map[row - 1][col] == "#" and _open(col, row, row + 3)
 			var on_floor := map[row + 1][col] == "#"
@@ -2048,7 +2297,8 @@ func _draw_wall_things(v: Node2D, span: Vector2i) -> void:
 			elif _hall_window(row, col) and _pieces.has("window"):
 				var window: Texture2D = _pieces["window"]
 				# The picture already shows the night outside, so it is not tinted.
-				v.draw_texture(window, at + Vector2(TILE - window.get_width() / 2.0, TILE - 40 - window.get_height()))
+				var size := window.get_size() * _window_scale
+				v.draw_texture_rect(window, Rect2(at + Vector2(TILE - size.x / 2.0, TILE - 40 - size.y), size), false, _window_tint)
 			elif hall and col % 12 == 6 and on_floor and not _by_hand("o") and _open(col, row - 5, row) and _open(col + 1, row - 5, row):
 				# A tall arched window, two tiles wide, a step above the floor.
 				var sky := Color("2a3a66") if night else Color("9fc6e0")
@@ -2091,6 +2341,14 @@ func _torch_here(row: int, col: int) -> bool:
 
 
 func _draw_torches(v: Node2D, span: Vector2i) -> void:
+	if dungeon and not _fire_frames.is_empty():
+		for col in range(span.x, mini(span.y, map[0].length())):
+			for row in map.size():
+				if map[row][col] != "y":
+					continue
+				var frame: Texture2D = _fire_frames[int(_anim / FIRE_FRAME + col) % _fire_frames.size()]
+				var size := frame.get_size() * FIRE_SCALE
+				v.draw_texture_rect(frame, Rect2(Vector2((col + 0.5) * TILE - size.x / 2.0, (row + 1) * TILE - size.y), size), false)
 	for col in range(span.x, mini(span.y, map[0].length())):
 		if col % 7 != 3 and not _by_hand("f"):
 			continue
@@ -2099,12 +2357,25 @@ func _draw_torches(v: Node2D, span: Vector2i) -> void:
 				continue
 			var at := Vector2(col * TILE, row * TILE)
 			var flicker := 0.85 + 0.15 * sin(_anim * 9.0 + col) * sin(_anim * 5.3 + row)
-			var base := at + Vector2(32, 40)
-			v.draw_circle(base + Vector2(0, -18), 70 * flicker, Color(1.0, 0.6, 0.2, 0.08))
-			v.draw_circle(base + Vector2(0, -18), 34 * flicker, Color(1.0, 0.7, 0.3, 0.12))
+			var torch_x := _torch_x(row, col)
+			var base := Vector2(torch_x + _torch_shift(row, col, torch_x), at.y + 40)
+			if not _pillar_torch_frames.is_empty() and not is_nan(_torch_pillar(row, col)):
+				var flame := base + Vector2(0, -30)
+				if _pillar_ring:
+					var ring := _pillar_ring.get_size() * PILLAR_RING_SCALE
+					v.draw_texture_rect(_pillar_ring, Rect2(flame + Vector2(-ring.x / 2.0, PILLAR_RING_DROP - ring.y / 2.0), ring), false)
+				var torch: Texture2D = _pillar_torch_frames[int(_anim / FIRE_FRAME + col) % _pillar_torch_frames.size()]
+				v.draw_texture_rect(torch, Rect2(flame - PILLAR_FLAME * PILLAR_TORCH_SCALE, torch.get_size() * PILLAR_TORCH_SCALE), false)
+				continue
+			if not _wall_torch_frames.is_empty():
+				var torch: Texture2D = _wall_torch_frames[int(_anim / FIRE_FRAME + col) % _wall_torch_frames.size()]
+				v.draw_texture_rect(torch, Rect2(base + Vector2(0, -30) - WALL_TORCH_FLAME * WALL_TORCH_SCALE, torch.get_size() * WALL_TORCH_SCALE), false)
+				continue
+			v.draw_circle(base + Vector2(0, -30), 48 * flicker, Color(1.0, 0.6, 0.2, 0.08))
+			v.draw_circle(base + Vector2(0, -30), 34 * flicker, Color(1.0, 0.7, 0.3, 0.12))
 			if not _torch_frames.is_empty():
-				var frame: Texture2D = _torch_frames[int(_anim * 10.0 + col) % _torch_frames.size()]
-				v.draw_texture(frame, base + Vector2(-frame.get_width() / 2.0, 30 - frame.get_height()))
+				var frame: Texture2D = _torch_frames[int(_anim / FIRE_FRAME + col) % _torch_frames.size()]
+				v.draw_texture_rect(frame, Rect2(base + Vector2(0, -30) - TORCH_FLAME * TORCH_SCALE, frame.get_size() * TORCH_SCALE), false)
 				continue
 			v.draw_rect(Rect2(base + Vector2(-4, -6), Vector2(8, 22)), Color("4a3020"))
 			v.draw_rect(Rect2(base + Vector2(-9, -8), Vector2(18, 5)), Color("2a2a2a"))
@@ -2118,12 +2389,21 @@ func _load_castle() -> void:
 	_castle.clear()
 	_pieces.clear()
 	_torch_frames.clear()
+	_pillar_torch_frames.clear()
+	_pillar_ring = null
+	_wall_torch_frames.clear()
+	_fire_frames.clear()
 	_door_frames.clear()
 	_outside.clear()
 	_soil = null
 	_soil_top = null
 	_soil_top_above = 0.0
 	_window_glass.clear()
+	_window_scale = WINDOW_SCALE
+	_window_tint = Color.WHITE
+	_backdrops.clear()
+	_pillars.clear()
+	_pillar_parts.clear()
 	var dir := CASTLE_DIR
 	if Game.castle_detail == "drobne" and ResourceLoader.exists(CASTLE_DIR_FINE + "tileset.png"):
 		dir = CASTLE_DIR_FINE
@@ -2149,31 +2429,89 @@ func _load_castle() -> void:
 			_pieces[piece] = load(dir + piece + ".png")
 	while ResourceLoader.exists(dir + "door_%d.png" % _door_frames.size()):
 		_door_frames.append(load(dir + "door_%d.png" % _door_frames.size()))
-	while ResourceLoader.exists(dir + "torch_%d.png" % _torch_frames.size()):
-		_torch_frames.append(load(dir + "torch_%d.png" % _torch_frames.size()))
+	_plank_board = load(CASTLE_DIR + "kladka.png") if ResourceLoader.exists(CASTLE_DIR + "kladka.png") else null
+	if ResourceLoader.exists(CASTLE_DIR + "pochodnia_slup_obrecz.png"):
+		_pillar_ring = load(CASTLE_DIR + "pochodnia_slup_obrecz.png")
+	while ResourceLoader.exists(CASTLE_DIR + "pochodnia_slup_%d.png" % _pillar_torch_frames.size()):
+		_pillar_torch_frames.append(load(CASTLE_DIR + "pochodnia_slup_%d.png" % _pillar_torch_frames.size()))
+	while ResourceLoader.exists(CASTLE_DIR + "pochodnia_sciana_%d.png" % _wall_torch_frames.size()):
+		_wall_torch_frames.append(load(CASTLE_DIR + "pochodnia_sciana_%d.png" % _wall_torch_frames.size()))
+	while ResourceLoader.exists(CASTLE_DIR + "torch_%d.png" % _torch_frames.size()):
+		_torch_frames.append(load(CASTLE_DIR + "torch_%d.png" % _torch_frames.size()))
+	# The fine castle may lack the flame and the backdrop: then the coarse one's are used.
+	var fire_dir := dir if ResourceLoader.exists(dir + "ogien_0.png") else CASTLE_DIR
+	while ResourceLoader.exists(fire_dir + "ogien_%d.png" % _fire_frames.size()):
+		_fire_frames.append(load(fire_dir + "ogien_%d.png" % _fire_frames.size()))
 	_load_outside(dir)
+	_load_backdrops((dir if FileAccess.file_exists(dir + "tlo/tlo.json") else CASTLE_DIR) + "tlo/")
+	_load_decor()
 	if _castle.has("hall") and not _castle.has("dungeon"):
 		_castle["dungeon"] = _castle["hall"]
 	elif _castle.has("dungeon") and not _castle.has("hall"):
 		_castle["hall"] = _castle["dungeon"]
 
 
+## The glass of a window picture: the see-through pixels the frame closes in, as polygons.
+static func _glass_of(window: Texture2D) -> Array[PackedVector2Array]:
+	var image := window.get_image()
+	if image.is_compressed():
+		image.decompress()
+	var size := image.get_size()
+	# See-through pixels reached from the picture's edge are outside the window; the rest is glass.
+	var outside := {}
+	var todo: Array[Vector2i] = []
+	for x in size.x:
+		todo.append(Vector2i(x, 0))
+		todo.append(Vector2i(x, size.y - 1))
+	for y in size.y:
+		todo.append(Vector2i(0, y))
+		todo.append(Vector2i(size.x - 1, y))
+	while not todo.is_empty():
+		var at: Vector2i = todo.pop_back()
+		if at.x < 0 or at.y < 0 or at.x >= size.x or at.y >= size.y or outside.has(at) or image.get_pixelv(at).a > 0.1:
+			continue
+		outside[at] = true
+		todo.append_array([at + Vector2i.LEFT, at + Vector2i.RIGHT, at + Vector2i.UP, at + Vector2i.DOWN])
+	var mask := Image.create(size.x, size.y, false, Image.FORMAT_LA8)
+	for y in size.y:
+		for x in size.x:
+			if image.get_pixel(x, y).a <= 0.1 and not outside.has(Vector2i(x, y)):
+				mask.set_pixel(x, y, Color.WHITE)
+	var bits := BitMap.new()
+	bits.create_from_image_alpha(mask)
+	var found: Array[PackedVector2Array] = []
+	for polygon in bits.opaque_to_polygons(Rect2i(Vector2i.ZERO, size), 0.5):
+		found.append(polygon)
+	return found
+
+
 ## The landscape layers listed in outside.json, and the window glass they show through.
 func _load_outside(dir: String) -> void:
-	if not _pieces.has("window") or not FileAccess.file_exists(dir + "window.json") or not FileAccess.file_exists(dir + "outside.json"):
+	if not _pieces.has("window") or not FileAccess.file_exists(dir + "window.json"):
 		return
 	var glass = JSON.parse_string(FileAccess.get_file_as_string(dir + "window.json"))
+	if not glass is Dictionary:
+		return
+	_window_scale = float(glass.get("scale", WINDOW_SCALE))
+	_window_tint = Color(str(glass.get("tint", "ffffff")))
+	if not FileAccess.file_exists(dir + "outside.json"):
+		return
 	var spec = JSON.parse_string(FileAccess.get_file_as_string(dir + "outside.json"))
-	if not glass is Dictionary or not glass.has("glass") or not spec is Dictionary:
+	if not spec is Dictionary:
 		return
 	for layer in spec.get("layers", []):
 		var path: String = dir + str(layer.get("file", "")) + ".png"
 		if ResourceLoader.exists(path):
-			_outside.append({"texture": load(path), "speed": float(layer.get("speed", 0.25)), "horizon": float(layer.get("horizon", 0)), "rise": float(layer.get("vertical_speed", -1.0))})
+			_outside.append({"texture": load(path), "speed": float(layer.get("speed", 0.25)), "horizon": float(layer.get("horizon", 0)), "rise": float(layer.get("vertical_speed", -1.0)), "window": bool(layer.get("window", true))})
 	if _outside.is_empty():
 		return
-	for point in glass["glass"]:
-		_window_glass.append(Vector2(point[0], point[1]))
+	if glass.has("glass"):
+		var points := PackedVector2Array()
+		for point in glass["glass"]:
+			points.append(Vector2(point[0], point[1]))
+		_window_glass.append(points)
+	else:
+		_window_glass = _glass_of(_pieces["window"])
 	var far: Image = _outside[0]["texture"].get_image()
 	var near: Image = _outside[-1]["texture"].get_image()
 	_outside_sky = far.get_pixel(0, 0)
@@ -2208,7 +2546,7 @@ func _hall_window(row: int, col: int) -> bool:
 ## The landscape lags behind the camera, so it seems far away.
 func _draw_windows() -> void:
 	var window: Texture2D = _pieces.get("window")
-	if not dungeon or _outside.is_empty() or not window or _window_glass.size() < 3:
+	if not dungeon or _outside.is_empty() or not window or _window_glass.is_empty():
 		return
 	var span := _visible_columns()
 	var origins: Array[Vector2] = []
@@ -2220,18 +2558,33 @@ func _draw_windows() -> void:
 		for row in range(1, map.size() - 1):
 			if map[row][col] == "#" or not _hall_window(row, col):
 				continue
-			var at := Vector2(col * TILE, row * TILE) + Vector2(TILE - window.get_width() / 2.0, TILE - 40 - window.get_height())
-			var points := PackedVector2Array()
-			for point in _window_glass:
-				points.append(at + point)
-			_windows.draw_colored_polygon(points, _outside_sky)
-			for i in _outside.size():
-				var texture: Texture2D = _outside[i]["texture"]
-				var uvs := PackedVector2Array()
-				for point in points:
-					uvs.append((point - origins[i]) / texture.get_size())
-				_windows.draw_colored_polygon(points, Color.WHITE, uvs, texture)
-			_windows.draw_texture(window, at)
+			var size := window.get_size() * _window_scale
+			var at := Vector2(col * TILE + _wall_shift(row, col), row * TILE) + Vector2(TILE - size.x / 2.0, TILE - 40 - size.y)
+			for glass in _window_glass:
+				_draw_glass(glass, at, row, origins)
+			_windows.draw_texture_rect(window, Rect2(at, size), false, _window_tint)
+
+
+## The view outside through one glass polygon of a window whose picture's corner is at.
+func _draw_glass(glass: PackedVector2Array, at: Vector2, row: int, origins: Array[Vector2]) -> void:
+	var points := PackedVector2Array()
+	for point in glass:
+		points.append(at + point * _window_scale)
+	_windows.draw_colored_polygon(points, _outside_sky)
+	# Every window looks out as if it stood on the starting ground, so a window high up
+	# shows the same skyline and not the picture's repeat beyond its top.
+	var lift := Vector2(0, (row + 1) * TILE - _horizon)
+	for i in _outside.size():
+		if not _outside[i]["window"]:
+			continue
+		var texture: Texture2D = _outside[i]["texture"]
+		var uvs := PackedVector2Array()
+		# The landscape keeps its height on screen by the layer's rise, so a window lifted away from
+		# the ground sees it moved by that share of the lift, and a little lower, as seen from higher up.
+		var rise: float = _outside[i]["rise"] if _outside[i]["rise"] >= 0.0 else _outside_rise
+		for point in points:
+			uvs.append((point - origins[i] - lift * (rise - WINDOW_HIGHER_VIEW)) / texture.get_size())
+		_windows.draw_colored_polygon(points, Color.WHITE, uvs, texture)
 
 
 func _stone_at(row: int, col: int) -> bool:
@@ -2272,7 +2625,8 @@ func _draw_castle(v: Node2D, span: Vector2i) -> void:
 func _draw_wall_depth(v: Node2D) -> void:
 	if not _wall_mesh:
 		_wall_mesh = _shade_mesh(_wall_shapes())
-	v.draw_mesh(_wall_mesh, null)
+	if _wall_mesh.get_surface_count() > 0:
+		v.draw_mesh(_wall_mesh, null)
 
 
 ## The shapes of the wall shading as [corners, colours] pairs. They are worked out once per level
@@ -2337,10 +2691,555 @@ func _stone_or_hidden(row: int, col: int) -> bool:
 	return map[row][col] == "#" or map[row][col] == "u"
 
 
+## Reads the backdrop layers, farthest first. tlo.json gives for each part ("hall" above the
+## starting ground, "dungeon" below it) a list of layers:
+##   "file": the picture in tlo/; "parallax": how fast it moves with the camera (1 = with the level,
+##   less = farther away); "scale": how many game pixels one picture pixel takes; "fill": true
+##   repeats it in every direction (a far wall), otherwise it stands on the floor of every room;
+##   "lift": how many pixels above the floor it stands; "tint": a colour it is multiplied by.
+## A part with layers draws them instead of its back wall.
+func _load_backdrops(dir: String) -> void:
+	if not FileAccess.file_exists(dir + "tlo.json"):
+		return
+	var spec = JSON.parse_string(FileAccess.get_file_as_string(dir + "tlo.json"))
+	if not spec is Dictionary:
+		return
+	for part in spec:
+		var layers: Array[Dictionary] = []
+		for layer in spec[part]:
+			if not layer is Dictionary:
+				continue
+			# "file" is one picture, or a list of pictures that take turns along the wall.
+			var textures: Array[Texture2D] = []
+			for file in backdrop_files(layer):
+				if ResourceLoader.exists(dir + file):
+					textures.append(load(dir + file))
+			if textures.is_empty():
+				continue
+			layers.append({
+				"texture": textures[0],
+				"textures": textures,
+				"parallax": float(layer.get("parallax", 1.0)),
+				"scale": float(layer.get("scale", 1.0)),
+				"fill": bool(layer.get("fill", false)),
+				"lift": float(layer.get("lift", 0.0)),
+				"spacing": float(layer.get("spacing", 0.0)),
+				"offset": float(layer.get("offset", 0.0)) * TILE,
+				"stretch": layer.get("stretch", []),
+				"tint": Color(str(layer.get("tint", "ffffff"))),
+			})
+		if not layers.is_empty():
+			_backdrops[part] = layers
+			for layer in layers:
+				if not layer["fill"] and not _pillars.has(part):
+					_pillars[part] = _pillar_spot(layer)
+					if layer["stretch"].size() == 2:
+						_pillar_parts[part] = float(layer["parallax"])
+
+
+## Where the copies of a standing layer (columns, entrances) are, in the level as the editor's
+## guides show them: Vector3(spacing, left and right edge of the first one's first solid run).
+func _pillar_spot(layer: Dictionary) -> Vector3:
+	var texture: Texture2D = layer["texture"]
+	var scale := float(layer["scale"])
+	var parallax := float(layer["parallax"])
+	var image := texture.get_image()
+	if image.is_compressed():
+		image.decompress()
+	var run := Vector2(-1, -1)
+	for x in image.get_width():
+		var solid := false
+		for y in image.get_height():
+			if image.get_pixel(x, y).a > 0.1:
+				solid = true
+				break
+		if solid and run.x < 0:
+			run = Vector2(x, x + 1)
+		elif solid and run.y == x:
+			run.y = x + 1
+		elif not solid and run.x >= 0:
+			break
+	var spacing := backdrop_spacing(texture.get_width() * scale, parallax, layer["spacing"])
+	var offset := float(layer["offset"])
+	return Vector3(spacing, offset + run.x * scale / parallax, offset + run.y * scale / parallax)
+
+
+## Where the flame of a wall torch painted at a cell is, sideways in the level: on the nearest
+## column of a hall, or beside the nearest dungeon entrance when one is close, so it looks fixed
+## to the backdrop; else on its own cell.
+func _torch_x(row: int, col: int) -> float:
+	var x := (col + 0.5) * TILE
+	var pillar := _torch_pillar(row, col)
+	if not is_nan(pillar):
+		if not _pillar_torch_frames.is_empty():
+			return pillar
+		# The picture's middle on the column's middle (the flame is right of the middle).
+		var width: float = TORCH_SCALE * (_torch_frames[0].get_width() if not _torch_frames.is_empty() else 0.0)
+		return pillar + TORCH_FLAME.x * TORCH_SCALE - width / 2.0
+	var mark := _nearest_mark(row, col)
+	if mark.size() == 3 and mark[2] == 0.0:
+		# Beside an entrance: on the side nearer to the painted cell, a little off its edge.
+		var left: float = mark[0] - ENTRANCE_TORCH_GAP
+		var right: float = mark[1] + ENTRANCE_TORCH_GAP
+		var side := left if absf(x - left) < absf(x - right) else right
+		if absf(side - x) <= ENTRANCE_TORCH_REACH and _open_between(row, col, floori(side / TILE)):
+			return side
+	return x
+
+
+## How far a wall torch has slid sideways: with its column when it hangs on one, else with the wall.
+func _torch_shift(row: int, col: int, x: float) -> float:
+	if not is_nan(_torch_pillar(row, col)):
+		return _plane_shift_at(x, _pillar_parts[_backdrop_part(row)])
+	return _wall_shift_at(x)
+
+
+## How far something at x in the level has slid sideways on a plane moving at this parallax.
+func _plane_shift_at(x: float, parallax: float) -> float:
+	if not _wall_moves() or not _camera:
+		return 0.0
+	return (_camera.get_screen_center_position().x - x) * (1.0 - parallax)
+
+
+## The middle of the column a wall torch at a cell hangs on, in the level, or NAN for none.
+func _torch_pillar(row: int, col: int) -> float:
+	var mark := _nearest_mark(row, col)
+	if mark.size() != 3 or mark[2] != 1.0:
+		return NAN
+	var on: float = (mark[0] + mark[1]) / 2.0
+	return on if _open_between(row, col, floori(on / TILE)) else NAN
+
+
+## The backdrop copy (column or entrance) nearest a cell: [left, right, 1 for a column], in the
+## level, or [] when the room's wall has none.
+func _nearest_mark(row: int, col: int) -> Array:
+	var part := _backdrop_part(row)
+	if not _wall_moves() or not _pillars.has(part):
+		return []
+	var spot: Vector3 = _pillars[part]
+	var middle := (spot.y + spot.z) / 2.0
+	var n := roundf(((col + 0.5) * TILE - middle) / spot.x)
+	return [spot.y + n * spot.x, spot.z + n * spot.x, 1.0 if _pillar_parts.has(part) else 0.0]
+
+
+## Whether a row is open from one cell to another (no stone between).
+func _open_between(row: int, from: int, to: int) -> bool:
+	if to < 0 or to >= map[row].length():
+		return false
+	for between in range(mini(from, to), maxi(from, to) + 1):
+		if map[row][between] == "#":
+			return false
+	return true
+
+
+## How far the back wall at x in the level has slid sideways from there.
+func _wall_shift_at(x: float) -> float:
+	if not _wall_moves() or not _camera:
+		return 0.0
+	return (_camera.get_screen_center_position().x - x) * (1.0 - WALL_PLANE)
+
+
+## The picture files of a backdrop layer in tlo.json.
+static func backdrop_files(layer: Dictionary) -> Array[String]:
+	var files: Array[String] = []
+	var file = layer.get("file", "")
+	for name in (file if file is Array else [file]):
+		if str(name) != "":
+			files.append(str(name))
+	return files
+
+
+## Which backdrop part a row belongs to.
+func _backdrop_part(row: int) -> String:
+	return "hall" if (row + 1) * TILE <= _horizon else "dungeon"
+
+
+## Whether open land lies beside the level above the starting ground (see LAND_AROUND_CASTLE).
+func _land_around() -> bool:
+	return LAND_AROUND_CASTLE or not dungeon
+
+
+## The back wall slides with backdrop layers in the castle (see WALL_PLANE).
+func _wall_moves() -> bool:
+	return dungeon and not _backdrops.is_empty()
+
+
+## How far the back wall at a cell has slid sideways from where the map puts it.
+func _wall_shift(_row: int, col: int) -> float:
+	if not _wall_moves() or not _camera:
+		return 0.0
+	return (_camera.get_screen_center_position().x - (col + 0.5) * TILE) * (1.0 - WALL_PLANE)
+
+
+## The back wall's things, each moved with its room's wall.
+func _draw_wall_decor() -> void:
+	var span := _visible_columns()
+	span = Vector2i(maxi(span.x - 4, 0), mini(span.y + 4, map[0].length()))
+	_draw_wall_things(_wall_decor, span)
+	for col in range(span.x, span.y):
+		for row in map.size():
+			if not _pieces.has(CASTLE_WALL_PICTURES.get(map[row][col], "")):
+				continue
+			var on_wall: Texture2D = _pieces[CASTLE_WALL_PICTURES[map[row][col]]]
+			_wall_decor.draw_set_transform(Vector2(_wall_shift(row, col), 0))
+			_wall_decor.draw_texture(on_wall, Vector2(col * TILE, row * TILE) + (Vector2(TILE, TILE) - on_wall.get_size()) / 2.0)
+	for thing in _decor:
+		if thing["on"] == "sciana" and thing["col"] >= span.x and thing["col"] < span.y:
+			var rect: Rect2 = thing["rect"]
+			_wall_decor.draw_set_transform(Vector2(_wall_shift_at(rect.get_center().x), 0))
+			_wall_decor.draw_texture_rect(thing["picture"], rect, false)
+	_wall_decor.draw_set_transform(Vector2.ZERO)
+
+
+## Puts the backdrop layers behind the level: each part's layers show only through its open cells.
+func _add_backdrops() -> void:
+	_backdrop_nodes.clear()
+	_wall_decor = null
+	if not dungeon or _backdrops.is_empty() or _room_of.is_empty():
+		return
+	var width := map[0].length()
+	_room_boxes.clear()
+	for row in map.size():
+		for col in width:
+			var room := _room_of[row * width + col]
+			if room < 0 or _passages.has(room):
+				continue
+			var cell := Rect2i(col, row, 1, 1)
+			_room_boxes[room] = _room_boxes[room].merge(cell) if _room_boxes.has(room) else cell
+	var order := 0
+	for part in _backdrops:
+		var mask := Node2D.new()
+		mask.clip_children = CanvasItem.CLIP_CHILDREN_ONLY
+		mask.draw.connect(_draw_backdrop_mask.bind(mask, part))
+		_static.add_child(mask)
+		_static.move_child(mask, order)
+		order += 1
+		for layer in _backdrops[part]:
+			if not _in_front_of_wall(layer):
+				_add_backdrop_layer(mask, layer, part)
+	# The wall's things slide too, so the stone around a room cuts them off like the wall.
+	var decor_mask := Node2D.new()
+	decor_mask.clip_children = CanvasItem.CLIP_CHILDREN_ONLY
+	decor_mask.draw.connect(_draw_backdrop_mask.bind(decor_mask, ""))
+	_static.add_child(decor_mask)
+	_static.move_child(decor_mask, order)
+	_wall_decor = Node2D.new()
+	_wall_decor.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_wall_decor.draw.connect(_draw_wall_decor)
+	decor_mask.add_child(_wall_decor)
+	_backdrop_nodes.append({"node": _wall_decor})
+	# The windows are on that wall too, behind the furniture that stands in the room.
+	_level.remove_child(_windows)
+	_static.add_child(_windows)
+	_static.move_child(_windows, order + 1)
+	order += 2
+	# The columns stand out from the wall, in front of what hangs on it.
+	for part in _backdrops:
+		var mask := Node2D.new()
+		mask.clip_children = CanvasItem.CLIP_CHILDREN_ONLY
+		mask.draw.connect(_draw_backdrop_mask.bind(mask, part))
+		_static.add_child(mask)
+		_static.move_child(mask, order)
+		order += 1
+		for layer in _backdrops[part]:
+			if _in_front_of_wall(layer):
+				_add_backdrop_layer(mask, layer, part)
+
+
+func _add_backdrop_layer(mask: Node2D, layer: Dictionary, part: String) -> void:
+	var node := Node2D.new()
+	node.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	node.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+	node.modulate = layer["tint"]
+	node.draw.connect(_draw_backdrop_layer.bind(node, layer, part))
+	mask.add_child(node)
+	_backdrop_nodes.append({"node": node})
+
+
+## Columns (layers stretched to the room's height) stand in front of the wall and its things.
+func _in_front_of_wall(layer: Dictionary) -> bool:
+	return layer["stretch"].size() == 2
+
+
+## The open cells of a part (or of the whole level, for ""), where its backdrop shows.
+func _draw_backdrop_mask(v: Node2D, part: String) -> void:
+	for row in map.size():
+		if part != "" and _backdrop_part(row) != part:
+			continue
+		var start := -1
+		for col in map[row].length() + 1:
+			var open := col < map[row].length() and map[row][col] != "#"
+			if open and start < 0:
+				start = col
+			elif not open and start >= 0:
+				v.draw_rect(Rect2(start * TILE, row * TILE, (col - start) * TILE, TILE), Color.WHITE)
+				start = -1
+
+
+## One backdrop layer, moved by its parallax against the camera.
+func _draw_backdrop_layer(v: Node2D, layer: Dictionary, part: String) -> void:
+	if not _camera:
+		return
+	var center := _camera.get_screen_center_position()
+	var half := SCREEN / _camera.zoom / 2.0 + Vector2(TILE, TILE)
+	var view := Rect2(center - half, half * 2.0)
+	var texture: Texture2D = layer["texture"]
+	var size: Vector2 = texture.get_size() * float(layer["scale"])
+	var parallax := float(layer["parallax"])
+	# Only sideways: the wall's things hang at fixed heights, so the wall must not slide up or down.
+	var shift := Vector2(center.x * (1.0 - parallax), 0.0)
+	if layer["fill"]:
+		var start := shift + ((view.position - shift) / size).floor() * size
+		_draw_tiled(v, texture, Rect2(start, view.end - start), float(layer["scale"]))
+		return
+	for room in _room_boxes:
+		var box: Rect2i = _room_boxes[room]
+		var area := Rect2(Vector2(box.position) * TILE, Vector2(box.size) * TILE)
+		if not area.intersects(view) or _backdrop_part(box.end.y - 1) != part:
+			continue
+		var left := maxf(area.position.x, view.position.x)
+		var right := minf(area.end.x, view.end.x)
+		var y := area.end.y - size.y - float(layer["lift"])
+		# Copy n belongs at n * spacing in the level and is there when the camera looks right at
+		# it, like the things on the wall, so the editor's guides (LevelMap) show where it stands.
+		var spacing := backdrop_spacing(size.x, parallax, layer["spacing"])
+		var offset: float = layer["offset"]
+		var first := ceili((left - size.x - shift.x - parallax * offset) / (parallax * spacing))
+		var last := floori((right - shift.x - parallax * offset) / (parallax * spacing))
+		var textures: Array = layer["textures"]
+		var scale := float(layer["scale"])
+		for n in range(first, last + 1):
+			texture = textures[posmod(n, textures.size())]
+			var x := shift.x + parallax * (spacing * n + offset)
+			var from := maxf(x, area.position.x)
+			var to := minf(x + size.x, area.end.x)
+			if to <= from:
+				continue
+			var columns := Vector2((from - x) / scale, (to - from) / scale)
+			if layer["stretch"].size() == 2:
+				_draw_stretched(v, texture, Rect2(from, area.position.y, to - from, area.size.y - float(layer["lift"])), columns, layer["stretch"], scale)
+			else:
+				v.draw_texture_rect_region(texture, Rect2(from, y, to - from, size.y), Rect2(columns.x, 0.0, columns.y, size.y / scale))
+
+
+## A picture standing the whole height of rect: its rows above stretch[0] at the top, its rows from
+## stretch[1] down at the bottom, and the rows between repeated down the middle (a column's shaft).
+## columns are the picture's columns drawn: first and how many.
+func _draw_stretched(v: Node2D, texture: Texture2D, rect: Rect2, columns: Vector2, stretch: Array, scale: float) -> void:
+	var top := float(stretch[0])
+	var bottom := float(stretch[1])
+	var height := texture.get_height()
+	var top_px := top * scale
+	var bottom_px := (height - bottom) * scale
+	v.draw_texture_rect_region(texture, Rect2(rect.position.x, rect.end.y - bottom_px, rect.size.x, bottom_px), Rect2(columns.x, bottom, columns.y, height - bottom))
+	v.draw_texture_rect_region(texture, Rect2(rect.position, Vector2(rect.size.x, top_px)), Rect2(columns.x, 0.0, columns.y, top))
+	var y := rect.position.y + top_px
+	var end := rect.end.y - bottom_px
+	var shaft := (bottom - top) * scale
+	while y < end:
+		var piece := minf(shaft, end - y)
+		v.draw_texture_rect_region(texture, Rect2(rect.position.x, y, rect.size.x, piece), Rect2(columns.x, top, columns.y, piece / scale))
+		y += shaft
+
+
+## How far apart, in the level, the copies of a backdrop picture size wide stand: whole tiles, far
+## enough that the copies do not touch when they slide together by the parallax, or the layer's
+## own spacing in tiles when that is further.
+static func backdrop_spacing(width: float, parallax: float, tiles := 0.0) -> float:
+	return maxf(ceilf(width / parallax / TILE), tiles) * TILE
+
+
+## A picture repeated over a rectangle from its top left corner, each picture pixel scale pixels big.
+func _draw_tiled(v: Node2D, texture: Texture2D, rect: Rect2, scale: float) -> void:
+	v.draw_texture_rect_region(texture, rect, Rect2(Vector2.ZERO, rect.size / scale))
+
+
+func _add_room_shade() -> void:
+	_room_shade = null
+	_room_of.clear()
+	if not dungeon:
+		return
+	_room_dark = PackedFloat32Array()
+	_room_dark.resize(map.size() * map[0].length())
+	_room_dark.fill(ROOM_DARK)
+	_label_rooms()
+	_room_shade = Node2D.new()
+	_room_shade.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_room_shade.draw.connect(_draw_room_shade)
+	_level.add_child(_room_shade)
+
+
+## Wiesław's size for the level (see DUNGEON_WIESLAW).
+func _wieslaw_size() -> float:
+	return DUNGEON_WIESLAW if dungeon else WIESLAW_SIZE
+
+
+## A cell in a narrow upright passage through stone (a ladder shaft or a hole between floors): open,
+## with at most two open cells side by side in its row.
+func _in_passage(row: int, col: int) -> bool:
+	var width := 1
+	for dir in [-1, 1]:
+		var at: int = col + dir
+		while width <= 3 and not _stone_or_hidden(row, at):
+			width += 1
+			at += dir
+	return width <= 2
+
+
+## Splits the open cells into rooms and passages (_room_of), and notes for each passage the rooms it
+## joins and where it meets them (_passages).
+func _label_rooms() -> void:
+	_room_of.clear()
+	_passages.clear()
+	var width := map[0].length()
+	_room_of.resize(map.size() * width)
+	_room_of.fill(-1)
+	var passage := PackedByteArray()
+	passage.resize(map.size() * width)
+	for row in map.size():
+		for col in width:
+			passage[row * width + col] = 1 if not _stone_or_hidden(row, col) and _in_passage(row, col) else 0
+	var count := 0
+	for row in map.size():
+		for col in width:
+			if _stone_or_hidden(row, col) or _room_of[row * width + col] >= 0:
+				continue
+			var kind := passage[row * width + col]
+			var queue: Array[Vector2i] = [Vector2i(col, row)]
+			_room_of[row * width + col] = count
+			var rows := Vector2i(row, row)
+			while not queue.is_empty():
+				var cell: Vector2i = queue.pop_back()
+				rows = Vector2i(mini(rows.x, cell.y), maxi(rows.y, cell.y))
+				for side in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+					var next: Vector2i = cell + side
+					if next.x < 0 or next.x >= width or next.y < 0 or next.y >= map.size() or _stone_or_hidden(next.y, next.x):
+						continue
+					var k := next.y * width + next.x
+					if _room_of[k] >= 0 or passage[k] != kind:
+						continue
+					_room_of[k] = count
+					queue.append(next)
+			if kind == 1:
+				_passages[count] = {"rows": rows, "rooms": {}}
+			count += 1
+	for row in map.size():
+		for col in width:
+			var here := _room_of[row * width + col]
+			if not _passages.has(here):
+				continue
+			for dir in [-1, 1]:
+				var next_row: int = row + dir
+				if next_row < 0 or next_row >= map.size():
+					continue
+				var there := _room_of[next_row * width + col]
+				if there >= 0 and not _passages.has(there):
+					# Where the passage meets the room, in level pixels.
+					_passages[here]["rooms"][there] = float(row * TILE if dir < 0 else (row + 1) * TILE)
+
+
+## How lit each room and passage is now: the one Wiesław is in fully; from inside a passage the
+## rooms it joins more the closer he is to them; a passage as much as the room it opens into.
+func _room_light() -> Dictionary:
+	var width := map[0].length()
+	var eye := player.position - Vector2(0, 40)
+	var cell := Vector2i(floori(eye.x / TILE), floori(eye.y / TILE))
+	if cell.y >= 0 and cell.y < map.size() and cell.x >= 0 and cell.x < width and _room_of[cell.y * width + cell.x] >= 0:
+		_room_here = _room_of[cell.y * width + cell.x]
+	var light := {_room_here: 1.0}
+	if _passages.has(_room_here):
+		var info: Dictionary = _passages[_room_here]
+		var span := float(info["rows"].y - info["rows"].x + 1) * TILE
+		for room in info["rooms"]:
+			var near := 1.0 - absf(eye.y - float(info["rooms"][room])) / span
+			light[room] = clampf(near, 0.0, 1.0)
+	else:
+		for passage in _passages:
+			var rooms: Dictionary = _passages[passage]["rooms"]
+			if rooms.has(_room_here):
+				light[passage] = 0.6
+	return light
+
+
+func _update_room_shade(delta: float) -> void:
+	if not _room_shade or not player or not _camera:
+		return
+	var columns := _visible_columns()
+	var center := _camera.get_screen_center_position()
+	var half_rows := ceili(SCREEN.y / _camera.zoom.y / TILE / 2.0) + 2
+	var top := clampi(floori(center.y / TILE) - half_rows, 0, map.size() - 1)
+	var bottom := clampi(floori(center.y / TILE) + half_rows, 0, map.size() - 1)
+	var left := clampi(columns.x, 0, map[0].length() - 1)
+	var right := clampi(columns.y, 0, map[0].length() - 1)
+	_room_window = Rect2i(left, top, right - left + 1, bottom - top + 1)
+	var light := _room_light()
+	var width := map[0].length()
+	if not _room_image or _room_image.get_size() != _room_window.size:
+		_room_image = Image.create(_room_window.size.x, _room_window.size.y, false, Image.FORMAT_RGBA8)
+		_room_texture = null
+	# How dark each open cell should be; stone takes the lightest open cell around it.
+	var wanted := PackedFloat32Array()
+	wanted.resize(_room_window.size.x * _room_window.size.y)
+	for row in range(top, bottom + 1):
+		for col in range(left, right + 1):
+			var room := _room_of[row * width + col]
+			wanted[(row - top) * _room_window.size.x + col - left] = ROOM_DARK * (1.0 - float(light.get(room, 0.0))) if room >= 0 else -1.0
+	var eye := player.position - Vector2(0, 40)
+	for row in range(top, bottom + 1):
+		for col in range(left, right + 1):
+			var k := (row - top) * _room_window.size.x + col - left
+			var dark := wanted[k]
+			if dark < 0.0:
+				dark = ROOM_DARK
+				for dy in [-1, 0, 1]:
+					for dx in [-1, 0, 1]:
+						var y: int = row - top + dy
+						var x: int = col - left + dx
+						if y >= 0 and y < _room_window.size.y and x >= 0 and x < _room_window.size.x and wanted[y * _room_window.size.x + x] >= 0.0:
+							dark = minf(dark, wanted[y * _room_window.size.x + x])
+				dark *= _lamp_shade(Vector2(col + 0.5, row + 0.5), light)
+			# Wiesław's glow.
+			var away := eye.distance_to((Vector2(col, row) + Vector2(0.5, 0.5)) * TILE) / TILE
+			dark *= clampf(away / GLOW_REACH, 0.0, 1.0)
+			var at := row * width + col
+			_room_dark[at] = move_toward(_room_dark[at], dark, delta * ROOM_FADE)
+			_room_image.set_pixel(col - left, row - top, Color(ROCK_INK, _room_dark[at]))
+	if not _room_texture:
+		_room_texture = ImageTexture.create_from_image(_room_image)
+	else:
+		_room_texture.update(_room_image)
+	_room_shade.queue_redraw()
+
+
+## How much of the shade is left on stone near a flame (1 = all of it). With rooms given, only the
+## flames in a lit room count.
+func _lamp_shade(at: Vector2, rooms: Dictionary) -> float:
+	var width := map[0].length()
+	var shade := 1.0
+	var cell := Vector2i(floori(at.x), floori(at.y))
+	for i in _lamps.size():
+		var lamp := _lamps[i]
+		if not rooms.is_empty() and float(rooms.get(_room_of[int(lamp.y) * width + int(lamp.x)], 0.0)) < 0.5:
+			continue
+		var cells := _lamp_cells[i]
+		if not (cells.has(cell) or cells.has(cell - Vector2i(1, 0)) or cells.has(cell - Vector2i(0, 1)) or cells.has(cell - Vector2i(1, 1))):
+			continue
+		var away := Vector2(lamp.x, lamp.y).distance_to(at)
+		shade = minf(shade, clampf((away - LAMP_CLEAR) / (lamp.z - LAMP_CLEAR), 0.0, 1.0))
+	return shade
+
+
+func _draw_room_shade() -> void:
+	if _room_texture:
+		_room_shade.draw_texture_rect(_room_texture, Rect2(Vector2(_room_window.position) * TILE, Vector2(_room_window.size) * TILE), false)
+
+
 ## Works out _rock_depth: how far each stone cell is from open air, counting a hidden room as stone
 ## (it must not give itself away) and the land outside the map as stone below the starting ground.
 func _measure_rock() -> void:
 	_rock_depth.clear()
+	_lamps.clear()
+	_lamp_cells.clear()
 	var deepest := ROCK_DARK.size() - 1
 	var open: Array[Vector2i] = []
 	for row in map.size():
@@ -2349,11 +3248,15 @@ func _measure_rock() -> void:
 		for col in map[row].length():
 			var rock: bool = map[row][col] == "#" or map[row][col] == "u"
 			depths[col] = deepest if rock else 0
+			if map[row][col] == "y":
+				_lamps.append(Vector3(col + 0.5, row + 0.2, LIGHT_FIRE.x))
+			elif _torch_here(row, col):
+				_lamps.append(Vector3(col + 0.5, row + 0.2, LIGHT_TORCH.x))
 			if not rock:
 				open.append(Vector2i(col, row))
 		_rock_depth.append(depths)
 	for row in map.size():
-		if row * TILE < _horizon:
+		if row * TILE < _horizon and _land_around():
 			for col in [-1, map[row].length()]:
 				open.append(Vector2i(col, row))
 	for step in range(1, deepest):
@@ -2365,6 +3268,35 @@ func _measure_rock() -> void:
 					_rock_depth[at.y][at.x] = step
 					next.append(at)
 		open = next
+	for lamp in _lamps:
+		_lamp_cells.append(_lamp_reach(lamp))
+
+
+## The cells a lamp lights: open cells within its reach, and stone up to LIT_EDGE deep from
+## the side the lamp is on (so never the far side of a floor).
+func _lamp_reach(lamp: Vector3) -> Dictionary:
+	var deepest := ceili(LIT_EDGE / TILE)
+	var start := Vector2i(int(lamp.x), int(lamp.y))
+	var seen := {start: 0}
+	var todo: Array[Vector2i] = [start]
+	while not todo.is_empty():
+		var cell: Vector2i = todo.pop_back()
+		var steps: int = seen[cell]
+		for side in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+			var at: Vector2i = cell + side
+			if at.y < 0 or at.y >= map.size() or at.x < 0 or at.x >= map[at.y].length():
+				continue
+			if Vector2(at.x + 0.5, at.y + 0.5).distance_to(Vector2(lamp.x, lamp.y)) > lamp.z:
+				continue
+			var rock: bool = map[at.y][at.x] == "#" or map[at.y][at.x] == "u"
+			if not rock and steps > 0:
+				continue
+			var next := steps + 1 if rock else 0
+			if next > deepest or (seen.has(at) and seen[at] <= next):
+				continue
+			seen[at] = next
+			todo.append(at)
+	return seen
 
 
 ## How dark the stone is at a cell corner: the four cells around it averaged, so the darkness
@@ -2375,10 +3307,10 @@ func _rock_dark_at(row: int, col: int) -> float:
 		var r: int = clampi(cell.y, 0, map.size() - 1)
 		var c: int = cell.x
 		if c < 0 or c >= map[r].length():
-			sum += 0.0 if r * TILE < _horizon else ROCK_DARK[-1]
+			sum += 0.0 if r * TILE < _horizon and _land_around() else ROCK_DARK[-1]
 		else:
 			sum += ROCK_DARK[_rock_depth[r][c]]
-	return sum / 4.0
+	return sum / 4.0 * _lamp_shade(Vector2(col, row), {})
 
 
 ## Darkens the inside of the castle stone (see ROCK_DARK).
@@ -2404,7 +3336,8 @@ func _draw_rock_dark(v: Node2D) -> void:
 					corners[k] *= TILE
 				shapes.append([corners, colors])
 		_rock_mesh = _shade_mesh(shapes)
-	v.draw_mesh(_rock_mesh, null)
+	if _rock_mesh.get_surface_count() > 0:
+		v.draw_mesh(_rock_mesh, null)
 
 
 ## A dungeon floor or ceiling block: grey stones, lit on the edge that faces open air.
@@ -2505,7 +3438,8 @@ func _draw_static_part(v: Node2D, part: String, span: Vector2i) -> void:
 		"middle":
 			if dungeon:
 				# A window or banner reaching into the next strip is drawn whole by its own strip.
-				_draw_wall_things(v, span)
+				if not _wall_moves():
+					_draw_wall_things(v, span)
 			if dungeon and not _castle.is_empty():
 				_draw_castle(v, span)
 		"front":
@@ -2529,6 +3463,8 @@ func _draw_static_back(v: Node2D, span: Vector2i) -> void:
 				under_ground = true
 			elif under_ground or _shaft(row, col) or _in_hole(row, col):
 				under_ground = true
+				if _backdrops.has(_backdrop_part(row)):
+					continue
 				if dungeon and _wall_picture(row) != "":
 					if run.x >= 0 and run.y == row - 1 and _wall_picture(run.x) == _wall_picture(row):
 						run.y = row
@@ -2545,8 +3481,59 @@ func _draw_static_back(v: Node2D, span: Vector2i) -> void:
 			_draw_wall_run(v, col, run)
 
 
+## One cell of a plank platform: the board's end at either end of a run of "=", the plain middle
+## between, and a bracket under each end.
+func _draw_plank(v: Node2D, row: int, col: int, at: Vector2) -> void:
+	var left := col == 0 or map[row][col - 1] != "="
+	var right := col + 1 >= map[row].length() or map[row][col + 1] != "="
+	var parts: Dictionary = PLANK_PARTS
+	if left and right:
+		# A single cell: both ends, half a cell each.
+		var half := Vector2(8, 5)
+		v.draw_texture_rect_region(_plank_board, Rect2(at, half * PLANK_SCALE), Rect2(parts["left"].position, half), PLANK_TINT)
+		v.draw_texture_rect_region(_plank_board, Rect2(at + Vector2(TILE / 2.0, 0), half * PLANK_SCALE),
+			Rect2(parts["right"].position + Vector2(8, 0), half), PLANK_TINT)
+	else:
+		var part: Rect2 = parts["left"] if left else parts["right"] if right else parts["middle"]
+		v.draw_texture_rect_region(_plank_board, Rect2(at, part.size * PLANK_SCALE), part, PLANK_TINT)
+	if left or right:
+		var bracket: Rect2 = parts["bracket"]
+		var x := at.x + (TILE - bracket.size.x * PLANK_SCALE) / 2.0
+		if not (left and right):
+			x = at.x + 4.0 * PLANK_SCALE if left else at.x
+		var shown := Rect2(Vector2(x, at.y + parts["left"].size.y * PLANK_SCALE), bracket.size * PLANK_SCALE)
+		if right and not left:
+			# The right bracket is the left one mirrored.
+			shown.position.x = at.x + TILE - 4.0 * PLANK_SCALE - shown.size.x
+			shown.size.x = -shown.size.x
+			shown.position.x -= shown.size.x
+		v.draw_texture_rect_region(_plank_board, shown, bracket, PLANK_TINT)
+
+
 func _draw_static_front(v: Node2D, span: Vector2i) -> void:
 	var ink := Color("2b1d14")
+	for thing in _decor:
+		if thing["on"] != "sciana" and thing["col"] >= span.x and thing["col"] < span.y:
+			var rect: Rect2 = thing["rect"]
+			if thing["on"] == "sufit" and rect.position.y > thing["hang"] + 8.0:
+				# A chain from the ceiling down to what hangs low.
+				var x := snappedf(rect.get_center().x, 2.0)
+				var y: float = thing["hang"]
+				if _hang_link:
+					# The chain picture's links, tiled down to the top of what hangs.
+					var size := _hang_link.get_size() * _hang_scale
+					x = snappedf(x - size.x / 2.0, _hang_scale)
+					while y < rect.position.y + 4.0:
+						var part := minf(size.y, rect.position.y + 4.0 - y)
+						v.draw_texture_rect_region(_hang_link, Rect2(x, y, size.x, part),
+							Rect2(Vector2.ZERO, Vector2(_hang_link.get_width(), part / _hang_scale)))
+						y += size.y
+				var k := 0
+				while not _hang_link and y < rect.position.y + 4.0:
+					v.draw_rect(Rect2(x - (4.0 if k % 2 == 0 else 1.0), y, 8.0 if k % 2 == 0 else 2.0, 12.0), Color("2e2a27"))
+					y += 10.0
+					k += 1
+			v.draw_texture_rect(thing["picture"], rect, false)
 	for row in map.size():
 		for col in range(span.x, mini(span.y, map[row].length())):
 			var at := Vector2(col * TILE, row * TILE)
@@ -2586,9 +3573,11 @@ func _draw_static_front(v: Node2D, span: Vector2i) -> void:
 					v.draw_rect(Rect2(at + Vector2(27, 28), Vector2(10, 12)), Color("f2c14e"))
 				_ when dungeon and _pieces.has(CASTLE_FURNITURE.get(map[row][col], "")):
 					# Furniture stands on the floor, centred on its cell.
+					if map[row][col] == "y" and not _fire_frames.is_empty():
+						continue
 					var piece: Texture2D = _pieces[CASTLE_FURNITURE[map[row][col]]]
 					v.draw_texture(piece, at + Vector2(TILE / 2.0 - piece.get_width() / 2.0, TILE - piece.get_height()))
-				_ when dungeon and _pieces.has(CASTLE_WALL_PICTURES.get(map[row][col], "")):
+				_ when dungeon and not _wall_moves() and _pieces.has(CASTLE_WALL_PICTURES.get(map[row][col], "")):
 					var on_wall: Texture2D = _pieces[CASTLE_WALL_PICTURES[map[row][col]]]
 					v.draw_texture(on_wall, at + (Vector2(TILE, TILE) - on_wall.get_size()) / 2.0)
 				_ when dungeon and _pieces.has(CASTLE_HANGING.get(map[row][col], "")):
@@ -2626,6 +3615,8 @@ func _draw_static_front(v: Node2D, span: Vector2i) -> void:
 					v.draw_rect(cell, Color("c08a4a"))
 					v.draw_rect(cell.grow(-3), ink, false, 3.0)
 					v.draw_line(at + Vector2(6, 6), at + Vector2(58, 58), ink, 3.0)
+				"=" when dungeon and _plank_board:
+					_draw_plank(v, row, col, at)
 				"=" when dungeon and _pieces.has("plank"):
 					v.draw_texture(_pieces["plank"], at)
 				"=" when dungeon:
@@ -2740,6 +3731,9 @@ func _draw_tiles() -> void:
 
 
 func _process(delta: float) -> void:
+	_update_room_shade(delta)
+	for layer in _backdrop_nodes:
+		layer["node"].queue_redraw()
 	for effect in _effects.duplicate():
 		effect["time"] += delta
 		if effect["time"] > (1.5 if effect["kind"] == "nokey" else 0.5):
@@ -2792,7 +3786,7 @@ func _draw_key_hints() -> void:
 		_hints.draw_string(ThemeDB.fallback_font, at + Vector2(-17, 8), hint[0], HORIZONTAL_ALIGNMENT_CENTER, 34, 22, Color("2b1d14"))
 
 
-## Until Wiesław first climbs, W and S over the end of the first ladder he comes near, and an
+## Until Wiesław first climbs, W and S over the end of the first ladder he stands at, and an
 ## arrow blinking along the ladder from that end.
 func _draw_ladder_hint() -> void:
 	if learned.has("ladder"):
@@ -2802,7 +3796,8 @@ func _draw_ladder_hint() -> void:
 		var at := map[row].find("H")
 		if at >= 0 and (col < 0 or at < col):
 			col = at
-	if col < 0 or absf((col + 0.5) * TILE - player.position.x) > 5 * TILE:
+	# Only once Wiesław stands at the ladder.
+	if col < 0 or absf((col + 0.5) * TILE - player.position.x) > 0.8 * TILE:
 		return
 	var rows := []
 	for row in map.size():
@@ -2902,13 +3897,14 @@ func _draw_key_line(canvas: CanvasItem, line: Array, center: Vector2) -> void:
 ## and jumping over the start, the sword (and apples) before the first Viking, the mug at the
 ## brother who sold it. Each goes once it has been used.
 func _draw_first_keys() -> void:
+	# Walking and jumping over the start from the first moment, gone once Wiesław moves.
 	if _start_at != Vector2.INF:
-		if absf(player.position.x - _start_at.x) > 6 * TILE:
+		if absf(player.position.x - _start_at.x) > TILE / 2.0:
 			learned["walk"] = true
 		if not learned.has("walk"):
-			var middle := Vector2(maxf(_start_at.x, 480.0), _start_at.y - 300.0)
-			_draw_key_line(_hints, [["A", "D"], "albo", ["<", ">"], "chodzenie"], middle)
-			_draw_key_line(_hints, [["W"], "albo", ["^"], "skok, w powietrzu jeszcze raz"], middle + Vector2(0, 72))
+			var over := Vector2(maxf(_start_at.x, 480.0), _start_at.y - 300.0)
+			_draw_key_line(_hints, [["A", "D"], "albo", ["<", ">"], "chodzenie"], over)
+			_draw_key_line(_hints, [["W"], "albo", ["^"], "skok, w powietrzu jeszcze raz"], over + Vector2(0, 72))
 	if _first_viking_at != Vector2.INF and not learned.has("sword"):
 		var line := [["Spacja"], "miecz"]
 		if apples > 0:
@@ -2958,6 +3954,10 @@ func _draw_shop(v: Node2D) -> void:
 			v.draw_texture_rect(heart, Rect2(icon - size / 2, size), false, tint)
 		elif i == 0:
 			v.draw_circle(icon, 22, Color(Color("d62828"), tint.a))
+		elif _items.has("mug"):
+			var picture: Texture2D = _items["mug"]
+			var size := picture.get_size()
+			v.draw_texture_rect(picture, Rect2(icon - size / 2, size), false, tint)
 		else:
 			v.draw_rect(Rect2(icon - Vector2(18, 16), Vector2(36, 40)), Color(Color("c08a4a"), tint.a))
 			v.draw_rect(Rect2(icon - Vector2(18, 26), Vector2(36, 11)), Color(Color("f4f0e0"), tint.a))
@@ -3023,18 +4023,18 @@ func _move_camera(delta: float) -> void:
 		return
 	# In the castle: kept to the floor, looking down ahead of a fall, Wiesław low in the frame.
 	var on_floor := player.is_on_floor() or _climbing
-	# Stepping up onto a shelf, a crate or a chest does not move the camera; only stone floor does,
-	# or going higher than that.
-	var on_stone := tile_at(player.position + Vector2(0, 8)) == "#" or _climbing
-	if on_floor and (on_stone or player.position.y > _floor_y or player.position.y < _floor_y - 3.0 * TILE):
+	if on_floor:
 		_floor_y = player.position.y
-	elif player.position.y < _floor_y - 3.0 * TILE:
-		_floor_y = player.position.y + 3.0 * TILE
+	elif player.position.y < _floor_y - 2.0 * TILE:
+		_floor_y = player.position.y + 2.0 * TILE
 	var falling := not on_floor and player.position.y > _floor_y + 8.0
 	var look := clampf(player.velocity.y / 900.0, 0.0, 1.0) * FALL_LOOK if falling else 0.0
 	_look_down = move_toward(_look_down, look, delta * 600.0)
 	var target := (player.position.y if falling else _floor_y) + _look_down
-	_camera.position = Vector2(0, target - player.position.y)
+	# The camera glides to its height: quickly in a fall, gently going up.
+	var rate := CAMERA_FALL_RATE if target > _camera_y else CAMERA_RISE_RATE
+	_camera_y = lerpf(_camera_y, target, 1.0 - exp(-rate * delta))
+	_camera.position = Vector2(0, _camera_y - player.position.y)
 	_camera.offset = Vector2(_look, -FRAME_LOW * SCREEN.y / _camera.zoom.y) + jolt
 
 
@@ -3075,9 +4075,253 @@ func _place_near_things() -> void:
 			if map[row][col] == "#" and map[row + 1][col] != "#":
 				ceilings.append((row + 1) * TILE)
 		if not ceilings.is_empty():
-			_near_things.append({"kind": "chain", "pos": Vector2((col + 0.5) * TILE, ceilings[dice.randi() % ceilings.size()]),
-				"seed": dice.randi(), "size": dice.randf_range(0.8, 1.25)})
+			var top := ceilings[dice.randi() % ceilings.size()]
+			var floor_row := int(top / TILE)
+			while floor_row < map.size() - 1 and map[floor_row][col] != "#":
+				floor_row += 1
+			# Only in rooms tall enough that a long chain does not hide the way.
+			if floor_row * TILE - top >= NEAR_MIN_ROOM * TILE and _castle_part(int(top / TILE)) != "hall":
+				# "hook": where on the screen the hook hangs while Wiesław stands on the floor.
+				_near_things.append({"kind": "chain", "pos": Vector2((col + 0.5) * TILE, top),
+					"seed": dice.randi(), "size": dice.randf_range(0.8, 1.25), "room": floor_row * TILE - top,
+					"rest": floor_row * TILE, "hook": dice.randf_range(0.3, 0.48)})
 		col += dice.randi_range(NEAR_EVERY.x, NEAR_EVERY.y)
+
+
+## Reads ozdoby.json (see DECOR_DIR): "blisko" for the near chains, "ozdoby" for the kinds of
+## scattered things ({"files", "on": sufit/podloga/sciana, "parts", "chance" per cell, "scale",
+## optional "flames" and "eyes" as picture pixels}) and "kapanie" for the dripping water.
+func _load_decor() -> void:
+	_decor_kinds.clear()
+	_near_pictures.clear()
+	_drip_spec = {}
+	if not FileAccess.file_exists(DECOR_DIR + "ozdoby.json"):
+		return
+	var spec = JSON.parse_string(FileAccess.get_file_as_string(DECOR_DIR + "ozdoby.json"))
+	if not spec is Dictionary:
+		return
+	var near: Dictionary = spec.get("blisko", {})
+	for file in near.get("files", []):
+		if ResourceLoader.exists(DECOR_DIR + str(file)):
+			_near_pictures.append(load(DECOR_DIR + str(file)))
+	_near_scale = float(near.get("scale", 3))
+	_hang_link = null
+	var link: Dictionary = spec.get("ogniwo", {})
+	if ResourceLoader.exists(DECOR_DIR + str(link.get("file", ""))):
+		_hang_link = load(DECOR_DIR + str(link["file"]))
+		_hang_scale = float(link.get("scale", 2))
+	for entry in spec.get("ozdoby", []):
+		var pictures: Array[Texture2D] = []
+		for file in entry.get("files", []):
+			if ResourceLoader.exists(DECOR_DIR + str(file)):
+				pictures.append(load(DECOR_DIR + str(file)))
+		if pictures.is_empty():
+			continue
+		var kind: Dictionary = entry.duplicate()
+		kind["pictures"] = pictures
+		_decor_kinds.append(kind)
+	_drip_spec = spec.get("kapanie", {})
+
+
+## Scatters the things of ozdoby.json over the castle: each free cell under a ceiling, on a floor
+## or (in the dungeons) on the wall a step above the floor gets one with its kind's chance, when
+## it fits there without touching anything painted on the map. The same level always gets the
+## same things.
+func _place_decor() -> void:
+	_decor.clear()
+	_drips.clear()
+	if not dungeon or map.is_empty():
+		return
+	var dice := RandomNumberGenerator.new()
+	dice.seed = map[0].length() * 17 + map.size() * 7 + 3
+	# Cells to keep clear: everything painted, with a cell around it, and more around the start.
+	var taken := {}
+	for row in map.size():
+		for col in map[row].length():
+			var letter := map[row][col]
+			if letter == " " or letter == "#":
+				continue
+			var around := 3 if letter == "P" else 1
+			for r in range(row - 1, row + 2):
+				for c in range(col - around, col + around + 1):
+					taken[Vector2i(c, r)] = true
+	for row in range(1, map.size() - 2):
+		var part := "dungeon" if _castle_part(row) == "deep" else _castle_part(row)
+		for col in range(1, map[row].length() - 1):
+			if map[row][col] != " " or taken.has(Vector2i(col, row)):
+				continue
+			var on := ""
+			if map[row - 1][col] == "#":
+				on = "sufit"
+			elif map[row + 1][col] == "#":
+				on = "podloga"
+			elif map[row + 2][col] == "#" and _wall_moves():
+				on = "sciana"
+			else:
+				continue
+			# One roll for the cell, then a kind by its share of the chances, so no kind crowds out
+			# the others.
+			var roll := dice.randf()
+			var kind := {}
+			for candidate in _decor_kinds:
+				if candidate.get("on", "") != on or not candidate.get("parts", ["hall", "dungeon"]).has(part):
+					continue
+				roll -= float(candidate.get("chance", 0.0))
+				if roll < 0.0:
+					kind = candidate
+					break
+			if kind.is_empty():
+				continue
+			var pictures: Array = kind["pictures"]
+			var picture: Texture2D = pictures[dice.randi() % pictures.size()]
+			var thing := _fit_decor(row, col, on, picture.get_size() * float(kind.get("scale", 2)), taken, float(kind.get("nad_podloga", 0.0)))
+			if thing.is_empty():
+				continue
+			thing["picture"] = picture
+			thing["kind"] = kind
+			thing["seed"] = dice.randi()
+			thing["eyes"] = kind.has("eyes") and part != "hall" and dice.randf() < 0.7
+			_decor.append(thing)
+	_place_drips(dice, taken)
+
+
+## Where a scattered thing of a size goes when it hangs from, stands on or hangs on the wall at a
+## cell: {"rect", "on", "col"}, its cells (and DECOR_GAP beside them) marked taken; empty when it
+## does not fit there.
+## A thing with "nad_podloga" in its kind hangs on a chain low enough to be seen, its bottom that
+## many cells above the floor under it.
+func _fit_decor(row: int, col: int, on: String, size: Vector2, taken: Dictionary, above := 0.0) -> Dictionary:
+	var cells := maxi(ceili(size.x / TILE), 1)
+	var x := col * TILE + cells * TILE / 2.0 - size.x / 2.0
+	var top: float
+	match on:
+		"sufit":
+			top = row * TILE - 2.0
+			if above > 0.0:
+				var floor_row := row
+				while floor_row < map.size() - 1 and map[floor_row][col] != "#":
+					floor_row += 1
+				top = maxf(top, floor_row * TILE - above * TILE - size.y)
+		"podloga":
+			top = (row + 1) * TILE - size.y
+		_:
+			top = (row + 2) * TILE - 0.7 * TILE - size.y
+	var rows := Vector2i(floori((top + 4.0) / TILE), floori((top + size.y - 1.0) / TILE))
+	# A low hanging thing keeps clear of the banners and windows hanging over the room.
+	for r in range(row, rows.y + 1):
+		for c in range(maxi(col - 1, 0), mini(col + cells + 1, map[r].length())):
+			if map[r][c] != " " and map[r][c] != "#":
+				return {}
+	for c in range(col, col + cells):
+		if c >= map[row].length():
+			return {}
+		for r in range(maxi(rows.x, 0), mini(rows.y, map.size() - 1) + 1):
+			if map[r][c] != " " or taken.has(Vector2i(c, r)):
+				return {}
+		match on:
+			"sufit":
+				if map[row - 1][c] != "#":
+					return {}
+			"podloga":
+				if map[row + 1][c] != "#":
+					return {}
+			_:
+				if map[row + 1][c] != " " or map[row + 2][c] != "#":
+					return {}
+	if on == "sciana":
+		# Not over a column or an entrance of the back wall, nor near a torch or a window.
+		var mark := _nearest_mark(row, col)
+		if mark.size() == 3 and x < mark[1] + TILE / 2.0 and x + size.x > mark[0] - TILE / 2.0:
+			return {}
+		for r in range(maxi(rows.x - 2, 0), row + 2):
+			for c in range(maxi(col - 3, 0), mini(col + cells + 3, map[r].length())):
+				if map[r][c] == "f" or map[r][c] == "o":
+					return {}
+	for r in range(mini(row, rows.x), rows.y + 1):
+		for c in range(col - DECOR_GAP, col + cells + DECOR_GAP):
+			taken[Vector2i(c, r)] = true
+	return {"rect": Rect2(Vector2(x, top), size), "on": on, "col": col, "hang": row * TILE - 4.0}
+
+
+## Picks the ceiling cells water drips from, each over a floor not too far down.
+func _place_drips(dice: RandomNumberGenerator, taken: Dictionary) -> void:
+	if _drip_spec.is_empty():
+		return
+	var parts: Array = _drip_spec.get("parts", ["dungeon"])
+	var chance := float(_drip_spec.get("chance", 0.03))
+	for row in range(1, map.size() - 1):
+		var part := "dungeon" if _castle_part(row) == "deep" else _castle_part(row)
+		if not parts.has(part):
+			continue
+		for col in range(map[row].length()):
+			if map[row][col] != " " or map[row - 1][col] != "#" or taken.has(Vector2i(col, row)):
+				continue
+			if dice.randf() >= chance:
+				continue
+			var floor_row := row
+			while floor_row < map.size() and floor_row - row < 12 and map[floor_row][col] == " ":
+				floor_row += 1
+			if floor_row >= map.size() or map[floor_row][col] != "#":
+				continue
+			var period := dice.randf_range(DRIP_EVERY.x, DRIP_EVERY.y)
+			_drips.append({"x": col * TILE + 4.0 * dice.randi_range(4, 12), "from": row * TILE, "to": floor_row * TILE,
+				"period": period, "phase": dice.randf() * period})
+
+
+## Candle flames on the scattered things, eyes in the dark and dripping water, over the dimmed
+## level so they shine.
+func _draw_glow() -> void:
+	if _decor.is_empty() and _drips.is_empty():
+		return
+	var v := _glow
+	var span := _visible_columns()
+	for thing in _decor:
+		if thing["col"] < span.x - 4 or thing["col"] > span.y + 4:
+			continue
+		var rect: Rect2 = thing["rect"]
+		var scale: float = rect.size.x / thing["picture"].get_width()
+		var kind: Dictionary = thing["kind"]
+		var phase := float(int(thing["seed"]) % 1000) / 100.0
+		var k := 0
+		for flame in kind.get("flames", []):
+			var at := rect.position + Vector2(flame[0] + 0.5, flame[1] + 0.5) * scale
+			var flicker := 0.7 + 0.3 * sin(_anim * 9.0 + k * 1.7 + phase) * sin(_anim * 5.3 + k)
+			v.draw_circle(at, 14.0, Color(1.0, 0.7, 0.3, 0.12 * flicker))
+			v.draw_circle(at, 6.0, Color(1.0, 0.82, 0.45, 0.3 * flicker))
+			v.draw_rect(Rect2(at - Vector2(scale, scale) / 2.0, Vector2(scale, scale * 1.5)), Color(1.0, 0.95, 0.75, 0.8 * flicker))
+			k += 1
+		if thing["eyes"]:
+			# They look out for a while, blink now and then, and hide again.
+			var t := fmod(_anim + phase, 7.0)
+			if t < 5.0 and absf(t - 2.4) > 0.07 and absf(t - 4.1) > 0.07:
+				var eyes: Array = kind["eyes"]
+				var middle := rect.position + Vector2(eyes[0], eyes[1]) * scale
+				var look := Vector2(roundf(sin(_anim * 0.7 + phase)) * scale, 0)
+				for side in [-1.0, 1.0]:
+					var eye := middle + look + Vector2(side * 2.0 * scale, 0)
+					v.draw_circle(eye, 8.0, Color(1.0, 0.85, 0.3, 0.15))
+					v.draw_rect(Rect2(eye - Vector2(scale, scale), Vector2(scale, scale) * 2.0), Color(1.0, 0.9, 0.4, 0.9))
+	for drip in _drips:
+		var col := int(drip["x"] / TILE)
+		if col < span.x - 1 or col > span.y + 1:
+			continue
+		var t := fmod(_anim + float(drip["phase"]), float(drip["period"]))
+		var fall := sqrt(2.0 * (float(drip["to"]) - float(drip["from"])) / DRIP_FALL)
+		var water := Color(0.7, 0.85, 1.0, 0.55)
+		var x: float = drip["x"]
+		if t < 0.6:
+			# A drop gathers on the ceiling.
+			var grown := 4.0 * ceilf(t / 0.3)
+			v.draw_rect(Rect2(x - 2.0, drip["from"], 4.0, grown), water)
+		elif t < 0.6 + fall:
+			var y: float = drip["from"] + 0.5 * DRIP_FALL * pow(t - 0.6, 2.0)
+			v.draw_rect(Rect2(x - 2.0, snappedf(y, 4.0), 4.0, 8.0), water)
+		elif t < 0.6 + fall + DRIP_SPLASH:
+			var s: float = (t - 0.6 - fall) / DRIP_SPLASH
+			var up := snappedf(sin(s * PI) * 10.0, 2.0)
+			var fade := Color(water, water.a * (1.0 - s))
+			for side in [-1.0, 1.0]:
+				v.draw_rect(Rect2(x - 2.0 + side * snappedf(4.0 + 14.0 * s, 2.0), drip["to"] - 4.0 - up, 4.0, 4.0), fade)
 
 
 ## The near shapes, drawn on the screen over the level (see NEAR_PARALLAX).
@@ -3086,12 +4330,43 @@ func _draw_near_things() -> void:
 	var zoom := _camera.zoom.x * NEAR_PARALLAX
 	var center := _camera.get_screen_center_position()
 	for thing in _near_things:
+		# Close to the camera, so they slide faster than the level both ways. A chain comes down
+		# from above the top of the screen, and only shows while the camera is in its storey.
 		var at: Vector2 = (thing["pos"] - center) * zoom + SCREEN / 2.0
 		var size: float = thing["size"] * zoom
 		if at.x < -300.0 * size or at.x > SCREEN.x + 300.0 * size:
 			continue
+		var into: float = center.y - thing["pos"].y
+		var shade := clampf(into / NEAR_FADE, 0.0, 1.0) * clampf((float(thing["room"]) - into) / NEAR_FADE, 0.0, 1.0)
+		if shade <= 0.0:
+			continue
+		# The camera follows the floor Wiesław stands on (_camera_y), so on the chain's own floor
+		# the hook is at its height on the screen, and it slides away as the camera leaves.
+		var hook: float = float(thing["hook"]) * SCREEN.y + (float(thing["rest"]) - _camera_y) * _camera.zoom.y * NEAR_PARALLAX
+		var top := -10.0
+		if hook <= top + 20.0:
+			continue
 		var dice := RandomNumberGenerator.new()
 		dice.seed = thing["seed"]
+		if thing["kind"] == "chain" and not _near_pictures.is_empty():
+			# A long chain picture with its end at the bottom, swinging slowly from a point high
+			# above the screen.
+			var picture: Texture2D = _near_pictures[int(thing["seed"]) % _near_pictures.size()]
+			var scale := size * _near_scale
+			var pivot := Vector2(at.x, -NEAR_SWING_FROM)
+			var length := hook - pivot.y
+			var shown := minf(length / scale, picture.get_height())
+			var tint := NEAR_TINT
+			tint.a = shade
+			var phase := float(int(thing["seed"]) % 1000)
+			var period := NEAR_SWING_TIME * (0.85 + 0.3 * fposmod(phase * 0.618, 1.0))
+			var swing := sin(_anim * TAU / period + phase) * NEAR_SWING / length
+			v.draw_set_transform(pivot, swing, Vector2.ONE * scale)
+			v.draw_texture_rect_region(picture, Rect2(-picture.get_width() / 2.0, (length - shown * scale) / scale, picture.get_width(), shown),
+				Rect2(0.0, picture.get_height() - shown, picture.get_width(), shown), tint)
+			v.draw_set_transform(Vector2.ZERO)
+			continue
+		at.y = top
 		match thing["kind"]:
 			"chain":
 				var links := dice.randi_range(7, 14)
@@ -3188,20 +4463,25 @@ func _draw_hud() -> void:
 	if mugs > 0:
 		# A little mug with its foam, and how many are in the bag.
 		var mug := apples_at + Vector2(170, -26)
-		v.draw_rect(Rect2(mug, Vector2(22, 26)), Color("c08a4a"))
-		v.draw_rect(Rect2(mug, Vector2(22, 26)), ink, false, 2.0)
-		v.draw_rect(Rect2(mug + Vector2(0, -6), Vector2(22, 7)), Color("f4f0e0"))
-		v.draw_arc(mug + Vector2(24, 13), 7, -PI / 2, PI / 2, 8, ink, 3.0)
+		var count_x := 38.0
+		if _items.has("mug"):
+			var picture: Texture2D = _items["mug"]
+			var size := picture.get_size() * (40.0 / picture.get_height())
+			v.draw_texture_rect(picture, Rect2(mug + Vector2(0, 26 - size.y), size), false)
+			count_x = size.x + 10.0
+		else:
+			v.draw_rect(Rect2(mug, Vector2(22, 26)), Color("c08a4a"))
+			v.draw_rect(Rect2(mug, Vector2(22, 26)), ink, false, 2.0)
+			v.draw_rect(Rect2(mug + Vector2(0, -6), Vector2(22, 7)), Color("f4f0e0"))
+			v.draw_arc(mug + Vector2(24, 13), 7, -PI / 2, PI / 2, 8, ink, 3.0)
 		var count := "x%d (Q)" % mugs
-		v.draw_string_outline(font, mug + Vector2(38, 24), count, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, 6, halo)
-		v.draw_string(font, mug + Vector2(38, 24), count, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, ink)
+		v.draw_string_outline(font, mug + Vector2(count_x, 24), count, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, 6, halo)
+		v.draw_string(font, mug + Vector2(count_x, 24), count, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, ink)
 	var modes: Array[String] = []
 	if _music or not _sounds.is_empty():
 		modes.append("M: %s" % {"silent": "cisza", "all": "muzyka i dźwięki"}.get(Game.sound, "same dźwięki"))
 	if _art_sets.size() > 1:
 		modes.append("L: grafika")
-	if CutoutCharacter.anim_dirs().size() > 1:
-		modes.append("K: postać")
 	if level_map.is_empty():
 		modes.append("N: plansza %s" % ("rycerska" if layout == "knight" else "mario"))
 	var mode := "     ".join(modes)
