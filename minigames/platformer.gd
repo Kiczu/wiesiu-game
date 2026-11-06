@@ -156,6 +156,19 @@ const COYOTE_TIME := 0.1
 const JUMP_BUFFER := 0.12
 const HURT_TIME := 1.5
 const VIKING_SPEED := 70.0
+## How close in front (px) Wiesław must be for a Viking to swing his axe, and the rest between swings.
+const VIKING_REACH := 110.0
+const VIKING_SWING_REST := 1.0
+## A Viking sees Wiesław this many tiles ahead (and hears him this close behind), stands startled
+## for VIKING_NOTICE seconds, runs at him at VIKING_CHASE_SPEED and gives up VIKING_FORGET seconds
+## after losing sight of him.
+const VIKING_SIGHT := 7.0
+const VIKING_HEAR := 2.5
+const VIKING_NOTICE := 0.4
+const VIKING_CHASE_SPEED := 160.0
+const VIKING_FORGET := 2.5
+## How long a chasing Viking takes to turn round when Wiesław gets behind him.
+const VIKING_TURN := 0.3
 ## Rats run fast and go down with one hit.
 const RAT_SPEED := 190.0
 const PLAYER_SIZE := Vector2(40, 92)
@@ -1685,6 +1698,8 @@ func _strike(viking: Dictionary, from_dir: float, damage: int) -> void:
 		_squash(node)
 	else:
 		viking["stun"] = 0.4
+		viking.erase("swing")
+		node.set("pose", "hurt")
 		viking["push"] = from_dir * 420.0
 		viking["dir"] = -from_dir
 
@@ -1740,13 +1755,107 @@ func _move_vikings(delta: float) -> void:
 				node.position = back
 			viking["push"] *= 0.85
 			continue
+		if _viking_attacks(viking, delta):
+			continue
+		var speed := RAT_SPEED if viking.get("kind", "") == "rat" else VIKING_SPEED
+		if viking.get("kind", "") != "rat" and _viking_chases(viking, delta):
+			# He goes for Wiesław, but not off a ledge or into a wall: there he waits.
+			speed = VIKING_CHASE_SPEED if float(viking["chase"]) <= VIKING_FORGET - VIKING_NOTICE + 0.001 else 0.0
+			var front: Vector2 = node.position + Vector2(viking["dir"] * 26.0, 0)
+			var below := tile_at(front + Vector2(0, 10))
+			if tile_at(front + Vector2(0, -10)) in SOLID or not (below in SOLID or below == "="):
+				speed = 0.0
+			node.set("running", speed > 0.0)
+			if node is PixelViking and node.frames_of("run") > 0:
+				node.pose = "run"
+				node.anim_speed = 1.0
+			else:
+				node.set("anim_speed", speed / VIKING_SPEED)
+			node.position.x += viking["dir"] * speed * delta
+			node.set("facing", int(viking["dir"]))
+			continue
+		node.set("running", true)
+		node.set("anim_speed", 1.0)
+		if node is PixelViking and node.pose == "run":
+			node.pose = "walk"
 		var ahead: Vector2 = node.position + Vector2(viking["dir"] * 26.0, 0)
 		var wall := tile_at(ahead + Vector2(0, -10)) in SOLID
 		var floor_tile := tile_at(ahead + Vector2(0, 10))
 		if wall or not (floor_tile in SOLID or floor_tile == "="):
 			viking["dir"] *= -1.0
-		node.position.x += viking["dir"] * (RAT_SPEED if viking.get("kind", "") == "rat" else VIKING_SPEED) * delta
+		node.position.x += viking["dir"] * speed * delta
 		node.set("facing", int(viking["dir"]))
+
+
+## A Viking who sees Wiesław on his floor (far ahead, or close behind him) turns to him and goes
+## after him, first with a start (a "!" over his head), and forgets him a while after losing sight.
+## Returns whether he is after Wiesław.
+func _viking_chases(viking: Dictionary, delta: float) -> bool:
+	var node: Node2D = viking["node"]
+	var away: Vector2 = player.position - node.position
+	var ahead := signf(away.x) == signf(viking["dir"])
+	var chasing := float(viking.get("chase", 0.0)) > 0.0
+	# Once after Wiesław he keeps track of him all around, also over his head in a jump.
+	var reach := VIKING_SIGHT if ahead or chasing else VIKING_HEAR
+	var sees := state == "" and absf(away.y) < TILE * (3.0 if chasing else 1.2) and absf(away.x) < reach * TILE
+	if sees:
+		var row := floori((node.position.y - 10.0) / TILE)
+		var from := floori(node.position.x / TILE)
+		var to := floori(player.position.x / TILE)
+		for col in range(mini(from, to), maxi(from, to) + 1):
+			if row >= 0 and row < map.size() and col >= 0 and col < map[row].length() and map[row][col] in SOLID:
+				sees = false
+				break
+	var chase := float(viking.get("chase", 0.0))
+	if sees:
+		if chase <= 0.0:
+			node.set("alert", 0.8)
+			chase = VIKING_FORGET
+		chase = maxf(chase, VIKING_FORGET - VIKING_NOTICE)
+		if absf(away.x) > 12.0 and signf(away.x) != signf(viking["dir"]):
+			# Jumped over, Wiesław is behind him: he turns round after a moment.
+			viking["turn"] = float(viking.get("turn", 0.0)) + delta
+			if not chasing or float(viking["turn"]) >= VIKING_TURN:
+				viking["dir"] = signf(away.x)
+				viking["turn"] = 0.0
+		else:
+			viking["turn"] = 0.0
+	else:
+		chase = maxf(chase - delta, 0.0)
+	# The start: he stands for a moment before he runs.
+	if chase > VIKING_FORGET - VIKING_NOTICE:
+		chase -= delta
+	viking["chase"] = chase
+	return chase > 0.0
+
+
+## A Viking with attack frames swings his axe at Wiesław standing close in front of him, and stands
+## still while he does; the blow hurts when the axe comes down. Returns whether he is swinging.
+func _viking_attacks(viking: Dictionary, delta: float) -> bool:
+	var node: Node2D = viking["node"]
+	if not node is PixelViking or node.frames_of("attack") == 0:
+		return false
+	viking["rest"] = maxf(float(viking.get("rest", 0.0)) - delta, 0.0)
+	var strike := PixelViking.STRIKE_FRAME / float(PixelViking.ANIM_FPS["attack"])
+	if viking.has("swing"):
+		var before := float(viking["swing"])
+		viking["swing"] = before + delta
+		if before < strike and float(viking["swing"]) >= strike and _in_axe_reach(viking):
+			_hit(false)
+		if float(viking["swing"]) >= node.frames_of("attack") / float(PixelViking.ANIM_FPS["attack"]):
+			viking.erase("swing")
+			viking["rest"] = VIKING_SWING_REST
+		return true
+	if viking["rest"] <= 0.0 and state == "" and _in_axe_reach(viking):
+		viking["swing"] = 0.0
+		node.pose = "attack"
+		return true
+	return false
+
+
+func _in_axe_reach(viking: Dictionary) -> bool:
+	var away: Vector2 = player.position - viking["node"].position
+	return signf(away.x) == signf(viking["dir"]) and absf(away.x) < VIKING_REACH and absf(away.y) < TILE
 
 
 func _check_touches() -> void:
@@ -1785,7 +1894,10 @@ func _check_touches() -> void:
 func _squash(node: Node2D) -> void:
 	node.set("running", false)
 	var tween := node.create_tween()
-	if node is CutoutCharacter:
+	if node is PixelViking and node.frames_of("death") > 0:
+		node.pose = "death"
+		tween.tween_interval(node.frames_of("death") / float(PixelViking.ANIM_FPS["death"]) + 0.6)
+	elif node is CutoutCharacter:
 		node.pose = "death"
 		tween.tween_interval(1.0)
 	else:
