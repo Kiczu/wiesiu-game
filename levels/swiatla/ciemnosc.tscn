@@ -1,0 +1,4 @@
+[gd_scene format=3]
+
+[node name="Ciemnosc" type="CanvasModulate"]
+color = Color(0.36, 0.39, 0.53, 1)

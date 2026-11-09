@@ -25,9 +25,25 @@ const MIN_ROWS := 12
 		wall_guides = value
 		queue_redraw()
 
+## In the editor, a grid of boxes as big as what the camera shows (SCREEN_CELLS), so rooms can be
+## made one screen tall and wide.
+@export var screen_guides := true:
+	set(value):
+		screen_guides = value
+		queue_redraw()
+
+## How many cells the camera shows across and down.
+const SCREEN_CELLS := Vector2i(25, 14)
+const GUIDE_SCREEN := Color(1.0, 0.9, 0.3, 0.35)
 const GUIDE_BACKDROP := Color(0.55, 0.75, 1.0, 0.22)
 const GUIDE_WINDOW := Color(0.4, 1.0, 0.5, 0.9)
 const GUIDE_TORCH := Color(1.0, 0.6, 0.2, 0.9)
+
+
+## Where the first text row's first cell is, in cells of the Map.
+func _first_cell() -> Vector2i:
+	var used := ($Map as TileMapLayer).get_used_rect()
+	return Vector2i(used.position.x, used.end.y - maxi(used.size.y, MIN_ROWS))
 
 
 ## The painted level as text rows, the lowest painted row at the bottom.
@@ -46,10 +62,42 @@ func to_rows() -> Array[String]:
 	return rows
 
 
-## Name, night and rows of the level scene at path.
+## The lights placed in the scene: copies of every PointLight2D under the level (the ready ones
+## are in levels/swiatla/), moved to where they stand over the text rows. A light with the
+## "migotanie" meta flickers like a flame.
+func scene_lights() -> Array:
+	var origin := Vector2(_first_cell() * ($Map as TileMapLayer).tile_set.tile_size)
+	var lights := []
+	for light: PointLight2D in find_children("*", "PointLight2D", true, false):
+		var copy: PointLight2D = light.duplicate()
+		copy.position = _place_of(light) - origin
+		lights.append(copy)
+	return lights
+
+
+## How dark the scene is: the colour of a CanvasModulate placed in it, or clear when there is none.
+func scene_darkness() -> Color:
+	for shade: CanvasModulate in find_children("*", "CanvasModulate", true, false):
+		return shade.color
+	return Color(0, 0, 0, 0)
+
+
+## Where a node under the level stands in the level, whatever it is placed in.
+func _place_of(node: Node2D) -> Vector2:
+	var at := Transform2D()
+	var part: Node = node
+	while part and part != self:
+		if part is Node2D:
+			at = (part as Node2D).transform * at
+		part = part.get_parent()
+	return at.origin
+
+
+## Name, night, rows, lights and darkness of the level scene at path.
 static func read(path: String) -> Dictionary:
 	var level: LevelMap = load(path).instantiate()
-	var spec := {"name": level.level_name, "night": level.night, "dungeon": level.dungeon, "map": level.to_rows()}
+	var spec := {"name": level.level_name, "night": level.night, "dungeon": level.dungeon, "map": level.to_rows(),
+		"lights": level.scene_lights(), "darkness": level.scene_darkness()}
 	level.free()
 	return spec
 
@@ -70,11 +118,18 @@ func _ready() -> void:
 	stage.night = night
 	stage.dungeon = dungeon
 	stage.level_name = level_name
+	stage.scene_lights = scene_lights()
+	stage.scene_darkness = scene_darkness()
+	# The placed lights and darkness go into the game; here they would light the wrong things.
+	for node in find_children("*", "PointLight2D", true, false) + find_children("*", "CanvasModulate", true, false):
+		node.queue_free()
 	add_child(stage)
 	stage.finished.connect(stage.restart)
 
 
 func _draw() -> void:
+	if Engine.is_editor_hint() and screen_guides:
+		_draw_screen_guides()
 	if not Engine.is_editor_hint() or not dungeon or not wall_guides:
 		return
 	var map := get_node_or_null("Map") as TileMapLayer
@@ -179,3 +234,26 @@ func _solid_runs(image: Image) -> Array[Vector2]:
 func _letter(map: TileMapLayer, cell: Vector2i) -> String:
 	var tile := map.get_cell_atlas_coords(cell)
 	return LETTERS[tile.x] if tile.x >= 0 and tile.x < LETTERS.length() else " "
+
+
+## Boxes of one screen each over the painted cells, counted from the left and the bottom.
+func _draw_screen_guides() -> void:
+	var map := get_node_or_null("Map") as TileMapLayer
+	if not map:
+		return
+	var used := map.get_used_rect()
+	if used.size.x == 0:
+		return
+	var tile := float(PlatformerGame.TILE)
+	var left := used.position.x * tile
+	var right := used.end.x * tile
+	var bottom := used.end.y * tile
+	var top := used.position.y * tile
+	var x := left
+	while x <= right:
+		draw_dashed_line(Vector2(x, top), Vector2(x, bottom), GUIDE_SCREEN, 4.0, 24.0)
+		x += SCREEN_CELLS.x * tile
+	var y := bottom
+	while y >= top:
+		draw_dashed_line(Vector2(left, y), Vector2(right, y), GUIDE_SCREEN, 4.0, 24.0)
+		y -= SCREEN_CELLS.y * tile

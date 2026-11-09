@@ -540,8 +540,9 @@ func _climb_to_chest(stage: PlatformerGame) -> void:
 		floor_row += 1
 	stage.player.position = Vector2((down + 0.5) * tile, (surface + 1) * tile)
 	await _physics(2)
+	# Long enough for a ladder down a cellar one screen tall.
 	stage.input_climb = 1.0
-	await _physics(150)
+	await _physics(300)
 	stage.input_climb = 0.0
 	await _physics(20)
 	var in_cellar: bool = stage.player.position.y > (floor_row + 0.5) * tile and stage.player.is_on_floor()
@@ -554,7 +555,7 @@ func _climb_to_chest(stage: PlatformerGame) -> void:
 	await _physics(2)
 	stage.input_climb = -1.0
 	stage.input_jump = true
-	await _physics(150)
+	await _physics(300)
 	stage.input_climb = 0.0
 	stage.input_jump = false
 	await _physics(40)
