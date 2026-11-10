@@ -10,7 +10,7 @@ signal pause_requested
 const TILE := 64
 const SCREEN := Vector2(1280, 720)
 ## The camera is pulled back a little, so more of the level is in view.
-const VIEW_ZOOM := 0.8
+const VIEW_ZOOM := 1.0
 ## The castle camera is close, with Wiesław drawn smaller (DUNGEON_WIESLAW) so the rooms and the
 ## things in them look big around him.
 const DUNGEON_ZOOM := 1.0
@@ -254,6 +254,14 @@ const WINDOW_SCALE := 0.75
 const WINDOW_HIGHER_VIEW := 0.06
 ## The window glass repeats the landscape sideways but stretches its top and bottom rows on,
 ## so a window up high shows sky above the picture and not its repeat.
+## The laid pictures get darker towards their bottoms, so a clump looks round, lit from above.
+const PICTURE_VOLUME_SHADER := """
+shader_type canvas_item;
+void fragment() {
+	COLOR = texture(TEXTURE, UV) * COLOR;
+	COLOR.rgb *= mix(1.0, 0.45, smoothstep(0.3, 1.0, UV.y));
+}
+"""
 const WINDOW_VIEW_SHADER := "shader_type canvas_item;\nvarying vec4 tint;\nvoid vertex() {\n\ttint = COLOR;\n}\nvoid fragment() {\n\tCOLOR = tint * texture(TEXTURE, vec2(fract(UV.x), clamp(UV.y, 0.0, 1.0)));\n}\n"
 ## With backdrop layers the back wall and what hangs on it (windows, banners, torches, shelves)
 ## slide this much slower than the level, so the rooms get depth; each wall thing sits where the
@@ -353,6 +361,10 @@ var level_name := ""
 ## colour of its CanvasModulate (clear when it has none); see LevelMap.scene_lights.
 var scene_lights: Array = []
 var scene_darkness := Color(0, 0, 0, 0)
+## The pictures laid by hand in the level scene (see LevelMap.scene_pictures).
+var scene_pictures: Array = []
+## The scene of pictures laid in 3D in front of the level (see LevelDressing), if it has one.
+var dressing_path := ""
 ## Castle dungeons: stone walls and floors with torches instead of the outdoor art, and the
 ## drakkar tile (D) is the way out, a door.
 var dungeon := false
@@ -587,6 +599,17 @@ var _first_ground := PackedInt32Array()
 ## view: drawing every brick each frame made big levels lag, and redrawing all in view at once
 ## made the game stutter.
 var _static: Node2D
+## Cells covered by pictures laid on the ground: the drawn rims leave them to the pictures.
+var _dressed := {}
+## The laid pictures that move by depth or fade by floor, from left to right where laid:
+## [picture, where it was laid, how much faster it moves, its top or NAN when it never fades,
+## its own opacity, half its width].
+var _screen_pictures: Array = []
+## The pictures of _screen_pictures shown last frame, as [first, last + 1].
+var _screen_span := Vector2i.ZERO
+## Farther than this from the middle of the screen, a laid picture of _screen_pictures is out of
+## view whatever its depth.
+var _screen_reach := 0.0
 const STATIC_CHUNK := 16
 ## {"span": its columns, "nodes": its layers, "dirty": to be drawn again when in view}.
 var _chunks: Array[Dictionary] = []
@@ -594,6 +617,18 @@ var _chunks: Array[Dictionary] = []
 var _drawing: Node2D
 ## See _brick_texture.
 var _bricks := {}
+## Shows the pictures of dressing_path (see _add_dressing).
+var _dressing_camera: Camera3D
+var _dressing_shown: TextureRect
+var _dressing_view: SubViewport
+## The pictures of dressing_path, and with cellars the same split by the floor they dress (see
+## _floors), each floor seen in its own view: [view, camera, shown] (see _show_dressing_floor).
+var _dressing_pictures: Array[Sprite3D] = []
+var _dressing_floor_views: Array = []
+## The pictures of dressing_path that can stand in front of a hole in a floor (a pit or a ladder's
+## shaft), each with the hole: [picture, hole from x to y in metres, how much it shows] (see
+## _clear_dressing_holes).
+var _dressing_holes: Array = []
 
 
 func _ready() -> void:
@@ -616,6 +651,7 @@ func _ready() -> void:
 	_background = Node2D.new()
 	_back.add_child(_background)
 	_background.draw.connect(_draw_background)
+	_add_dressing()
 	_front = CanvasLayer.new()
 	_front.layer = 1
 	_world.add_child(_front)
@@ -663,6 +699,7 @@ func _ready() -> void:
 
 
 func restart() -> void:
+	_dressing_holes.clear()
 	if _level:
 		_world.remove_child(_level)
 		_level.queue_free()
@@ -697,6 +734,7 @@ func restart() -> void:
 	_world.add_child(_level)
 	_static = Node2D.new()
 	_level.add_child(_static)
+	_find_dressed_cells()
 	_make_chunks()
 	_windows = Node2D.new()
 	_windows.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -707,6 +745,7 @@ func restart() -> void:
 	_windows.material.shader = view
 	_windows.draw.connect(_draw_windows)
 	_level.add_child(_windows)
+	_add_scene_pictures()
 	_tiles = Node2D.new()
 	_tiles.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_tiles.draw.connect(_draw_tiles)
@@ -766,6 +805,276 @@ func restart() -> void:
 	if _music and Game.sound == "all" and not _music.playing:
 		_music.play()
 	set_physics_process(true)
+
+
+## The cells under the pictures laid on the ground (see _dressed).
+func _find_dressed_cells() -> void:
+	_dressed.clear()
+	for entry: Dictionary in scene_pictures:
+		if entry["layer"] != "ground":
+			continue
+		var picture: Sprite2D = entry["node"]
+		var area: Rect2 = picture.transform * picture.get_rect()
+		for row in range(floori(area.position.y / TILE), ceili(area.end.y / TILE)):
+			for col in range(floori(area.position.x / TILE), ceili(area.end.x / TILE)):
+				# Only cells the picture covers past their middle.
+				if area.has_point(Vector2(col + 0.5, row + 0.5) * TILE):
+					_dressed[Vector2i(col, row)] = true
+
+
+## The pictures laid in the level scene, each in its layer: behind the ground among the strips'
+## back walls, on the ground under the level's things, in front of Wiesław, and right at the
+## screen.
+func _add_scene_pictures() -> void:
+	_screen_pictures.clear()
+	if scene_pictures.is_empty():
+		return
+	var layers := {}
+	for layer: String in ["back", "ground", "front", "near"]:
+		var group := Node2D.new()
+		group.name = "Pictures_" + layer
+		layers[layer] = group
+	# Behind the ground: after every strip's back part, before the wall shading.
+	_static.add_child(layers["back"])
+	_static.move_child(layers["back"], _chunks.size())
+	_level.add_child(layers["ground"])
+	# In front of Wiesław and over the black of the other floors (see _cover): each of these
+	# pictures fades out by itself while Wiesław is on another floor (see _move_screen_pictures).
+	layers["front"].z_index = 110
+	layers["near"].z_index = 120
+	_level.add_child(layers["front"])
+	_level.add_child(layers["near"])
+	var volume := ShaderMaterial.new()
+	volume.shader = Shader.new()
+	volume.shader.code = PICTURE_VOLUME_SHADER
+	var nearest := 0.0
+	var widest := 0.0
+	for entry: Dictionary in scene_pictures:
+		var picture: Sprite2D = (entry["node"] as Sprite2D).duplicate(0)
+		picture.material = volume
+		layers[entry["layer"]].add_child(picture)
+		var depth := float(entry["depth"])
+		var fades: bool = entry["layer"] in ["front", "near"]
+		if not fades and is_zero_approx(depth):
+			continue
+		var area: Rect2 = picture.transform * picture.get_rect()
+		# Moved every frame by _move_screen_pictures, so not smoothed between physics steps.
+		picture.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
+		picture.visible = false
+		_screen_pictures.append([picture, picture.position, depth, area.position.y if fades else NAN,
+			picture.modulate.a, area.size.x / 2.0])
+		nearest = minf(nearest, depth)
+		widest = maxf(widest, area.size.x / 2.0 * (1.0 + absf(depth)))
+	_screen_pictures.sort_custom(func(a: Array, b: Array) -> bool: return a[1].x < b[1].x)
+	_screen_span = Vector2i.ZERO
+	# A picture laid this far from the middle stands past the screen's edge: the farthest
+	# (slowest) ones come in from farthest away.
+	_screen_reach = (SCREEN.x / 2.0 / minf(DUNGEON_ZOOM, VIEW_ZOOM) + widest) / (1.0 + nearest)
+
+
+## The pictures laid in 3D in front of the level (see LevelDressing): drawn over the level, under
+## the effects, through a camera that follows the level's (see _move_dressing).
+func _add_dressing() -> void:
+	if dressing_path == "" or not ResourceLoader.exists(dressing_path):
+		return
+	var dressing: Node3D = load(dressing_path).instantiate()
+	var view := SubViewport.new()
+	view.size = Vector2i(SCREEN)
+	view.transparent_bg = true
+	view.own_world_3d = true
+	view.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	view.add_child(dressing)
+	_dressing_view = view
+	if dressing.has_method("prepare"):
+		dressing.prepare()
+	_dressing_pictures.assign(dressing.find_children("*", "Sprite3D", true, false))
+	_dressing_camera = dressing.get_node_or_null("Kamera") as Camera3D
+	if not _dressing_camera:
+		_dressing_camera = Camera3D.new()
+		_dressing_camera.fov = 40.0
+		dressing.add_child(_dressing_camera)
+	_dressing_camera.keep_aspect = Camera3D.KEEP_HEIGHT
+	_dressing_camera.far = 200.0
+	var layer := CanvasLayer.new()
+	layer.layer = 1
+	_world.add_child(layer)
+	layer.add_child(view)
+	_dressing_camera.make_current()
+	var shown := TextureRect.new()
+	_dressing_shown = shown
+	shown.texture = view.get_texture()
+	shown.size = SCREEN
+	shown.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	shown.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	layer.add_child(shown)
+
+
+## Puts the camera of the 3D pictures where the level's camera looks, as far in front of the level
+## as makes the level plane fill the screen as the level's camera does.
+func _move_dressing() -> void:
+	if not _dressing_camera or not _camera or not _camera.is_inside_tree():
+		return
+	var middle := _camera.get_screen_center_position()
+	_dressing_camera.position = Vector3(middle.x / 100.0, -middle.y / 100.0,
+		LevelDressing.camera_distance(_dressing_camera.fov, _camera.zoom.y))
+	# Drawn for the night already, so only the cellars darken them, like the level around them
+	# (see _add_cellar_cover).
+	var dark := _darkness.color if _darkness and is_instance_valid(_darkness) else Color.WHITE
+	_dressing_shown.modulate = Color.WHITE.lerp(dark, _below) if _cover else dark
+	_show_dressing_floor()
+	_clear_dressing_holes()
+
+
+## With cellars (see _add_cellar_cover), only the floor Wiesław is on keeps its 3D pictures; on the
+## ladder between two floors the two cross-fade, like the black over them. Each floor is seen in a
+## view of its own, faded whole, so its pictures stay cut out (blending thousands of them one by
+## one is slow).
+func _show_dressing_floor() -> void:
+	if not _cover or _floors.is_empty():
+		return
+	if _dressing_floor_views.is_empty():
+		_split_dressing_floors()
+	var tint := _dressing_shown.modulate
+	for k in _dressing_floor_views.size():
+		var item: Array = _dressing_floor_views[k]
+		var view: SubViewport = item[0]
+		var shown := clampf(1.0 - absf(_floor_at - k), 0.0, 1.0)
+		(item[2] as TextureRect).visible = shown > 0.0
+		(item[2] as TextureRect).modulate = Color(tint, tint.a * shown)
+		view.render_target_update_mode = SubViewport.UPDATE_ALWAYS if shown > 0.0 else SubViewport.UPDATE_DISABLED
+		if shown > 0.0:
+			(item[1] as Camera3D).global_transform = _dressing_camera.global_transform
+
+
+## Moves the pictures into a view per floor (see _show_dressing_floor), each seen through a copy
+## of the dressing's camera; the dressing's own view is left empty.
+func _split_dressing_floors() -> void:
+	var layer := _dressing_shown.get_parent()
+	for k in _floors.size():
+		var view := SubViewport.new()
+		view.size = _dressing_view.size
+		view.transparent_bg = true
+		view.own_world_3d = true
+		var root := Node3D.new()
+		view.add_child(root)
+		var camera := Camera3D.new()
+		camera.fov = _dressing_camera.fov
+		camera.keep_aspect = _dressing_camera.keep_aspect
+		camera.near = _dressing_camera.near
+		camera.far = _dressing_camera.far
+		root.add_child(camera)
+		layer.add_child(view)
+		camera.make_current()
+		var shown := TextureRect.new()
+		shown.texture = view.get_texture()
+		shown.size = _dressing_shown.size
+		shown.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		shown.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		layer.add_child(shown)
+		_dressing_floor_views.append([view, camera, shown])
+	for picture in _dressing_pictures:
+		# A picture belongs to the floor of the ground it grows on: a little above its middle,
+		# as those laid along an edge hang over it, unless it says ("ziemia", level px).
+		var ground := float(picture.get_meta("ziemia", -picture.global_position.y * 100.0 - 100.0))
+		var floor := clampi(floori(_floor_of(ground)), 0, _floors.size() - 1)
+		picture.set_meta("floor", floor)
+		picture.reparent((_dressing_floor_views[floor][1] as Camera3D).get_parent())
+	_dressing_shown.visible = false
+	_dressing_view.render_target_update_mode = SubViewport.UPDATE_DISABLED
+
+
+## Keeps the holes in the floors open: a picture fades out while it stands in front of one as
+## seen from where the camera is now, so the holes show wherever the view is (a hole cut where
+## the picture is laid would only be right with the camera straight in front of it).
+func _clear_dressing_holes() -> void:
+	if _dressing_pictures.is_empty():
+		return
+	if _dressing_holes.is_empty():
+		_find_dressing_holes()
+	var eye := _dressing_camera.position
+	for item: Array in _dressing_holes:
+		var picture: Sprite3D = item[0]
+		var hole: Vector2 = item[1]
+		var shown := 1.0
+		# Where on the level plane the picture stands as seen from the camera.
+		var near := (eye.z - picture.global_position.z) / eye.z
+		var middle := eye.x + (picture.global_position.x - eye.x) / near
+		var half := picture.texture.get_width() * picture.pixel_size * absf(picture.global_basis.x.x) / 2.0 / near
+		var apart := maxf(hole.x - (middle + half), (middle - half) - hole.y)
+		shown *= clampf(apart / 0.3, 0.0, 1.0)
+		if is_equal_approx(shown, float(item[2])):
+			continue
+		item[2] = shown
+		picture.visible = shown > 0.0
+		picture.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD if shown >= 1.0 else SpriteBase3D.ALPHA_CUT_DISABLED
+		picture.modulate.a = float(picture.get_meta("alpha", 1.0)) * shown
+
+
+## The holes in the floors that the pictures must leave open: short runs of open cells or ladder
+## tops in a floor, solid on both sides, and the pictures near enough to stand in front of one.
+func _find_dressing_holes() -> void:
+	var holes: Array[Rect2] = []
+	for row in range(1, map.size()):
+		var col := 1
+		while col < map[row].length():
+			if map[row][col - 1] in SOLID and _floor_gap(row, col):
+				var end := col
+				while _floor_gap(row, end):
+					end += 1
+				if end - col <= 3 and end < map[row].length() and map[row][end] in SOLID:
+					holes.append(Rect2(col * TILE, row * TILE, (end - col) * TILE, 0.0))
+				col = end
+			col += 1
+	for picture in _dressing_pictures:
+		if not picture.has_meta("alpha"):
+			picture.set_meta("alpha", picture.modulate.a)
+		if picture.global_position.z > 1.5 or not picture.get_meta("dziury", true):
+			continue  # only those along the edge: the layers nearer the camera pass over the hole
+		var at := Vector2(picture.global_position.x, -picture.global_position.y) * 100.0
+		for hole in holes:
+			if absf(at.x - hole.get_center().x) < 1000.0 and at.y > hole.position.y - 250.0 and at.y < hole.position.y + 600.0:
+				picture.set_meta("hole", true)
+				_dressing_holes.append([picture, Vector2(hole.position.x, hole.end.x) / 100.0, -1.0])
+				break
+
+
+## Whether a cell of a floor's row is a way down through it (open, or a ladder's top).
+func _floor_gap(row: int, col: int) -> bool:
+	if col >= map[row].length() or map[row][col] in SOLID:
+		return false
+	return col >= map[row - 1].length() or not map[row - 1][col] in SOLID + "H"
+
+
+## Moves the laid pictures by their depth: each stands where it was laid when the middle of the
+## screen is there, and moves away from it faster (nearer) or slower (farther) than the level as
+## the view goes by. Those in front fade out while Wiesław is on another floor. Only the pictures
+## near the screen are touched; the rest stay hidden.
+func _move_screen_pictures() -> void:
+	if not _level.is_inside_tree() or _screen_pictures.is_empty():
+		return
+	var middle := _level.get_global_transform_with_canvas().affine_inverse() * (get_viewport().get_visible_rect().size / 2.0)
+	var half := get_viewport().get_visible_rect().size.x / 2.0 / _level.get_global_transform_with_canvas().get_scale().x
+	var first := _screen_pictures.bsearch_custom(middle.x - _screen_reach, func(item: Array, x: float) -> bool: return item[1].x < x)
+	var last := _screen_pictures.bsearch_custom(middle.x + _screen_reach, func(item: Array, x: float) -> bool: return item[1].x < x)
+	# The ones that went out of reach since last frame.
+	for k in range(_screen_span.x, _screen_span.y):
+		if k < first or k >= last:
+			(_screen_pictures[k][0] as CanvasItem).visible = false
+	_screen_span = Vector2i(first, last)
+	var floor_shown := _cover and not _floors.is_empty()
+	for k in range(first, last):
+		var item: Array = _screen_pictures[k]
+		var picture: Sprite2D = item[0]
+		var laid: Vector2 = item[1]
+		var at := laid + (laid - middle) * float(item[2])
+		var shown := absf(at.x - middle.x) < half + float(item[5])
+		if shown and floor_shown and not is_nan(float(item[3])):
+			var fade := 1.0 - clampf(absf(_floor_at - floorf(_floor_of(float(item[3])))), 0.0, 1.0)
+			picture.modulate.a = float(item[4]) * fade
+			shown = fade > 0.0
+		picture.visible = shown
+		if shown:
+			picture.position = at
 
 
 ## The darkness and lights placed in the level scene, over the ones the level makes itself; a
@@ -4223,9 +4532,9 @@ func _draw_organic_ground(v: Node2D, span: Vector2i) -> void:
 						moss.append(edge)
 					# A dark rim just inside each open side.
 					v.draw_polyline(edge, Color(0.05, 0.04, 0.05, 0.85), 5.0)
-				else:
+				elif not _dressed.has(Vector2i(col, row)):
 					edges[side].append([edge, out, row, col])
-			if not rims.is_empty() and open[0]:
+			if not rims.is_empty() and open[0] and not _dressed.has(Vector2i(col, row)):
 				for right in [false, true]:
 					if open[1 if right else 3]:
 						corner_spots.append([Vector2((col + (1 if right else 0)) * TILE, row * TILE), right, row * 7 + col])
@@ -4800,6 +5109,8 @@ func _process(delta: float) -> void:
 		if effect["time"] > (1.5 if effect["kind"] == "nokey" else 0.5):
 			_effects.erase(effect)
 	_move_particles(delta)
+	_move_screen_pictures()
+	_move_dressing()
 
 
 ## A small key in a bubble over a chest, a brother or the castle door Wiesław can use with F,

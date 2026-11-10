@@ -94,6 +94,8 @@ func _play_trial() -> void:
 		stage.level_name = spec["name"]
 		stage.scene_lights = spec.get("lights", [])
 		stage.scene_darkness = spec.get("darkness", Color(0, 0, 0, 0))
+		stage.scene_pictures = spec.get("pictures", [])
+		stage.dressing_path = spec.get("dressing", "")
 		# Going left out of a level leads back to the one before, in front of its way out.
 		stage.can_go_back = index > 0
 		stage.start_at_exit = back
