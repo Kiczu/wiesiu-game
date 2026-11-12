@@ -2750,6 +2750,9 @@ func _load_art_set(dir: String) -> Dictionary:
 		art_set["organic"] = true
 	if spec.get("castle_plank", false):
 		art_set["castle_plank"] = true
+		# Its own repaint of the castle's plank, when it has one.
+		if ResourceLoader.exists(dir + "kladka.png"):
+			art_set["plank"] = load(dir + "kladka.png")
 	if spec.has("moonlight"):
 		art_set["moonlight"] = spec["moonlight"]
 	# The castle's camera (kept to the floor, Wiesław low in the frame) for this outdoor level too.
@@ -4714,11 +4717,15 @@ func _draw_cellar_wall(v: Node2D, row: int, col: int) -> void:
 ## Up over the ground outdoors a run of planks is one apple tree branch ("branch" in the art set:
 ## the picture, where along it the branch can be walked on, "span" in picture pixels, and the
 ## height of its top, "top"), stretched over the run and drawn from the run's first cell.
+## Not under a picture laid on the ground layer of the level scene, which is the branch then.
 func _draw_branch(v: Node2D, row: int, col: int) -> void:
 	if col > 0 and map[row][col - 1] == "=":
 		return
 	var cells := 0
 	while col + cells < map[row].length() and map[row][col + cells] == "=":
+		# A run under a picture laid in the level scene (a bough of a big tree) is drawn by it.
+		if _dressed.has(Vector2i(col + cells, row)):
+			return
 		cells += 1
 	var branch: Dictionary = _art["branch"]
 	var picture: Texture2D = branch["texture"]
@@ -4731,6 +4738,11 @@ func _draw_branch(v: Node2D, row: int, col: int) -> void:
 		v.draw_texture_rect(picture, Rect2(at, Vector2(-picture.get_width(), picture.get_height()) * scale), false)
 	else:
 		v.draw_texture_rect(picture, Rect2(at, picture.get_size() * scale), false)
+
+
+## The plank picture of the art in use: its own one, or the castle's.
+func _plank_picture() -> Texture2D:
+	return _art.get("plank", _plank_board)
 
 
 ## A hole in the ground over each way down from the surface ("hole" in the art set: the picture,
@@ -4760,12 +4772,12 @@ func _draw_plank(v: Node2D, row: int, col: int, at: Vector2) -> void:
 	if left and right:
 		# A single cell: both ends, half a cell each.
 		var half := Vector2(8, 5)
-		v.draw_texture_rect_region(_plank_board, Rect2(at, half * PLANK_SCALE), Rect2(parts["left"].position, half), PLANK_TINT)
-		v.draw_texture_rect_region(_plank_board, Rect2(at + Vector2(TILE / 2.0, 0), half * PLANK_SCALE),
+		v.draw_texture_rect_region(_plank_picture(), Rect2(at, half * PLANK_SCALE), Rect2(parts["left"].position, half), PLANK_TINT)
+		v.draw_texture_rect_region(_plank_picture(), Rect2(at + Vector2(TILE / 2.0, 0), half * PLANK_SCALE),
 			Rect2(parts["right"].position + Vector2(8, 0), half), PLANK_TINT)
 	else:
 		var part: Rect2 = parts["left"] if left else parts["right"] if right else parts["middle"]
-		v.draw_texture_rect_region(_plank_board, Rect2(at, part.size * PLANK_SCALE), part, PLANK_TINT)
+		v.draw_texture_rect_region(_plank_picture(), Rect2(at, part.size * PLANK_SCALE), part, PLANK_TINT)
 	if left or right:
 		var bracket: Rect2 = parts["bracket"]
 		var x := at.x + (TILE - bracket.size.x * PLANK_SCALE) / 2.0
@@ -4777,7 +4789,7 @@ func _draw_plank(v: Node2D, row: int, col: int, at: Vector2) -> void:
 			shown.position.x = at.x + TILE - 4.0 * PLANK_SCALE - shown.size.x
 			shown.size.x = -shown.size.x
 			shown.position.x -= shown.size.x
-		v.draw_texture_rect_region(_plank_board, shown, bracket, PLANK_TINT)
+		v.draw_texture_rect_region(_plank_picture(), shown, bracket, PLANK_TINT)
 
 
 ## Grass and moss hanging over each top corner of the ground, where the surface ends at a drop
