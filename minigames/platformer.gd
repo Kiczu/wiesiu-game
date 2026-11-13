@@ -629,6 +629,11 @@ var _dressing_floor_views: Array = []
 ## shaft), each with the hole: [picture, hole from x to y in metres, how much it shows] (see
 ## _clear_dressing_holes).
 var _dressing_holes: Array = []
+## The grass Wiesław walks in among the 3D pictures (textures from a "trawa" folder), sorted by x: each item is
+## [picture, its shared material, bend, bend speed]; and the items bending now (see _bend_grass).
+var _grass: Array = []
+var _grass_bending: Array = []
+var _grass_ready := false
 
 
 func _ready() -> void:
@@ -1031,11 +1036,115 @@ func _find_dressing_holes() -> void:
 		if picture.global_position.z > 1.5 or not picture.get_meta("dziury", true):
 			continue  # only those along the edge: the layers nearer the camera pass over the hole
 		var at := Vector2(picture.global_position.x, -picture.global_position.y) * 100.0
+		# The nearest hole of its floor: two holes may both be near enough.
+		var nearest := Rect2()
+		var away := 1000.0
 		for hole in holes:
-			if absf(at.x - hole.get_center().x) < 1000.0 and at.y > hole.position.y - 250.0 and at.y < hole.position.y + 600.0:
-				picture.set_meta("hole", true)
-				_dressing_holes.append([picture, Vector2(hole.position.x, hole.end.x) / 100.0, -1.0])
-				break
+			var apart := absf(at.x - hole.get_center().x)
+			if apart < away and at.y > hole.position.y - 250.0 and at.y < hole.position.y + 600.0:
+				nearest = hole
+				away = apart
+		if away < 1000.0:
+			picture.set_meta("hole", true)
+			_dressing_holes.append([picture, Vector2(nearest.position.x, nearest.end.x) / 100.0, -1.0])
+
+
+## The swaying grass: the stems lean away from Wiesław as he passes through and spring back.
+## All of it sways a little in the wind (in the shader); only the tufts near him bend more.
+const GRASS_SHADER := """
+shader_type spatial;
+render_mode unshaded, cull_disabled;
+uniform sampler2D picture : source_color, filter_nearest;
+uniform float height = 1.0;
+uniform float bend = 0.0;
+void vertex() {
+	float up = pow(1.0 - UV.y, 1.5);
+	float wind = sin(TIME * 1.4 + MODEL_MATRIX[3].x * 1.7) * 0.025 + sin(TIME * 2.3 + MODEL_MATRIX[3].x * 3.1) * 0.012;
+	VERTEX.x += (bend + wind) * height * up;
+}
+void fragment() {
+	vec4 c = texture(picture, UV) * COLOR;
+	// Cut out; a picture faded in front of a hole (COLOR.a) thins out in a dither instead.
+	float dither = fract(dot(floor(FRAGCOORD.xy / 2.0), vec2(0.5, 0.25)) + 0.125);
+	if (c.a < 0.5 * COLOR.a || COLOR.a <= dither) {
+		discard;
+	}
+	ALBEDO = c.rgb;
+}
+"""
+## How far from Wiesław (level px) the grass leans, and how far it leans at most.
+const GRASS_REACH := 70.0
+const GRASS_LEAN := 0.6
+## Only the grass Wiesław walks in moves: the layers laid farther in front of the level than this
+## (3D units; the first front layer stands at about 1.8) stay still.
+const GRASS_DEPTH := 1.0
+
+
+## Gives the grass among the 3D pictures the swaying material, once.
+func _prepare_grass() -> void:
+	_grass_ready = true
+	var shader := Shader.new()
+	shader.code = GRASS_SHADER
+	var materials := {}
+	for picture in _dressing_pictures:
+		if not picture.texture or not "/trawa" in picture.texture.resource_path or picture.global_position.z >= GRASS_DEPTH:
+			continue
+		if not materials.has(picture.texture):
+			var material := ShaderMaterial.new()
+			material.shader = shader
+			material.set_shader_parameter("picture", picture.texture)
+			material.set_shader_parameter("height", picture.texture.get_height() * picture.pixel_size)
+			materials[picture.texture] = material
+		picture.material_override = materials[picture.texture]
+		_grass.append([picture, materials[picture.texture], 0.0, 0.0])
+	_grass.sort_custom(func(a: Array, b: Array) -> bool: return a[0].global_position.x < b[0].global_position.x)
+
+
+## Leans the tufts near Wiesław away from him (each with a material of its own while it moves),
+## springing back once he is gone.
+func _bend_grass(delta: float) -> void:
+	if _dressing_pictures.is_empty() or not player:
+		return
+	if not _grass_ready:
+		_prepare_grass()
+	if _grass.is_empty():
+		return
+	var feet := Vector2(player.position.x, player.position.y + 50.0)
+	var x := feet.x / 100.0
+	# The tufts near him: found from the sorted list.
+	var lo := _grass.bsearch_custom(x - 1.6, func(a, b) -> bool: return (a[0].global_position.x if a is Array else a) < (b[0].global_position.x if b is Array else b))
+	for k in range(lo, _grass.size()):
+		var item: Array = _grass[k]
+		if item[0].global_position.x > x + 1.6:
+			break
+		if not item in _grass_bending:
+			_grass_bending.append(item)
+	var pace := clampf(absf(player.velocity.x) / 300.0, 0.0, 1.0)
+	var eye := _dressing_camera.position
+	for item: Array in _grass_bending.duplicate():
+		var picture: Sprite3D = item[0]
+		var target := 0.0
+		var bottom := -(picture.global_position.y - picture.texture.get_height() * picture.pixel_size * picture.global_basis.y.y / 2.0) * 100.0
+		# Where on the level plane the tuft stands as seen from the camera (as in _clear_dressing_holes).
+		var near := (eye.z - picture.global_position.z) / eye.z
+		var apart := (eye.x + (picture.global_position.x - eye.x) / near) * 100.0 - feet.x
+		var half := picture.texture.get_width() * picture.pixel_size * absf(picture.global_basis.x.x) * 50.0
+		var reach := GRASS_REACH + half * 0.5
+		if picture.visible and absf(apart) < reach and absf(bottom - feet.y) < 90.0:
+			target = signf(apart) * GRASS_LEAN * (1.0 - absf(apart) / reach) * (0.5 + 0.5 * pace)
+		# A spring: towards the target, with some swing.
+		item[3] = (item[3] + (target - item[2]) * 90.0 * delta) * maxf(0.0, 1.0 - 8.0 * delta)
+		item[2] += item[3] * delta
+		var moving := absf(item[2]) > 0.002 or absf(item[3]) > 0.01 or target != 0.0
+		if moving:
+			if picture.material_override == item[1]:
+				picture.material_override = (item[1] as ShaderMaterial).duplicate()
+			(picture.material_override as ShaderMaterial).set_shader_parameter("bend", item[2])
+		else:
+			item[2] = 0.0
+			item[3] = 0.0
+			picture.material_override = item[1]
+			_grass_bending.erase(item)
 
 
 ## Whether a cell of a floor's row is a way down through it (open, or a ladder's top).
@@ -2753,6 +2862,20 @@ func _load_art_set(dir: String) -> Dictionary:
 		# Its own repaint of the castle's plank, when it has one.
 		if ResourceLoader.exists(dir + "kladka.png"):
 			art_set["plank"] = load(dir + "kladka.png")
+	# Its own ladder (drabina.png, repeated down the shaft, a cell wide) and spikes (kolce.png, a
+	# cell wide, standing on the cell's floor).
+	if ResourceLoader.exists(dir + "drabina.png"):
+		art_set["ladder"] = load(dir + "drabina.png")
+	if ResourceLoader.exists(dir + "kolce.png"):
+		art_set["spikes"] = load(dir + "kolce.png")
+	# A board hung on two ropes from the ceiling, for planks instead of the castle's one ("rope_plank":
+	# the picture, its scale, and in its pixels the rows of the board ("board") and of the rope
+	# above it ("rope"), the left end, the middle and the right end ("left", "middle", "right", from
+	# and to x, each a cell wide when scaled), and where the ropes are in the ends ("ropes", x).
+	var rope_plank: Dictionary = spec.get("rope_plank", {})
+	if ResourceLoader.exists(dir + str(rope_plank.get("file", ""))):
+		art_set["rope_plank"] = rope_plank.duplicate()
+		art_set["rope_plank"]["texture"] = load(dir + str(rope_plank["file"]))
 	if spec.has("moonlight"):
 		art_set["moonlight"] = spec["moonlight"]
 	# The castle's camera (kept to the floor, Wiesław low in the frame) for this outdoor level too.
@@ -2797,8 +2920,9 @@ func _load_art_set(dir: String) -> Dictionary:
 		for file in edges.get(side, []):
 			if ResourceLoader.exists(dir + str(file)):
 				corner_pictures.append({"picture": load(dir + str(file)), "right": side == "right"})
-	# Hand-drawn rims laid along the outline of soft ground: "top" (grass), "bottom" (hanging
-	# roots), "side" (an earth wall, its outer face on the picture's left) and "corner" pictures.
+	# Hand-drawn rims laid along the outline of soft ground: "top" (grass), "top_under" (the top of
+	# floors in the cellars), "bottom" (hanging roots), "side" (an earth wall, its outer face on
+	# the picture's left) and "corner" pictures.
 	var rims := {}
 	for kind in spec.get("rims", {}):
 		var rim: Dictionary = spec["rims"][kind]
@@ -4551,10 +4675,17 @@ func _draw_organic_ground(v: Node2D, span: Vector2i) -> void:
 		var batches := {}
 		for side: int in group:
 			var kind: String = ["top", "side", "bottom", "side"][side]
-			if not rims.has(kind):
+			if not rims.has(kind) and not (side == 0 and rims.has("top_under")):
 				continue
+			# Floors below the surface (the cellars') get their own top ("top_under"), if the set
+			# has one; a set may leave the surface without a rim ("top" left out).
+			var surface := int(_floors[0].z / TILE) if not _floors.is_empty() else -1
 			for item: Array in edges[side]:
-				_draw_rim(batches, rims[kind], item[0], item[1], item[2], item[3], side)
+				var rim: Dictionary = rims.get(kind, {})
+				if side == 0 and rims.has("top_under") and (item[2] > surface if surface >= 0 else _outdoor_tiles(item[2], item[3] + 1) == _art["ground"]["under"]):
+					rim = rims["top_under"]
+				if not rim.is_empty():
+					_draw_rim(batches, rim, item[0], item[1], item[2], item[3], side)
 		for picture: Texture2D in batches:
 			_batch_draw(v, batches[picture], picture, Color.WHITE)
 	if rims.has("corner"):
@@ -4768,6 +4899,9 @@ func _draw_holes(v: Node2D, span: Vector2i) -> void:
 func _draw_plank(v: Node2D, row: int, col: int, at: Vector2) -> void:
 	var left := col == 0 or map[row][col - 1] != "="
 	var right := col + 1 >= map[row].length() or map[row][col + 1] != "="
+	if _art.has("rope_plank"):
+		_draw_rope_plank(v, row, col, at, left, right)
+		return
 	var parts: Dictionary = PLANK_PARTS
 	if left and right:
 		# A single cell: both ends, half a cell each.
@@ -4790,6 +4924,53 @@ func _draw_plank(v: Node2D, row: int, col: int, at: Vector2) -> void:
 			shown.size.x = -shown.size.x
 			shown.position.x -= shown.size.x
 		v.draw_texture_rect_region(_plank_picture(), shown, bracket, PLANK_TINT)
+
+
+## One cell of a plank hung on ropes (the art set's "rope_plank"): the board's left end, middle or
+## right end (a single cell gets half of each end), and at the ends the rope up to the ceiling.
+func _draw_rope_plank(v: Node2D, row: int, col: int, at: Vector2, left: bool, right: bool) -> void:
+	var plank: Dictionary = _art["rope_plank"]
+	var picture: Texture2D = plank["texture"]
+	var scale := float(plank["scale"])
+	var board: Array = plank["board"]
+	var pieces := []
+	if left and right:
+		var l: Array = plank["left"]
+		var r: Array = plank["right"]
+		var half_l := (float(l[1]) - float(l[0])) / 2.0
+		var half_r := (float(r[1]) - float(r[0])) / 2.0
+		pieces = [[float(l[0]), half_l, 0.0], [float(r[0]) + half_r, half_r, half_l * scale]]
+	else:
+		var part: Array = plank["left"] if left else plank["right"] if right else plank["middle"]
+		pieces = [[float(part[0]), float(part[1]) - float(part[0]), 0.0]]
+	var height := float(board[1]) - float(board[0])
+	for piece: Array in pieces:
+		v.draw_texture_rect_region(picture, Rect2(at + Vector2(piece[2], 0), Vector2(piece[1], height) * scale),
+			Rect2(piece[0], float(board[0]), piece[1], height))
+	if not (left or right):
+		return
+	# The ropes, tiled from the board up to the ceiling above it.
+	var top := row - 1
+	while top >= 0 and not (col < map[top].length() and map[top][col] in SOLID):
+		top -= 1
+	var ceiling := (top + 1) * TILE
+	var rope: Array = plank["rope"]
+	var ropes: Array = plank["ropes"]
+	var width := 10.0
+	for k in 2:
+		if (k == 0 and not left) or (k == 1 and not right):
+			continue
+		var part: Array = plank["left"] if k == 0 else plank["right"]
+		var x := float(ropes[k]) - float(part[0])
+		if left and right:
+			x = x if k == 0 else x - (float(part[1]) - float(part[0])) / 2.0 + (float((plank["left"] as Array)[1]) - float((plank["left"] as Array)[0])) / 2.0
+		var length := float(rope[1]) - float(rope[0])
+		var y := at.y
+		while y > ceiling + 0.5:
+			var step := minf(length * scale, y - ceiling)
+			v.draw_texture_rect_region(picture, Rect2(at.x + (x - width / 2.0) * scale, y - step, width * scale, step),
+				Rect2(float(ropes[k]) - width / 2.0, float(rope[1]) - step / scale, width, step / scale))
+			y -= step
 
 
 ## Grass and moss hanging over each top corner of the ground, where the surface ends at a drop
@@ -4906,6 +5087,9 @@ func _draw_static_front(v: Node2D, span: Vector2i) -> void:
 					_draw_trapdoor(v, row, col, at)
 				"d", "e":
 					_draw_lever(v, at, map[row][col] == "e")
+				"x" when _art.has("spikes"):
+					var spikes: Texture2D = _art["spikes"]
+					v.draw_texture(spikes, at + Vector2((TILE - spikes.get_width()) / 2.0, TILE - spikes.get_height()))
 				"x" when dungeon and _pieces.has("spikes"):
 					v.draw_texture(_pieces["spikes"], at + Vector2(0, TILE - _pieces["spikes"].get_height()))
 				"x" when _items.has("thorns"):
@@ -4913,6 +5097,9 @@ func _draw_static_front(v: Node2D, span: Vector2i) -> void:
 				"C", "c" when _items.has("flag"):
 					var texture: Texture2D = _items["flag_on" if map[row][col] == "c" else "flag"]
 					v.draw_texture(texture, at + Vector2(8, TILE - texture.get_height()))
+				"H" when _art.has("ladder"):
+					var steps: Texture2D = _art["ladder"]
+					v.draw_texture_rect_region(steps, Rect2(at, Vector2(TILE, TILE)), Rect2(0, fposmod(at.y, steps.get_height()), steps.get_width(), TILE))
 				"H" when (dungeon or _art.has("castle_plank")) and _pieces.has("ladder"):
 					var ladder: Texture2D = _pieces["ladder"]
 					v.draw_texture_rect_region(ladder, Rect2(at, Vector2(TILE, TILE)), Rect2(0, fposmod(at.y, ladder.get_height()), ladder.get_width(), TILE))
@@ -5123,6 +5310,7 @@ func _process(delta: float) -> void:
 	_move_particles(delta)
 	_move_screen_pictures()
 	_move_dressing()
+	_bend_grass(delta)
 
 
 ## A small key in a bubble over a chest, a brother or the castle door Wiesław can use with F,
