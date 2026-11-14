@@ -3157,6 +3157,9 @@ func _draw_night_sky(v: Node2D, scroll: float, sky: Dictionary) -> void:
 	var moon: Dictionary = sky["moon"]
 	var place: Array = moon.get("at", [0.5, 0.2])
 	var centre := Vector2(float(place[0]) * SCREEN.x, float(place[1]) * SCREEN.y)
+	# Hung in the sky, not on the screen: it goes by like the farthest layer ("speed": its share
+	# of the camera's way sideways, "follow": of its way up and down from the starting ground).
+	centre += Vector2(-scroll * float(moon.get("speed", 0.0)) * VIEW_ZOOM, (_ground_line() - GROUND_LINE) * float(moon.get("follow", 0.0)))
 	var radius := float(moon.get("radius", 64.0))
 	var glow := Color(str(moon.get("glow", "c8d4ff")))
 	# A soft glow: many faint circles, so no rings show.

@@ -1,0 +1,3805 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/level_dressing.gd" id="1_d"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_01.png" id="t0"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_02.png" id="t1"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_03.png" id="t2"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_04.png" id="t3"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_05.png" id="t4"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_06.png" id="t5"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_07.png" id="t6"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_08.png" id="t7"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_09.png" id="t8"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_10.png" id="t9"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_11.png" id="t10"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_12.png" id="t11"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_13.png" id="t12"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_14.png" id="t13"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_15.png" id="t14"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_16.png" id="t15"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_17.png" id="t16"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_18.png" id="t17"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_19.png" id="t18"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_20.png" id="t19"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_21.png" id="t20"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_22.png" id="t21"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_23.png" id="t22"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_24.png" id="t23"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_25.png" id="t24"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_26.png" id="t25"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_27.png" id="t26"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_28.png" id="t27"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_29.png" id="t28"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_30.png" id="t29"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_31.png" id="t30"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_32.png" id="t31"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_33.png" id="t32"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_34.png" id="t33"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_35.png" id="t34"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_36.png" id="t35"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_37.png" id="t36"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_38.png" id="t37"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_39.png" id="t38"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_40.png" id="t39"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_41.png" id="t40"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_42.png" id="t41"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_43.png" id="t42"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_44.png" id="t43"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_45.png" id="t44"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_46.png" id="t45"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_47.png" id="t46"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_48.png" id="t47"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_49.png" id="t48"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_50.png" id="t49"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_51.png" id="t50"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_52.png" id="t51"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_53.png" id="t52"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_54.png" id="t53"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_55.png" id="t54"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_56.png" id="t55"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_57.png" id="t56"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_58.png" id="t57"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_59.png" id="t58"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_60.png" id="t59"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_61.png" id="t60"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_62.png" id="t61"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_63.png" id="t62"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_a_64.png" id="t63"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_01.png" id="t64"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_02.png" id="t65"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_03.png" id="t66"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_04.png" id="t67"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_05.png" id="t68"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_06.png" id="t69"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_07.png" id="t70"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_08.png" id="t71"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_09.png" id="t72"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_10.png" id="t73"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_11.png" id="t74"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_12.png" id="t75"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_13.png" id="t76"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_14.png" id="t77"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_15.png" id="t78"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_16.png" id="t79"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_17.png" id="t80"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_18.png" id="t81"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_19.png" id="t82"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_20.png" id="t83"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_21.png" id="t84"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_22.png" id="t85"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_23.png" id="t86"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_24.png" id="t87"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_25.png" id="t88"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_26.png" id="t89"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_27.png" id="t90"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_28.png" id="t91"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_29.png" id="t92"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_30.png" id="t93"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_31.png" id="t94"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_32.png" id="t95"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_33.png" id="t96"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_34.png" id="t97"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_35.png" id="t98"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_36.png" id="t99"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_37.png" id="t100"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_38.png" id="t101"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_39.png" id="t102"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_40.png" id="t103"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_41.png" id="t104"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_42.png" id="t105"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_43.png" id="t106"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_44.png" id="t107"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_45.png" id="t108"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_46.png" id="t109"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_47.png" id="t110"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_48.png" id="t111"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_49.png" id="t112"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_50.png" id="t113"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_51.png" id="t114"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_52.png" id="t115"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_53.png" id="t116"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_54.png" id="t117"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_55.png" id="t118"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_56.png" id="t119"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_57.png" id="t120"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_58.png" id="t121"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_59.png" id="t122"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_60.png" id="t123"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_61.png" id="t124"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_62.png" id="t125"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_63.png" id="t126"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_kepka_b_64.png" id="t127"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_krzak_01.png" id="t128"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_krzak_02.png" id="t129"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_krzak_03.png" id="t130"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_krzak_04.png" id="t131"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_krzak_05.png" id="t132"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_krzak_06.png" id="t133"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_krzak_07.png" id="t134"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_krzak_08.png" id="t135"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_krzak_09.png" id="t136"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_pas_01.png" id="t137"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_pas_02.png" id="t138"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_pas_03.png" id="t139"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_pas_04.png" id="t140"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_tlo.png" id="t141"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_wysoka_01.png" id="t142"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/trawa_noc/noc_wysoka_02.png" id="t143"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/rekwizyty/jablko_1.png" id="t144"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/rekwizyty/jablko_10.png" id="t145"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/rekwizyty/jablko_11.png" id="t146"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/rekwizyty/jablko_2.png" id="t147"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/rekwizyty/jablko_3.png" id="t148"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/rekwizyty/jablko_4.png" id="t149"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/rekwizyty/jablko_5.png" id="t150"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/rekwizyty/jablko_6.png" id="t151"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/rekwizyty/jablko_7.png" id="t152"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/rekwizyty/jablko_8.png" id="t153"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/rekwizyty/jablko_9.png" id="t154"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/rekwizyty/skrzynka_1.png" id="t155"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/rekwizyty/skrzynka_2.png" id="t156"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/rekwizyty/skrzynka_3.png" id="t157"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/rekwizyty/skrzynka_4.png" id="t158"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/rekwizyty/skrzynka_5.png" id="t159"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/rekwizyty/skrzynka_6.png" id="t160"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/rekwizyty/skrzynka_7.png" id="t161"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/rekwizyty/skrzynka_piw_1.png" id="t162"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/rekwizyty/skrzynka_piw_2.png" id="t163"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/rekwizyty/skrzynka_piw_4.png" id="t164"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/rekwizyty/skrzynka_piw_5.png" id="t165"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/kamienie_1.png" id="t166"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/kamienie_10.png" id="t167"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/kamienie_11.png" id="t168"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/kamienie_12.png" id="t169"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/kamienie_13.png" id="t170"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/kamienie_14.png" id="t171"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/kamienie_15.png" id="t172"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/kamienie_16.png" id="t173"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/kamienie_17.png" id="t174"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/kamienie_18.png" id="t175"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/kamienie_19.png" id="t176"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/kamienie_2.png" id="t177"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/kamienie_20.png" id="t178"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/kamienie_21.png" id="t179"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/kamienie_22.png" id="t180"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/kamienie_23.png" id="t181"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/kamienie_24.png" id="t182"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/kamienie_25.png" id="t183"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/kamienie_27.png" id="t184"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/kamienie_3.png" id="t185"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/kamienie_4.png" id="t186"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/kamienie_5.png" id="t187"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/kamienie_6.png" id="t188"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/kamienie_7.png" id="t189"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/kamienie_8.png" id="t190"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/kamienie_9.png" id="t191"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/korzen_1.png" id="t192"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/korzen_2.png" id="t193"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/korzen_3.png" id="t194"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/korzen_4.png" id="t195"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/korzen_5.png" id="t196"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/korzen_6.png" id="t197"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/korzen_7.png" id="t198"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/korzen_8.png" id="t199"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/pajeczyna_1.png" id="t200"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/pajeczyna_10.png" id="t201"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/pajeczyna_11.png" id="t202"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/pajeczyna_12.png" id="t203"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/pajeczyna_13.png" id="t204"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/pajeczyna_14.png" id="t205"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/pajeczyna_15.png" id="t206"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/pajeczyna_16.png" id="t207"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/pajeczyna_2.png" id="t208"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/pajeczyna_3.png" id="t209"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/pajeczyna_4.png" id="t210"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/pajeczyna_5.png" id="t211"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/pajeczyna_6.png" id="t212"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/pajeczyna_7.png" id="t213"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/pajeczyna_8.png" id="t214"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/pajeczyna_9.png" id="t215"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/piwnica_tlo.png" id="t216"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/rzecz_1.png" id="t217"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/rzecz_10.png" id="t218"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/rzecz_11.png" id="t219"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/rzecz_12.png" id="t220"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/rzecz_13.png" id="t221"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/rzecz_14.png" id="t222"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/rzecz_15.png" id="t223"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/rzecz_16.png" id="t224"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/rzecz_2.png" id="t225"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/rzecz_3.png" id="t226"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/rzecz_4.png" id="t227"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/rzecz_5.png" id="t228"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/rzecz_6.png" id="t229"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/rzecz_7.png" id="t230"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/rzecz_8.png" id="t231"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/rzecz_9.png" id="t232"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/skrzynia_1.png" id="t233"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/skrzynia_10.png" id="t234"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/skrzynia_11.png" id="t235"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/skrzynia_12.png" id="t236"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/skrzynia_13.png" id="t237"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/skrzynia_14.png" id="t238"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/skrzynia_15.png" id="t239"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/skrzynia_16.png" id="t240"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/skrzynia_2.png" id="t241"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/skrzynia_3.png" id="t242"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/skrzynia_4.png" id="t243"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/skrzynia_5.png" id="t244"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/skrzynia_6.png" id="t245"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/skrzynia_7.png" id="t246"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/skrzynia_8.png" id="t247"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/skrzynia_9.png" id="t248"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/slup_1.png" id="t249"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/slup_2.png" id="t250"]
+[ext_resource type="Texture2D" path="res://art/platformer/sad/piwnica3d/slup_trzon.png" id="t251"]
+
+[sub_resource type="StandardMaterial3D" id="black"]
+shading_mode = 0
+albedo_color = Color(0.02, 0.02, 0.035, 1)
+
+[sub_resource type="Environment" id="env"]
+background_mode = 1
+background_color = Color(0.2, 0.26, 0.43, 1)
+
+[node name="Sad nocą 3D" type="Node3D"]
+script = ExtResource("1_d")
+
+[node name="Swiat" type="WorldEnvironment" parent="."]
+environment = SubResource("env")
+
+[node name="Kamera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.96, -3.77, 9.891)
+fov = 40.0
+far = 200.0
+
+[node name="Teren" type="Node3D" parent="."]
+
+[node name="Blok0" type="CSGBox3D" parent="Teren"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.36, -4.16, 0)
+size = Vector3(7.68, 0.64, 1.2)
+material = SubResource("black")
+
+[node name="Blok1" type="CSGBox3D" parent="Teren"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.04, -4.80, 0)
+size = Vector3(5.76, 0.64, 1.2)
+material = SubResource("black")
+
+[node name="Blok2" type="CSGBox3D" parent="Teren"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.36, -6.40, 0)
+size = Vector3(30.72, 2.56, 1.2)
+material = SubResource("black")
+
+[node name="Ziemia" type="Node3D" parent="."]
+
+[node name="noc_kepka_b_52_100001" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.367, 0, 0, 0, 1.367, 0, 0, 0, 1, 0.100, -5.222, 0.867)
+texture = ExtResource("t115")
+
+[node name="noc_kepka_a_37_100002" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.271, 0, 0, 0, 1.271, 0, 0, 0, 1, 0.225, -5.189, 0.912)
+flip_h = true
+texture = ExtResource("t36")
+
+[node name="noc_kepka_a_04_100003" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.653, 0, 0, 0, 1.653, 0, 0, 0, 1, 0.367, -5.047, 0.763)
+texture = ExtResource("t3")
+
+[node name="noc_kepka_a_51_100004" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.587, 0, 0, 0, 1.587, 0, 0, 0, 1, 0.514, -5.076, 0.878)
+texture = ExtResource("t50")
+
+[node name="noc_kepka_b_02_100005" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.589, 0, 0, 0, 1.589, 0, 0, 0, 1, 0.656, -4.978, 0.796)
+flip_h = true
+texture = ExtResource("t65")
+
+[node name="noc_kepka_b_35_100006" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.567, 0, 0, 0, 1.567, 0, 0, 0, 1, 0.825, -4.971, 0.753)
+flip_h = true
+texture = ExtResource("t98")
+
+[node name="noc_kepka_b_38_100007" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.791, 0, 0, 0, 1.791, 0, 0, 0, 1, 0.985, -4.890, 0.863)
+texture = ExtResource("t101")
+
+[node name="noc_kepka_b_41_100008" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.057, 0, 0, 0, 2.057, 0, 0, 0, 1, 1.136, -4.896, 0.774)
+flip_h = true
+texture = ExtResource("t104")
+
+[node name="noc_kepka_a_49_100009" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.980, 0, 0, 0, 1.980, 0, 0, 0, 1, 1.293, -4.878, 0.788)
+flip_h = true
+texture = ExtResource("t48")
+
+[node name="noc_kepka_a_55_100010" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.802, 0, 0, 0, 1.802, 0, 0, 0, 1, 1.474, -4.908, 0.923)
+texture = ExtResource("t54")
+
+[node name="noc_pas_02_100011" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.832, 0, 0, 0, 1.832, 0, 0, 0, 1, 1.706, -5.147, 0.829)
+texture = ExtResource("t138")
+
+[node name="noc_krzak_04_100012" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.830, 0, 0, 0, 1.830, 0, 0, 0, 1, 2.520, -5.016, 0.838)
+texture = ExtResource("t131")
+
+[node name="noc_pas_01_100013" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.845, 0, 0, 0, 1.845, 0, 0, 0, 1, 3.035, -5.080, 0.768)
+flip_h = true
+texture = ExtResource("t137")
+
+[node name="noc_pas_04_100014" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.843, 0, 0, 0, 1.843, 0, 0, 0, 1, 4.095, -5.098, 0.775)
+texture = ExtResource("t140")
+
+[node name="noc_pas_02_100015" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.836, 0, 0, 0, 1.836, 0, 0, 0, 1, 4.953, -5.080, 0.812)
+texture = ExtResource("t138")
+
+[node name="noc_pas_02_100016" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.821, 0, 0, 0, 1.821, 0, 0, 0, 1, 6.042, -5.087, 0.887)
+flip_h = true
+texture = ExtResource("t138")
+
+[node name="noc_pas_01_100017" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.847, 0, 0, 0, 1.847, 0, 0, 0, 1, 6.846, -5.123, 0.758)
+flip_h = true
+texture = ExtResource("t137")
+
+[node name="noc_pas_04_100018" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.836, 0, 0, 0, 1.836, 0, 0, 0, 1, 7.953, -5.047, 0.809)
+texture = ExtResource("t140")
+
+[node name="noc_pas_01_100019" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.837, 0, 0, 0, 1.837, 0, 0, 0, 1, 8.780, -5.111, 0.806)
+flip_h = true
+texture = ExtResource("t137")
+
+[node name="noc_pas_04_100020" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.838, 0, 0, 0, 1.838, 0, 0, 0, 1, 9.577, -5.034, 0.800)
+flip_h = true
+texture = ExtResource("t140")
+
+[node name="noc_krzak_02_100021" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.834, 0, 0, 0, 1.834, 0, 0, 0, 1, 10.614, -5.042, 0.822)
+texture = ExtResource("t129")
+
+[node name="noc_kepka_a_36_100022" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.238, 0, 0, 0, 2.238, 0, 0, 0, 1, 11.148, -4.907, 0.935)
+flip_h = true
+texture = ExtResource("t35")
+
+[node name="noc_pas_01_100023" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.829, 0, 0, 0, 1.829, 0, 0, 0, 1, 11.355, -5.085, 0.846)
+flip_h = true
+texture = ExtResource("t137")
+
+[node name="noc_pas_03_100024" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.819, 0, 0, 0, 1.819, 0, 0, 0, 1, 12.595, -5.096, 0.897)
+texture = ExtResource("t139")
+
+[node name="noc_kepka_b_24_100025" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.077, 0, 0, 0, 2.077, 0, 0, 0, 1, 13.692, -4.959, 0.887)
+texture = ExtResource("t87")
+
+[node name="noc_kepka_b_64_100026" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.241, 0, 0, 0, 2.241, 0, 0, 0, 1, 13.875, -4.892, 0.875)
+texture = ExtResource("t127")
+
+[node name="noc_pas_01_100027" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.808, 0, 0, 0, 1.808, 0, 0, 0, 1, 14.090, -5.086, 0.949)
+texture = ExtResource("t137")
+
+[node name="noc_kepka_b_54_100028" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.134, 0, 0, 0, 2.134, 0, 0, 0, 1, 15.054, -4.875, 0.918)
+texture = ExtResource("t117")
+
+[node name="noc_kepka_b_60_100029" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.826, 0, 0, 0, 1.826, 0, 0, 0, 1, 15.209, -4.798, 0.941)
+texture = ExtResource("t123")
+
+[node name="noc_pas_01_100030" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.833, 0, 0, 0, 1.833, 0, 0, 0, 1, 15.379, -5.023, 0.824)
+texture = ExtResource("t137")
+
+[node name="noc_kepka_b_24_100031" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.314, 0, 0, 0, 2.314, 0, 0, 0, 1, 16.403, -4.995, 0.838)
+flip_h = true
+texture = ExtResource("t87")
+
+[node name="noc_pas_04_100032" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.816, 0, 0, 0, 1.816, 0, 0, 0, 1, 16.628, -5.096, 0.911)
+flip_h = true
+texture = ExtResource("t140")
+
+[node name="noc_pas_03_100033" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.840, 0, 0, 0, 1.840, 0, 0, 0, 1, 17.521, -5.027, 0.792)
+flip_h = true
+texture = ExtResource("t139")
+
+[node name="noc_pas_01_100034" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.810, 0, 0, 0, 1.810, 0, 0, 0, 1, 18.705, -5.022, 0.940)
+flip_h = true
+texture = ExtResource("t137")
+
+[node name="noc_pas_02_100035" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.815, 0, 0, 0, 1.815, 0, 0, 0, 1, 19.697, -5.082, 0.916)
+texture = ExtResource("t138")
+
+[node name="noc_kepka_b_52_100036" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.047, 0, 0, 0, 2.047, 0, 0, 0, 1, 20.763, -4.854, 0.916)
+texture = ExtResource("t115")
+
+[node name="noc_pas_03_100037" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.836, 0, 0, 0, 1.836, 0, 0, 0, 1, 20.955, -5.096, 0.812)
+flip_h = true
+texture = ExtResource("t139")
+
+[node name="noc_pas_01_100038" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.817, 0, 0, 0, 1.817, 0, 0, 0, 1, 21.799, -5.026, 0.904)
+texture = ExtResource("t137")
+
+[node name="noc_krzak_02_100039" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.830, 0, 0, 0, 1.830, 0, 0, 0, 1, 22.947, -5.011, 0.839)
+texture = ExtResource("t129")
+
+[node name="noc_krzak_04_100040" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.840, 0, 0, 0, 1.840, 0, 0, 0, 1, 23.515, -5.074, 0.790)
+flip_h = true
+texture = ExtResource("t131")
+
+[node name="noc_pas_01_100041" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.841, 0, 0, 0, 1.841, 0, 0, 0, 1, 23.866, -5.043, 0.786)
+flip_h = true
+texture = ExtResource("t137")
+
+[node name="noc_pas_02_100042" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.832, 0, 0, 0, 1.832, 0, 0, 0, 1, 24.970, -5.140, 0.829)
+texture = ExtResource("t138")
+
+[node name="noc_krzak_07_100043" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.843, 0, 0, 0, 1.843, 0, 0, 0, 1, 25.778, -5.055, 0.776)
+texture = ExtResource("t134")
+
+[node name="noc_pas_03_100044" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.830, 0, 0, 0, 1.830, 0, 0, 0, 1, 26.270, -5.076, 0.843)
+flip_h = true
+texture = ExtResource("t139")
+
+[node name="noc_kepka_a_32_100045" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.967, 0, 0, 0, 1.967, 0, 0, 0, 1, 27.375, -4.939, 0.930)
+texture = ExtResource("t31")
+
+[node name="noc_kepka_b_19_100046" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.010, 0, 0, 0, 2.010, 0, 0, 0, 1, 27.596, -4.833, 0.894)
+texture = ExtResource("t82")
+
+[node name="noc_pas_04_100047" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.817, 0, 0, 0, 1.817, 0, 0, 0, 1, 27.727, -5.068, 0.904)
+flip_h = true
+texture = ExtResource("t140")
+
+[node name="noc_pas_01_100048" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.841, 0, 0, 0, 1.841, 0, 0, 0, 1, 28.891, -5.050, 0.785)
+texture = ExtResource("t137")
+
+[node name="noc_kepka_b_63_100049" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.857, 0, 0, 0, 1.857, 0, 0, 0, 1, 29.743, -4.959, 0.888)
+flip_h = true
+texture = ExtResource("t126")
+
+[node name="noc_kepka_b_02_100050" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.651, 0, 0, 0, 1.651, 0, 0, 0, 1, 29.926, -4.993, 0.826)
+texture = ExtResource("t65")
+
+[node name="noc_kepka_a_52_100051" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.635, 0, 0, 0, 1.635, 0, 0, 0, 1, 30.063, -4.962, 0.773)
+flip_h = true
+texture = ExtResource("t51")
+
+[node name="noc_kepka_a_32_100052" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.570, 0, 0, 0, 1.570, 0, 0, 0, 1, 30.213, -5.020, 0.888)
+texture = ExtResource("t31")
+
+[node name="noc_kepka_b_05_100053" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.395, 0, 0, 0, 1.395, 0, 0, 0, 1, 30.379, -5.108, 0.849)
+texture = ExtResource("t68")
+
+[node name="noc_kepka_b_44_100054" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.444, 0, 0, 0, 1.444, 0, 0, 0, 1, 30.530, -5.167, 0.935)
+texture = ExtResource("t107")
+
+[node name="noc_kepka_a_63_100055" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.572, 0, 0, 0, 1.572, 0, 0, 0, 1, 0.200, -5.551, 1.121)
+flip_h = true
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t62")
+
+[node name="noc_kepka_b_48_100056" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.416, 0, 0, 0, 1.416, 0, 0, 0, 1, 0.392, -5.416, 1.227)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t111")
+
+[node name="noc_kepka_a_35_100057" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.575, 0, 0, 0, 1.575, 0, 0, 0, 1, 0.530, -5.236, 1.248)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t34")
+
+[node name="noc_kepka_a_56_100058" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.922, 0, 0, 0, 1.922, 0, 0, 0, 1, 0.663, -5.214, 1.139)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t55")
+
+[node name="noc_kepka_a_25_100059" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.810, 0, 0, 0, 1.810, 0, 0, 0, 1, 0.801, -5.221, 1.288)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t24")
+
+[node name="noc_kepka_b_28_100060" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.152, 0, 0, 0, 2.152, 0, 0, 0, 1, 0.981, -5.170, 1.294)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t91")
+
+[node name="noc_kepka_a_19_100061" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.106, 0, 0, 0, 2.106, 0, 0, 0, 1, 1.202, -5.239, 1.105)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t18")
+
+[node name="noc_kepka_a_48_100062" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.021, 0, 0, 0, 2.021, 0, 0, 0, 1, 1.437, -5.089, 1.134)
+flip_h = true
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t47")
+
+[node name="noc_pas_02_100063" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.000, 0, 0, 0, 2.000, 0, 0, 0, 1, 1.663, -5.363, 1.290)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t138")
+
+[node name="noc_pas_03_100064" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.024, 0, 0, 0, 2.024, 0, 0, 0, 1, 2.674, -5.346, 1.186)
+flip_h = true
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t139")
+
+[node name="noc_kepka_a_47_100065" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.358, 0, 0, 0, 2.358, 0, 0, 0, 1, 3.886, -5.153, 1.172)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t46")
+
+[node name="noc_pas_01_100066" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.029, 0, 0, 0, 2.029, 0, 0, 0, 1, 4.166, -5.296, 1.165)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t137")
+
+[node name="noc_kepka_b_40_100067" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.499, 0, 0, 0, 2.499, 0, 0, 0, 1, 5.476, -5.198, 1.138)
+flip_h = true
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t103")
+
+[node name="noc_pas_01_100068" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.010, 0, 0, 0, 2.010, 0, 0, 0, 1, 5.741, -5.354, 1.249)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t137")
+
+[node name="noc_kepka_b_31_100069" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.625, 0, 0, 0, 2.625, 0, 0, 0, 1, 6.816, -5.167, 1.253)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t94")
+
+[node name="noc_pas_04_100070" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.040, 0, 0, 0, 2.040, 0, 0, 0, 1, 7.030, -5.409, 1.120)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t140")
+
+[node name="noc_pas_03_100071" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.000, 0, 0, 0, 2.000, 0, 0, 0, 1, 8.364, -5.335, 1.289)
+flip_h = true
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t139")
+
+[node name="noc_pas_01_100072" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.026, 0, 0, 0, 2.026, 0, 0, 0, 1, 9.556, -5.390, 1.178)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t137")
+
+[node name="noc_kepka_a_06_100073" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.133, 0, 0, 0, 2.133, 0, 0, 0, 1, 10.779, -5.106, 1.122)
+flip_h = true
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t5")
+
+[node name="noc_kepka_b_33_100074" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.041, 0, 0, 0, 2.041, 0, 0, 0, 1, 10.971, -5.126, 1.152)
+flip_h = true
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t96")
+
+[node name="noc_pas_01_100075" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.015, 0, 0, 0, 2.015, 0, 0, 0, 1, 11.159, -5.361, 1.228)
+flip_h = true
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t137")
+
+[node name="noc_kepka_a_12_100076" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.310, 0, 0, 0, 2.310, 0, 0, 0, 1, 12.330, -5.065, 1.288)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t11")
+
+[node name="noc_pas_01_100077" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.024, 0, 0, 0, 2.024, 0, 0, 0, 1, 12.576, -5.335, 1.186)
+flip_h = true
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t137")
+
+[node name="noc_pas_03_100078" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.022, 0, 0, 0, 2.022, 0, 0, 0, 1, 13.648, -5.309, 1.197)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t139")
+
+[node name="noc_kepka_a_07_100079" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.044, 0, 0, 0, 2.044, 0, 0, 0, 1, 14.842, -5.082, 1.149)
+flip_h = true
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t6")
+
+[node name="noc_pas_03_100080" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.009, 0, 0, 0, 2.009, 0, 0, 0, 1, 15.058, -5.277, 1.250)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t139")
+
+[node name="noc_pas_02_100081" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.024, 0, 0, 0, 2.024, 0, 0, 0, 1, 16.391, -5.384, 1.186)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t138")
+
+[node name="noc_pas_04_100082" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.037, 0, 0, 0, 2.037, 0, 0, 0, 1, 17.361, -5.415, 1.129)
+flip_h = true
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t140")
+
+[node name="noc_pas_04_100083" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.023, 0, 0, 0, 2.023, 0, 0, 0, 1, 18.596, -5.324, 1.191)
+flip_h = true
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t140")
+
+[node name="noc_pas_04_100084" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.038, 0, 0, 0, 2.038, 0, 0, 0, 1, 19.742, -5.358, 1.128)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t140")
+
+[node name="noc_kepka_b_30_100085" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.648, 0, 0, 0, 2.648, 0, 0, 0, 1, 20.944, -5.238, 1.206)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t93")
+
+[node name="noc_pas_01_100086" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.021, 0, 0, 0, 2.021, 0, 0, 0, 1, 21.237, -5.313, 1.201)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t137")
+
+[node name="noc_pas_02_100087" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.015, 0, 0, 0, 2.015, 0, 0, 0, 1, 22.532, -5.405, 1.227)
+flip_h = true
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t138")
+
+[node name="noc_krzak_04_100088" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.003, 0, 0, 0, 2.003, 0, 0, 0, 1, 23.504, -5.281, 1.276)
+flip_h = true
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t131")
+
+[node name="noc_pas_01_100089" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.039, 0, 0, 0, 2.039, 0, 0, 0, 1, 23.951, -5.352, 1.120)
+flip_h = true
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t137")
+
+[node name="noc_kepka_a_61_100090" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.539, 0, 0, 0, 2.539, 0, 0, 0, 1, 24.867, -5.123, 1.175)
+flip_h = true
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t60")
+
+[node name="noc_kepka_a_20_100091" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.673, 0, 0, 0, 2.673, 0, 0, 0, 1, 25.135, -5.117, 1.189)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t19")
+
+[node name="noc_pas_03_100092" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.026, 0, 0, 0, 2.026, 0, 0, 0, 1, 25.393, -5.300, 1.178)
+flip_h = true
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t139")
+
+[node name="noc_pas_03_100093" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.019, 0, 0, 0, 2.019, 0, 0, 0, 1, 26.673, -5.357, 1.210)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t139")
+
+[node name="noc_pas_01_100094" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.023, 0, 0, 0, 2.023, 0, 0, 0, 1, 27.750, -5.316, 1.192)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t137")
+
+[node name="noc_pas_04_100095" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.030, 0, 0, 0, 2.030, 0, 0, 0, 1, 28.838, -5.390, 1.160)
+flip_h = true
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t140")
+
+[node name="noc_kepka_b_63_100096" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(2.018, 0, 0, 0, 2.018, 0, 0, 0, 1, 29.825, -5.204, 1.239)
+flip_h = true
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t126")
+
+[node name="noc_kepka_b_19_100097" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.905, 0, 0, 0, 1.905, 0, 0, 0, 1, 30.007, -5.325, 1.214)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t82")
+
+[node name="noc_kepka_b_54_100098" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.624, 0, 0, 0, 1.624, 0, 0, 0, 1, 30.192, -5.394, 1.180)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t117")
+
+[node name="noc_kepka_a_07_100099" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.571, 0, 0, 0, 1.571, 0, 0, 0, 1, 30.323, -5.381, 1.179)
+flip_h = true
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t6")
+
+[node name="noc_kepka_a_46_100100" type="Sprite3D" parent="Ziemia"]
+transform = Transform3D(1.398, 0, 0, 0, 1.398, 0, 0, 0, 1, 30.477, -5.487, 1.252)
+flip_h = true
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t45")
+
+[node name="Przód" type="Node3D" parent="."]
+
+[node name="Warstwa 1" type="Node3D" parent="Przód"]
+
+[node name="noc_pas_04_100125" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.675, 0, 0, 0, 1.675, 0, 0, 0, 1, 0.210, -5.433, 1.764)
+flip_h = true
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t140")
+
+[node name="noc_pas_03_100126" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.680, 0, 0, 0, 1.680, 0, 0, 0, 1, 0.761, -5.350, 1.790)
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t139")
+
+[node name="noc_wysoka_01_100127" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.697, 0, 0, 0, 1.697, 0, 0, 0, 1, 1.483, -5.751, 1.872)
+flip_h = true
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_03_100128" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.979, 0, 0, 0, 1.979, 0, 0, 0, 1, 2.163, -5.464, 1.748)
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t139")
+
+[node name="noc_kepka_b_42_100129" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(3.321, 0, 0, 0, 3.321, 0, 0, 0, 1, 3.031, -5.366, 1.896)
+flip_h = true
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t105")
+
+[node name="noc_wysoka_02_100130" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.944, 0, 0, 0, 1.944, 0, 0, 0, 1, 3.264, -5.876, 1.792)
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100131" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.952, 0, 0, 0, 1.952, 0, 0, 0, 1, 4.207, -5.861, 1.674)
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100132" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.704, 0, 0, 0, 1.704, 0, 0, 0, 1, 5.096, -5.828, 1.688)
+flip_h = true
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100133" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.887, 0, 0, 0, 1.887, 0, 0, 0, 1, 5.749, -5.843, 1.654)
+flip_h = true
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t142")
+
+[node name="noc_kepka_a_10_100134" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(2.975, 0, 0, 0, 2.975, 0, 0, 0, 1, 6.570, -5.346, 1.659)
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t9")
+
+[node name="noc_wysoka_01_100135" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.675, 0, 0, 0, 1.675, 0, 0, 0, 1, 6.763, -5.748, 1.868)
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_04_100136" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(2.069, 0, 0, 0, 2.069, 0, 0, 0, 1, 7.629, -5.492, 1.745)
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t140")
+
+[node name="noc_pas_01_100137" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.904, 0, 0, 0, 1.904, 0, 0, 0, 1, 8.533, -5.410, 1.666)
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t137")
+
+[node name="noc_wysoka_02_100138" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.901, 0, 0, 0, 1.901, 0, 0, 0, 1, 9.400, -5.923, 1.617)
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t143")
+
+[node name="noc_kepka_b_52_100139" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(3.394, 0, 0, 0, 3.394, 0, 0, 0, 1, 10.329, -5.413, 1.814)
+flip_h = true
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t115")
+
+[node name="noc_wysoka_02_100140" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.908, 0, 0, 0, 1.908, 0, 0, 0, 1, 10.510, -5.813, 1.843)
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100141" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.540, 0, 0, 0, 1.540, 0, 0, 0, 1, 11.373, -5.652, 1.831)
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_01_100142" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.812, 0, 0, 0, 1.812, 0, 0, 0, 1, 12.137, -5.419, 1.784)
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t137")
+
+[node name="noc_wysoka_02_100143" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.508, 0, 0, 0, 1.508, 0, 0, 0, 1, 12.938, -5.667, 1.656)
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100144" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.748, 0, 0, 0, 1.748, 0, 0, 0, 1, 13.652, -5.774, 1.758)
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100145" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.724, 0, 0, 0, 1.724, 0, 0, 0, 1, 14.328, -5.791, 1.899)
+flip_h = true
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100146" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.799, 0, 0, 0, 1.799, 0, 0, 0, 1, 14.926, -5.831, 1.824)
+flip_h = true
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t143")
+
+[node name="noc_kepka_b_58_100147" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(2.862, 0, 0, 0, 2.862, 0, 0, 0, 1, 15.676, -5.341, 1.769)
+flip_h = true
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t121")
+
+[node name="noc_pas_02_100148" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(2.118, 0, 0, 0, 2.118, 0, 0, 0, 1, 15.932, -5.573, 1.646)
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t138")
+
+[node name="noc_kepka_b_37_100149" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(3.231, 0, 0, 0, 3.231, 0, 0, 0, 1, 16.851, -5.396, 1.626)
+flip_h = true
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t100")
+
+[node name="noc_wysoka_02_100150" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.745, 0, 0, 0, 1.745, 0, 0, 0, 1, 17.015, -5.763, 1.817)
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100151" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.539, 0, 0, 0, 1.539, 0, 0, 0, 1, 17.620, -5.675, 1.789)
+flip_h = true
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100152" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.558, 0, 0, 0, 1.558, 0, 0, 0, 1, 18.135, -5.791, 1.610)
+flip_h = true
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100153" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.965, 0, 0, 0, 1.965, 0, 0, 0, 1, 18.865, -5.876, 1.642)
+flip_h = true
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100154" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.774, 0, 0, 0, 1.774, 0, 0, 0, 1, 19.759, -5.804, 1.818)
+flip_h = true
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100155" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.629, 0, 0, 0, 1.629, 0, 0, 0, 1, 20.618, -5.749, 1.657)
+flip_h = true
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100156" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.849, 0, 0, 0, 1.849, 0, 0, 0, 1, 21.319, -5.833, 1.848)
+flip_h = true
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t143")
+
+[node name="noc_kepka_a_60_100157" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(2.982, 0, 0, 0, 2.982, 0, 0, 0, 1, 22.209, -5.282, 1.750)
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t59")
+
+[node name="noc_wysoka_01_100158" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.792, 0, 0, 0, 1.792, 0, 0, 0, 1, 22.499, -5.867, 1.608)
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100159" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.837, 0, 0, 0, 1.837, 0, 0, 0, 1, 23.120, -5.882, 1.699)
+flip_h = true
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100160" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.595, 0, 0, 0, 1.595, 0, 0, 0, 1, 23.880, -5.740, 1.771)
+flip_h = true
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100161" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.803, 0, 0, 0, 1.803, 0, 0, 0, 1, 24.688, -5.866, 1.637)
+flip_h = true
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100162" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.914, 0, 0, 0, 1.914, 0, 0, 0, 1, 25.579, -5.885, 1.656)
+flip_h = true
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100163" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.623, 0, 0, 0, 1.623, 0, 0, 0, 1, 26.208, -5.767, 1.801)
+flip_h = true
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_01_100164" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.730, 0, 0, 0, 1.730, 0, 0, 0, 1, 26.929, -5.360, 1.724)
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t137")
+
+[node name="noc_wysoka_02_100165" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.753, 0, 0, 0, 1.753, 0, 0, 0, 1, 27.503, -5.811, 1.679)
+flip_h = true
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100166" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.681, 0, 0, 0, 1.681, 0, 0, 0, 1, 28.287, -5.739, 1.749)
+flip_h = true
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t142")
+
+[node name="noc_kepka_b_41_100167" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(3.378, 0, 0, 0, 3.378, 0, 0, 0, 1, 29.130, -5.459, 1.746)
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t104")
+
+[node name="noc_wysoka_02_100168" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.561, 0, 0, 0, 1.561, 0, 0, 0, 1, 29.403, -5.769, 1.634)
+flip_h = true
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100169" type="Sprite3D" parent="Przód/Warstwa 1"]
+transform = Transform3D(1.667, 0, 0, 0, 1.667, 0, 0, 0, 1, 30.061, -5.814, 1.616)
+modulate = Color(0.8, 0.83, 0.92, 1)
+texture = ExtResource("t142")
+
+[node name="Warstwa 2" type="Node3D" parent="Przód"]
+
+[node name="noc_kepka_a_63_100170" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(2.828, 0, 0, 0, 2.828, 0, 0, 0, 1, 0.215, -5.480, 2.434)
+flip_h = true
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t62")
+
+[node name="noc_pas_02_100171" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.948, 0, 0, 0, 1.948, 0, 0, 0, 1, 0.415, -5.637, 2.497)
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t138")
+
+[node name="noc_pas_03_100172" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(2.130, 0, 0, 0, 2.130, 0, 0, 0, 1, 1.367, -5.631, 2.426)
+flip_h = true
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t139")
+
+[node name="noc_pas_01_100173" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.715, 0, 0, 0, 1.715, 0, 0, 0, 1, 2.316, -5.454, 2.538)
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t137")
+
+[node name="noc_wysoka_01_100174" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.921, 0, 0, 0, 1.921, 0, 0, 0, 1, 3.164, -5.988, 2.307)
+flip_h = true
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100175" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.691, 0, 0, 0, 1.691, 0, 0, 0, 1, 3.945, -5.841, 2.476)
+flip_h = true
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100176" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.571, 0, 0, 0, 1.571, 0, 0, 0, 1, 4.798, -5.826, 2.533)
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t143")
+
+[node name="noc_kepka_a_16_100177" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(2.854, 0, 0, 0, 2.854, 0, 0, 0, 1, 5.380, -5.435, 2.551)
+flip_h = true
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t15")
+
+[node name="noc_kepka_a_52_100178" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(3.270, 0, 0, 0, 3.270, 0, 0, 0, 1, 5.559, -5.573, 2.371)
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t51")
+
+[node name="noc_wysoka_02_100179" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(2.021, 0, 0, 0, 2.021, 0, 0, 0, 1, 5.788, -6.023, 2.382)
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t143")
+
+[node name="noc_kepka_b_50_100180" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(3.158, 0, 0, 0, 3.158, 0, 0, 0, 1, 6.573, -5.539, 2.351)
+flip_h = true
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t113")
+
+[node name="noc_wysoka_01_100181" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.785, 0, 0, 0, 1.785, 0, 0, 0, 1, 6.821, -5.920, 2.389)
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100182" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.979, 0, 0, 0, 1.979, 0, 0, 0, 1, 7.580, -5.969, 2.569)
+flip_h = true
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_04_100183" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(2.187, 0, 0, 0, 2.187, 0, 0, 0, 1, 8.289, -5.640, 2.432)
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t140")
+
+[node name="noc_pas_03_100184" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.963, 0, 0, 0, 1.963, 0, 0, 0, 1, 8.992, -5.571, 2.427)
+flip_h = true
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t139")
+
+[node name="noc_wysoka_01_100185" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.655, 0, 0, 0, 1.655, 0, 0, 0, 1, 9.954, -5.839, 2.464)
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100186" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.973, 0, 0, 0, 1.973, 0, 0, 0, 1, 10.816, -5.948, 2.475)
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100187" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.680, 0, 0, 0, 1.680, 0, 0, 0, 1, 11.485, -5.824, 2.445)
+flip_h = true
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t143")
+
+[node name="noc_pas_02_100188" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.964, 0, 0, 0, 1.964, 0, 0, 0, 1, 12.305, -5.561, 2.531)
+flip_h = true
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t138")
+
+[node name="noc_wysoka_02_100189" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.892, 0, 0, 0, 1.892, 0, 0, 0, 1, 13.150, -5.921, 2.537)
+flip_h = true
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t143")
+
+[node name="noc_pas_04_100190" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.839, 0, 0, 0, 1.839, 0, 0, 0, 1, 13.858, -5.610, 2.361)
+flip_h = true
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t140")
+
+[node name="noc_kepka_b_20_100191" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(2.905, 0, 0, 0, 2.905, 0, 0, 0, 1, 14.581, -5.498, 2.305)
+flip_h = true
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t83")
+
+[node name="noc_wysoka_01_100192" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.528, 0, 0, 0, 1.528, 0, 0, 0, 1, 14.765, -5.796, 2.572)
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100193" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.549, 0, 0, 0, 1.549, 0, 0, 0, 1, 15.513, -5.843, 2.428)
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_04_100194" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.708, 0, 0, 0, 1.708, 0, 0, 0, 1, 16.240, -5.472, 2.546)
+flip_h = true
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t140")
+
+[node name="noc_pas_04_100195" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.722, 0, 0, 0, 1.722, 0, 0, 0, 1, 16.835, -5.515, 2.423)
+flip_h = true
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t140")
+
+[node name="noc_wysoka_02_100196" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.891, 0, 0, 0, 1.891, 0, 0, 0, 1, 17.687, -5.922, 2.480)
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t143")
+
+[node name="noc_krzak_01_100197" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(2.043, 0, 0, 0, 2.043, 0, 0, 0, 1, 18.500, -5.618, 2.372)
+flip_h = true
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t128")
+
+[node name="noc_wysoka_02_100198" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.952, 0, 0, 0, 1.952, 0, 0, 0, 1, 18.838, -5.978, 2.591)
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t143")
+
+[node name="noc_pas_03_100199" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.809, 0, 0, 0, 1.809, 0, 0, 0, 1, 19.868, -5.499, 2.466)
+flip_h = true
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t139")
+
+[node name="noc_wysoka_02_100200" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.961, 0, 0, 0, 1.961, 0, 0, 0, 1, 20.741, -5.944, 2.577)
+flip_h = true
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t143")
+
+[node name="noc_krzak_06_100201" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(2.017, 0, 0, 0, 2.017, 0, 0, 0, 1, 21.621, -5.616, 2.470)
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t133")
+
+[node name="noc_wysoka_02_100202" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(2.013, 0, 0, 0, 2.013, 0, 0, 0, 1, 22.054, -6.019, 2.364)
+flip_h = true
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100203" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.766, 0, 0, 0, 1.766, 0, 0, 0, 1, 22.866, -5.936, 2.420)
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100204" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.976, 0, 0, 0, 1.976, 0, 0, 0, 1, 23.603, -6.023, 2.361)
+flip_h = true
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100205" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.829, 0, 0, 0, 1.829, 0, 0, 0, 1, 24.505, -5.953, 2.456)
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t143")
+
+[node name="noc_pas_02_100206" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.831, 0, 0, 0, 1.831, 0, 0, 0, 1, 25.306, -5.552, 2.408)
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t138")
+
+[node name="noc_pas_01_100207" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.708, 0, 0, 0, 1.708, 0, 0, 0, 1, 25.978, -5.501, 2.397)
+flip_h = true
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t137")
+
+[node name="noc_wysoka_01_100208" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.662, 0, 0, 0, 1.662, 0, 0, 0, 1, 26.785, -5.867, 2.482)
+flip_h = true
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100209" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.680, 0, 0, 0, 1.680, 0, 0, 0, 1, 27.498, -5.890, 2.427)
+flip_h = true
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100210" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.880, 0, 0, 0, 1.880, 0, 0, 0, 1, 28.276, -5.947, 2.344)
+flip_h = true
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100211" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.788, 0, 0, 0, 1.788, 0, 0, 0, 1, 29.140, -5.886, 2.407)
+flip_h = true
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100212" type="Sprite3D" parent="Przód/Warstwa 2"]
+transform = Transform3D(1.896, 0, 0, 0, 1.896, 0, 0, 0, 1, 29.934, -5.938, 2.445)
+modulate = Color(0.707, 0.737, 0.827, 1)
+texture = ExtResource("t142")
+
+[node name="Warstwa 3" type="Node3D" parent="Przód"]
+
+[node name="noc_wysoka_02_100213" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.822, 0, 0, 0, 1.822, 0, 0, 0, 1, 0.216, -5.995, 3.287)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100214" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.582, 0, 0, 0, 1.582, 0, 0, 0, 1, 1.055, -5.886, 3.148)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t143")
+
+[node name="noc_pas_02_100215" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.778, 0, 0, 0, 1.778, 0, 0, 0, 1, 1.661, -5.631, 3.121)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t138")
+
+[node name="noc_wysoka_01_100216" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.863, 0, 0, 0, 1.863, 0, 0, 0, 1, 2.414, -6.030, 3.272)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_kepka_b_15_100217" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(3.487, 0, 0, 0, 3.487, 0, 0, 0, 1, 3.131, -5.648, 3.007)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t78")
+
+[node name="noc_wysoka_01_100218" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.686, 0, 0, 0, 1.686, 0, 0, 0, 1, 3.303, -5.912, 3.254)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100219" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.668, 0, 0, 0, 1.668, 0, 0, 0, 1, 4.161, -5.922, 3.268)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100220" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.728, 0, 0, 0, 1.728, 0, 0, 0, 1, 4.938, -5.994, 3.102)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100221" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.829, 0, 0, 0, 1.829, 0, 0, 0, 1, 5.738, -6.001, 3.186)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_04_100222" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.849, 0, 0, 0, 1.849, 0, 0, 0, 1, 6.439, -5.555, 3.273)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t140")
+
+[node name="noc_wysoka_02_100223" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.799, 0, 0, 0, 1.799, 0, 0, 0, 1, 7.212, -6.022, 3.006)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100224" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.948, 0, 0, 0, 1.948, 0, 0, 0, 1, 7.877, -6.001, 3.294)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_01_100225" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(2.001, 0, 0, 0, 2.001, 0, 0, 0, 1, 8.860, -5.657, 3.168)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t137")
+
+[node name="noc_wysoka_01_100226" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.664, 0, 0, 0, 1.664, 0, 0, 0, 1, 9.611, -5.942, 3.215)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_02_100227" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.843, 0, 0, 0, 1.843, 0, 0, 0, 1, 10.478, -5.657, 3.207)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t138")
+
+[node name="noc_wysoka_02_100228" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.660, 0, 0, 0, 1.660, 0, 0, 0, 1, 11.184, -5.922, 3.075)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100229" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.994, 0, 0, 0, 1.994, 0, 0, 0, 1, 11.887, -6.102, 3.245)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100230" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.533, 0, 0, 0, 1.533, 0, 0, 0, 1, 12.886, -5.849, 3.186)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100231" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.640, 0, 0, 0, 1.640, 0, 0, 0, 1, 13.494, -5.893, 3.190)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t143")
+
+[node name="noc_kepka_a_53_100232" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(3.507, 0, 0, 0, 3.507, 0, 0, 0, 1, 14.093, -5.492, 3.249)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t52")
+
+[node name="noc_pas_03_100233" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(2.131, 0, 0, 0, 2.131, 0, 0, 0, 1, 14.352, -5.677, 3.038)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t139")
+
+[node name="noc_wysoka_01_100234" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.745, 0, 0, 0, 1.745, 0, 0, 0, 1, 15.090, -5.988, 3.208)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100235" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.850, 0, 0, 0, 1.850, 0, 0, 0, 1, 15.759, -6.048, 3.119)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t143")
+
+[node name="noc_pas_01_100236" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(2.161, 0, 0, 0, 2.161, 0, 0, 0, 1, 16.379, -5.678, 3.058)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t137")
+
+[node name="noc_wysoka_01_100237" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.913, 0, 0, 0, 1.913, 0, 0, 0, 1, 17.363, -6.005, 3.257)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_kepka_b_09_100238" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(2.902, 0, 0, 0, 2.902, 0, 0, 0, 1, 18.166, -5.501, 3.217)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t72")
+
+[node name="noc_pas_02_100239" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.941, 0, 0, 0, 1.941, 0, 0, 0, 1, 18.358, -5.622, 3.240)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t138")
+
+[node name="noc_kepka_b_01_100240" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(3.608, 0, 0, 0, 3.608, 0, 0, 0, 1, 18.994, -5.528, 3.130)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t64")
+
+[node name="noc_pas_03_100241" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(2.027, 0, 0, 0, 2.027, 0, 0, 0, 1, 19.176, -5.632, 3.082)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t139")
+
+[node name="noc_wysoka_01_100242" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.633, 0, 0, 0, 1.633, 0, 0, 0, 1, 19.933, -5.978, 3.002)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100243" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(2.054, 0, 0, 0, 2.054, 0, 0, 0, 1, 20.457, -6.168, 3.061)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_04_100244" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.998, 0, 0, 0, 1.998, 0, 0, 0, 1, 21.285, -5.681, 3.064)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t140")
+
+[node name="noc_wysoka_02_100245" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.916, 0, 0, 0, 1.916, 0, 0, 0, 1, 21.999, -6.001, 3.298)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100246" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.997, 0, 0, 0, 1.997, 0, 0, 0, 1, 22.919, -6.104, 3.162)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_01_100247" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.993, 0, 0, 0, 1.993, 0, 0, 0, 1, 23.583, -5.639, 3.003)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t137")
+
+[node name="noc_wysoka_01_100248" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.903, 0, 0, 0, 1.903, 0, 0, 0, 1, 24.195, -6.026, 3.221)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_01_100249" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(2.167, 0, 0, 0, 2.167, 0, 0, 0, 1, 25.136, -5.701, 3.145)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t137")
+
+[node name="noc_pas_01_100250" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(2.007, 0, 0, 0, 2.007, 0, 0, 0, 1, 26.175, -5.643, 3.068)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t137")
+
+[node name="noc_pas_03_100251" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(2.013, 0, 0, 0, 2.013, 0, 0, 0, 1, 27.037, -5.625, 3.135)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t139")
+
+[node name="noc_pas_03_100252" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.840, 0, 0, 0, 1.840, 0, 0, 0, 1, 27.902, -5.559, 3.222)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t139")
+
+[node name="noc_pas_02_100253" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.895, 0, 0, 0, 1.895, 0, 0, 0, 1, 28.665, -5.668, 3.047)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t138")
+
+[node name="noc_wysoka_01_100254" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.739, 0, 0, 0, 1.739, 0, 0, 0, 1, 29.240, -5.988, 3.096)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_kepka_b_19_100255" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(2.761, 0, 0, 0, 2.761, 0, 0, 0, 1, 29.874, -5.520, 3.177)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t82")
+
+[node name="noc_kepka_b_64_100256" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(3.090, 0, 0, 0, 3.090, 0, 0, 0, 1, 30.038, -5.506, 3.212)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t127")
+
+[node name="noc_kepka_b_19_100257" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(3.554, 0, 0, 0, 3.554, 0, 0, 0, 1, 30.262, -5.603, 3.233)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t82")
+
+[node name="noc_pas_01_100258" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.789, 0, 0, 0, 1.789, 0, 0, 0, 1, 30.500, -5.610, 3.185)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t137")
+
+[node name="noc_wysoka_02_100259" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.963, 0, 0, 0, 1.963, 0, 0, 0, 1, 0.216, -6.619, 3.343)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100260" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.999, 0, 0, 0, 1.999, 0, 0, 0, 1, 1.115, -6.644, 3.322)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100261" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.861, 0, 0, 0, 1.861, 0, 0, 0, 1, 2.110, -6.585, 3.343)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100262" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.818, 0, 0, 0, 1.818, 0, 0, 0, 1, 2.939, -6.539, 3.368)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100263" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(2.100, 0, 0, 0, 2.100, 0, 0, 0, 1, 3.682, -6.670, 3.360)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100264" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.891, 0, 0, 0, 1.891, 0, 0, 0, 1, 4.519, -6.551, 3.360)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100265" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(2.157, 0, 0, 0, 2.157, 0, 0, 0, 1, 5.566, -6.651, 3.332)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100266" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(2.089, 0, 0, 0, 2.089, 0, 0, 0, 1, 6.710, -6.685, 3.363)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100267" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(2.104, 0, 0, 0, 2.104, 0, 0, 0, 1, 7.883, -6.667, 3.329)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100268" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.852, 0, 0, 0, 1.852, 0, 0, 0, 1, 9.078, -6.537, 3.329)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100269" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.835, 0, 0, 0, 1.835, 0, 0, 0, 1, 10.010, -6.552, 3.352)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100270" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.937, 0, 0, 0, 1.937, 0, 0, 0, 1, 11.057, -6.591, 3.361)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100271" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(2.061, 0, 0, 0, 2.061, 0, 0, 0, 1, 12.160, -6.631, 3.329)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100272" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.901, 0, 0, 0, 1.901, 0, 0, 0, 1, 13.138, -6.594, 3.337)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100273" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(2.073, 0, 0, 0, 2.073, 0, 0, 0, 1, 13.872, -6.649, 3.338)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100274" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.939, 0, 0, 0, 1.939, 0, 0, 0, 1, 14.729, -6.561, 3.351)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100275" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.889, 0, 0, 0, 1.889, 0, 0, 0, 1, 15.524, -6.540, 3.349)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100276" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.887, 0, 0, 0, 1.887, 0, 0, 0, 1, 16.357, -6.533, 3.344)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100277" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.960, 0, 0, 0, 1.960, 0, 0, 0, 1, 17.164, -6.588, 3.334)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100278" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.813, 0, 0, 0, 1.813, 0, 0, 0, 1, 18.029, -6.551, 3.339)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100279" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(2.096, 0, 0, 0, 2.096, 0, 0, 0, 1, 18.862, -6.674, 3.363)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100280" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(2.098, 0, 0, 0, 2.098, 0, 0, 0, 1, 19.713, -6.643, 3.321)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100281" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(2.052, 0, 0, 0, 2.052, 0, 0, 0, 1, 20.800, -6.623, 3.328)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100282" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(2.148, 0, 0, 0, 2.148, 0, 0, 0, 1, 21.788, -6.728, 3.369)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100283" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(2.173, 0, 0, 0, 2.173, 0, 0, 0, 1, 22.963, -6.711, 3.323)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100284" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.980, 0, 0, 0, 1.980, 0, 0, 0, 1, 24.072, -6.615, 3.362)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100285" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(2.038, 0, 0, 0, 2.038, 0, 0, 0, 1, 25.141, -6.616, 3.368)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100286" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(2.109, 0, 0, 0, 2.109, 0, 0, 0, 1, 26.100, -6.681, 3.367)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100287" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(2.092, 0, 0, 0, 2.092, 0, 0, 0, 1, 27.059, -6.716, 3.325)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100288" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.992, 0, 0, 0, 1.992, 0, 0, 0, 1, 27.890, -6.615, 3.335)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100289" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(2.023, 0, 0, 0, 2.023, 0, 0, 0, 1, 28.883, -6.612, 3.329)
+flip_h = true
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100290" type="Sprite3D" parent="Przód/Warstwa 3"]
+transform = Transform3D(1.856, 0, 0, 0, 1.856, 0, 0, 0, 1, 30.011, -6.535, 3.348)
+modulate = Color(0.613, 0.643, 0.733, 1)
+texture = ExtResource("t142")
+
+[node name="Warstwa 4" type="Node3D" parent="Przód"]
+
+[node name="noc_wysoka_01_100291" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.929, 0, 0, 0, 1.929, 0, 0, 0, 1, 0.213, -6.132, 3.733)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_04_100292" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.733, 0, 0, 0, 1.733, 0, 0, 0, 1, 0.943, -5.664, 3.790)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t140")
+
+[node name="noc_wysoka_02_100293" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.668, 0, 0, 0, 1.668, 0, 0, 0, 1, 1.759, -5.973, 3.764)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_kepka_a_53_100294" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(3.246, 0, 0, 0, 3.246, 0, 0, 0, 1, 2.434, -5.512, 3.966)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t52")
+
+[node name="noc_kepka_b_37_100295" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(3.320, 0, 0, 0, 3.320, 0, 0, 0, 1, 2.654, -5.638, 3.780)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t100")
+
+[node name="noc_pas_04_100296" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.846, 0, 0, 0, 1.846, 0, 0, 0, 1, 2.822, -5.644, 3.829)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t140")
+
+[node name="noc_wysoka_02_100297" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.777, 0, 0, 0, 1.777, 0, 0, 0, 1, 3.693, -5.985, 3.820)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100298" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.967, 0, 0, 0, 1.967, 0, 0, 0, 1, 4.402, -6.085, 3.856)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_pas_01_100299" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.657, 0, 0, 0, 1.657, 0, 0, 0, 1, 5.192, -5.607, 3.878)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t137")
+
+[node name="noc_wysoka_02_100300" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.579, 0, 0, 0, 1.579, 0, 0, 0, 1, 5.899, -5.859, 3.929)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_pas_03_100301" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.722, 0, 0, 0, 1.722, 0, 0, 0, 1, 6.461, -5.606, 3.728)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t139")
+
+[node name="noc_wysoka_02_100302" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.714, 0, 0, 0, 1.714, 0, 0, 0, 1, 7.234, -5.999, 3.786)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_pas_03_100303" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.707, 0, 0, 0, 1.707, 0, 0, 0, 1, 8.119, -5.591, 3.745)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t139")
+
+[node name="noc_krzak_08_100304" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(2.038, 0, 0, 0, 2.038, 0, 0, 0, 1, 8.727, -5.597, 3.714)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t135")
+
+[node name="noc_pas_01_100305" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.951, 0, 0, 0, 1.951, 0, 0, 0, 1, 9.148, -5.614, 3.905)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t137")
+
+[node name="noc_wysoka_02_100306" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.790, 0, 0, 0, 1.790, 0, 0, 0, 1, 10.068, -6.000, 3.995)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100307" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.688, 0, 0, 0, 1.688, 0, 0, 0, 1, 10.951, -5.975, 3.834)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_01_100308" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(2.030, 0, 0, 0, 2.030, 0, 0, 0, 1, 11.609, -5.623, 3.987)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t137")
+
+[node name="noc_pas_04_100309" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.775, 0, 0, 0, 1.775, 0, 0, 0, 1, 12.536, -5.597, 3.986)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t140")
+
+[node name="noc_wysoka_01_100310" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.949, 0, 0, 0, 1.949, 0, 0, 0, 1, 13.180, -6.150, 3.737)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100311" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.579, 0, 0, 0, 1.579, 0, 0, 0, 1, 13.820, -5.895, 3.911)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100312" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.529, 0, 0, 0, 1.529, 0, 0, 0, 1, 14.593, -5.846, 3.923)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100313" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.831, 0, 0, 0, 1.831, 0, 0, 0, 1, 15.163, -6.072, 3.813)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_04_100314" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.832, 0, 0, 0, 1.832, 0, 0, 0, 1, 15.921, -5.632, 3.875)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t140")
+
+[node name="noc_pas_02_100315" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.991, 0, 0, 0, 1.991, 0, 0, 0, 1, 16.615, -5.711, 3.805)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t138")
+
+[node name="noc_pas_03_100316" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.830, 0, 0, 0, 1.830, 0, 0, 0, 1, 17.551, -5.600, 3.915)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t139")
+
+[node name="noc_krzak_09_100317" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.998, 0, 0, 0, 1.998, 0, 0, 0, 1, 18.317, -5.541, 3.837)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t136")
+
+[node name="noc_wysoka_02_100318" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.775, 0, 0, 0, 1.775, 0, 0, 0, 1, 18.599, -6.059, 3.745)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100319" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.535, 0, 0, 0, 1.535, 0, 0, 0, 1, 19.226, -5.877, 3.985)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_pas_02_100320" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(2.114, 0, 0, 0, 2.114, 0, 0, 0, 1, 19.771, -5.730, 3.958)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t138")
+
+[node name="noc_wysoka_01_100321" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.902, 0, 0, 0, 1.902, 0, 0, 0, 1, 20.492, -6.058, 3.977)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_03_100322" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.932, 0, 0, 0, 1.932, 0, 0, 0, 1, 21.493, -5.655, 3.949)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t139")
+
+[node name="noc_wysoka_02_100323" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.847, 0, 0, 0, 1.847, 0, 0, 0, 1, 22.232, -6.050, 3.786)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100324" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.999, 0, 0, 0, 1.999, 0, 0, 0, 1, 22.859, -6.115, 3.746)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100325" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.746, 0, 0, 0, 1.746, 0, 0, 0, 1, 23.714, -5.988, 3.920)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_03_100326" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.821, 0, 0, 0, 1.821, 0, 0, 0, 1, 24.613, -5.644, 3.828)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t139")
+
+[node name="noc_wysoka_02_100327" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.691, 0, 0, 0, 1.691, 0, 0, 0, 1, 25.358, -5.991, 3.765)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_kepka_a_20_100328" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(3.675, 0, 0, 0, 3.675, 0, 0, 0, 1, 26.143, -5.554, 3.733)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t19")
+
+[node name="noc_kepka_a_27_100329" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(3.506, 0, 0, 0, 3.506, 0, 0, 0, 1, 26.326, -5.583, 3.988)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t26")
+
+[node name="noc_wysoka_01_100330" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.572, 0, 0, 0, 1.572, 0, 0, 0, 1, 26.471, -5.902, 3.824)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t142")
+
+[node name="noc_krzak_09_100331" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.989, 0, 0, 0, 1.989, 0, 0, 0, 1, 27.285, -5.530, 3.863)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t136")
+
+[node name="noc_pas_04_100332" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(2.082, 0, 0, 0, 2.082, 0, 0, 0, 1, 27.489, -5.643, 3.964)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t140")
+
+[node name="noc_pas_01_100333" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.894, 0, 0, 0, 1.894, 0, 0, 0, 1, 28.235, -5.606, 3.992)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t137")
+
+[node name="noc_wysoka_02_100334" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.917, 0, 0, 0, 1.917, 0, 0, 0, 1, 28.950, -6.060, 3.993)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_kepka_a_06_100335" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(3.217, 0, 0, 0, 3.217, 0, 0, 0, 1, 29.926, -5.600, 3.939)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t5")
+
+[node name="noc_wysoka_01_100336" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.537, 0, 0, 0, 1.537, 0, 0, 0, 1, 30.183, -5.938, 3.856)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100337" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(2.012, 0, 0, 0, 2.012, 0, 0, 0, 1, 0.213, -6.646, 4.046)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100338" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(2.112, 0, 0, 0, 2.112, 0, 0, 0, 1, 1.302, -6.685, 4.031)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100339" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.770, 0, 0, 0, 1.770, 0, 0, 0, 1, 2.257, -6.491, 4.059)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100340" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.934, 0, 0, 0, 1.934, 0, 0, 0, 1, 3.121, -6.617, 4.032)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100341" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.840, 0, 0, 0, 1.840, 0, 0, 0, 1, 3.921, -6.514, 4.066)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100342" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.979, 0, 0, 0, 1.979, 0, 0, 0, 1, 4.850, -6.601, 4.021)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100343" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(2.002, 0, 0, 0, 2.002, 0, 0, 0, 1, 5.804, -6.635, 4.060)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100344" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.783, 0, 0, 0, 1.783, 0, 0, 0, 1, 6.874, -6.509, 4.048)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100345" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(2.124, 0, 0, 0, 2.124, 0, 0, 0, 1, 7.586, -6.685, 4.041)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100346" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.960, 0, 0, 0, 1.960, 0, 0, 0, 1, 8.810, -6.560, 4.067)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100347" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.910, 0, 0, 0, 1.910, 0, 0, 0, 1, 9.915, -6.631, 4.023)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100348" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(2.101, 0, 0, 0, 2.101, 0, 0, 0, 1, 10.724, -6.715, 4.037)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100349" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.849, 0, 0, 0, 1.849, 0, 0, 0, 1, 11.822, -6.544, 4.055)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100350" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.906, 0, 0, 0, 1.906, 0, 0, 0, 1, 12.853, -6.564, 4.026)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100351" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(2.014, 0, 0, 0, 2.014, 0, 0, 0, 1, 13.612, -6.616, 4.026)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100352" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(2.038, 0, 0, 0, 2.038, 0, 0, 0, 1, 14.492, -6.664, 4.046)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100353" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(2.106, 0, 0, 0, 2.106, 0, 0, 0, 1, 15.365, -6.668, 4.067)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100354" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.868, 0, 0, 0, 1.868, 0, 0, 0, 1, 16.574, -6.603, 4.060)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100355" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.788, 0, 0, 0, 1.788, 0, 0, 0, 1, 17.514, -6.524, 4.027)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100356" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.875, 0, 0, 0, 1.875, 0, 0, 0, 1, 18.352, -6.579, 4.022)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100357" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(2.051, 0, 0, 0, 2.051, 0, 0, 0, 1, 19.418, -6.650, 4.045)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100358" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(2.115, 0, 0, 0, 2.115, 0, 0, 0, 1, 20.282, -6.695, 4.037)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100359" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.833, 0, 0, 0, 1.833, 0, 0, 0, 1, 21.376, -6.552, 4.027)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100360" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.879, 0, 0, 0, 1.879, 0, 0, 0, 1, 22.232, -6.536, 4.066)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100361" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.933, 0, 0, 0, 1.933, 0, 0, 0, 1, 23.270, -6.634, 4.048)
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100362" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.817, 0, 0, 0, 1.817, 0, 0, 0, 1, 24.364, -6.511, 4.067)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100363" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.937, 0, 0, 0, 1.937, 0, 0, 0, 1, 25.309, -6.601, 4.066)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100364" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.939, 0, 0, 0, 1.939, 0, 0, 0, 1, 26.059, -6.587, 4.062)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100365" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.987, 0, 0, 0, 1.987, 0, 0, 0, 1, 26.929, -6.606, 4.069)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100366" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.976, 0, 0, 0, 1.976, 0, 0, 0, 1, 27.731, -6.594, 4.040)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100367" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(1.957, 0, 0, 0, 1.957, 0, 0, 0, 1, 28.734, -6.588, 4.067)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100368" type="Sprite3D" parent="Przód/Warstwa 4"]
+transform = Transform3D(2.093, 0, 0, 0, 2.093, 0, 0, 0, 1, 29.601, -6.669, 4.052)
+flip_h = true
+modulate = Color(0.52, 0.55, 0.64, 1)
+texture = ExtResource("t143")
+
+[node name="Warstwa 5" type="Node3D" parent="Przód"]
+
+[node name="noc_pas_03_100369" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.953, 0, 0, 0, 1.953, 0, 0, 0, 1, 0.205, -5.589, 4.640)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t139")
+
+[node name="noc_wysoka_01_100370" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.880, 0, 0, 0, 1.880, 0, 0, 0, 1, 0.936, -6.035, 4.597)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100371" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.943, 0, 0, 0, 1.943, 0, 0, 0, 1, 1.813, -6.090, 4.448)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100372" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.898, 0, 0, 0, 1.898, 0, 0, 0, 1, 2.587, -6.005, 4.587)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_kepka_b_37_100373" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(3.241, 0, 0, 0, 3.241, 0, 0, 0, 1, 3.237, -5.565, 4.662)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t100")
+
+[node name="noc_wysoka_02_100374" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.826, 0, 0, 0, 1.826, 0, 0, 0, 1, 3.461, -6.068, 4.412)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100375" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.770, 0, 0, 0, 1.770, 0, 0, 0, 1, 4.390, -5.986, 4.555)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_01_100376" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.715, 0, 0, 0, 1.715, 0, 0, 0, 1, 5.039, -5.571, 4.678)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t137")
+
+[node name="noc_pas_04_100377" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.988, 0, 0, 0, 1.988, 0, 0, 0, 1, 5.904, -5.661, 4.500)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t140")
+
+[node name="noc_wysoka_01_100378" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.642, 0, 0, 0, 1.642, 0, 0, 0, 1, 6.709, -5.905, 4.623)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100379" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.644, 0, 0, 0, 1.644, 0, 0, 0, 1, 7.448, -5.967, 4.502)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_kepka_b_43_100380" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(2.699, 0, 0, 0, 2.699, 0, 0, 0, 1, 8.261, -5.480, 4.676)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t106")
+
+[node name="noc_wysoka_02_100381" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.741, 0, 0, 0, 1.741, 0, 0, 0, 1, 8.409, -5.951, 4.629)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_kepka_b_01_100382" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(3.134, 0, 0, 0, 3.134, 0, 0, 0, 1, 9.318, -5.488, 4.526)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t64")
+
+[node name="noc_krzak_03_100383" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.952, 0, 0, 0, 1.952, 0, 0, 0, 1, 9.469, -5.709, 4.455)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t130")
+
+[node name="noc_kepka_b_05_100384" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(3.266, 0, 0, 0, 3.266, 0, 0, 0, 1, 9.842, -5.594, 4.594)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t68")
+
+[node name="noc_wysoka_02_100385" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.553, 0, 0, 0, 1.553, 0, 0, 0, 1, 10.056, -5.930, 4.476)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100386" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.803, 0, 0, 0, 1.803, 0, 0, 0, 1, 10.560, -5.957, 4.699)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_pas_02_100387" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.913, 0, 0, 0, 1.913, 0, 0, 0, 1, 11.260, -5.634, 4.585)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t138")
+
+[node name="noc_wysoka_02_100388" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.642, 0, 0, 0, 1.642, 0, 0, 0, 1, 11.894, -5.949, 4.515)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100389" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.848, 0, 0, 0, 1.848, 0, 0, 0, 1, 12.630, -6.042, 4.546)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100390" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.422, 0, 0, 0, 1.422, 0, 0, 0, 1, 13.597, -5.812, 4.651)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_kepka_a_50_100391" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(2.758, 0, 0, 0, 2.758, 0, 0, 0, 1, 14.285, -5.506, 4.637)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t49")
+
+[node name="noc_wysoka_02_100392" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.674, 0, 0, 0, 1.674, 0, 0, 0, 1, 14.469, -5.930, 4.463)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100393" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.734, 0, 0, 0, 1.734, 0, 0, 0, 1, 15.213, -5.971, 4.565)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_pas_04_100394" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(2.072, 0, 0, 0, 2.072, 0, 0, 0, 1, 15.958, -5.698, 4.422)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t140")
+
+[node name="noc_pas_04_100395" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.791, 0, 0, 0, 1.791, 0, 0, 0, 1, 16.830, -5.585, 4.596)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t140")
+
+[node name="noc_krzak_06_100396" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.911, 0, 0, 0, 1.911, 0, 0, 0, 1, 17.586, -5.622, 4.569)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t133")
+
+[node name="noc_wysoka_01_100397" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.760, 0, 0, 0, 1.760, 0, 0, 0, 1, 17.907, -6.010, 4.466)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_kepka_a_16_100398" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(3.112, 0, 0, 0, 3.112, 0, 0, 0, 1, 18.545, -5.590, 4.415)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t15")
+
+[node name="noc_krzak_06_100399" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.891, 0, 0, 0, 1.891, 0, 0, 0, 1, 18.723, -5.615, 4.624)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t133")
+
+[node name="noc_pas_02_100400" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(2.114, 0, 0, 0, 2.114, 0, 0, 0, 1, 19.102, -5.771, 4.441)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t138")
+
+[node name="noc_kepka_b_07_100401" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(3.312, 0, 0, 0, 3.312, 0, 0, 0, 1, 20.012, -5.674, 4.503)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t70")
+
+[node name="noc_pas_04_100402" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.939, 0, 0, 0, 1.939, 0, 0, 0, 1, 20.274, -5.687, 4.487)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t140")
+
+[node name="noc_pas_04_100403" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.814, 0, 0, 0, 1.814, 0, 0, 0, 1, 20.932, -5.612, 4.567)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t140")
+
+[node name="noc_wysoka_01_100404" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.491, 0, 0, 0, 1.491, 0, 0, 0, 1, 21.608, -5.899, 4.490)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100405" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.502, 0, 0, 0, 1.502, 0, 0, 0, 1, 22.334, -5.855, 4.574)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100406" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.706, 0, 0, 0, 1.706, 0, 0, 0, 1, 22.949, -5.933, 4.650)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_kepka_a_07_100407" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(3.309, 0, 0, 0, 3.309, 0, 0, 0, 1, 23.530, -5.616, 4.479)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t6")
+
+[node name="noc_pas_03_100408" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.680, 0, 0, 0, 1.680, 0, 0, 0, 1, 23.709, -5.568, 4.611)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t139")
+
+[node name="noc_wysoka_02_100409" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.822, 0, 0, 0, 1.822, 0, 0, 0, 1, 24.516, -6.070, 4.408)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100410" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.570, 0, 0, 0, 1.570, 0, 0, 0, 1, 25.199, -5.921, 4.467)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100411" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.898, 0, 0, 0, 1.898, 0, 0, 0, 1, 26.002, -6.044, 4.453)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100412" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.509, 0, 0, 0, 1.509, 0, 0, 0, 1, 26.896, -5.857, 4.665)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100413" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.821, 0, 0, 0, 1.821, 0, 0, 0, 1, 27.514, -6.020, 4.624)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100414" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.472, 0, 0, 0, 1.472, 0, 0, 0, 1, 28.464, -5.890, 4.506)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100415" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.601, 0, 0, 0, 1.601, 0, 0, 0, 1, 29.193, -5.896, 4.673)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100416" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.441, 0, 0, 0, 1.441, 0, 0, 0, 1, 29.746, -5.793, 4.634)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100417" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.625, 0, 0, 0, 1.625, 0, 0, 0, 1, 30.300, -5.946, 4.404)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100418" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.793, 0, 0, 0, 1.793, 0, 0, 0, 1, 0.205, -6.505, 4.764)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100419" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.836, 0, 0, 0, 1.836, 0, 0, 0, 1, 1.129, -6.519, 4.740)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100420" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.794, 0, 0, 0, 1.794, 0, 0, 0, 1, 2.024, -6.494, 4.735)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100421" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.811, 0, 0, 0, 1.811, 0, 0, 0, 1, 2.728, -6.501, 4.766)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100422" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.828, 0, 0, 0, 1.828, 0, 0, 0, 1, 3.560, -6.536, 4.748)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100423" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.731, 0, 0, 0, 1.731, 0, 0, 0, 1, 4.589, -6.457, 4.747)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100424" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.860, 0, 0, 0, 1.860, 0, 0, 0, 1, 5.443, -6.474, 4.770)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100425" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.931, 0, 0, 0, 1.931, 0, 0, 0, 1, 6.169, -6.533, 4.758)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100426" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.897, 0, 0, 0, 1.897, 0, 0, 0, 1, 7.251, -6.549, 4.729)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100427" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.909, 0, 0, 0, 1.909, 0, 0, 0, 1, 8.227, -6.556, 4.761)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100428" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.903, 0, 0, 0, 1.903, 0, 0, 0, 1, 9.193, -6.541, 4.732)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100429" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.777, 0, 0, 0, 1.777, 0, 0, 0, 1, 10.252, -6.498, 4.761)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100430" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.959, 0, 0, 0, 1.959, 0, 0, 0, 1, 10.959, -6.586, 4.752)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100431" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.995, 0, 0, 0, 1.995, 0, 0, 0, 1, 11.960, -6.554, 4.757)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100432" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.818, 0, 0, 0, 1.818, 0, 0, 0, 1, 12.734, -6.469, 4.761)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100433" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.779, 0, 0, 0, 1.779, 0, 0, 0, 1, 13.503, -6.521, 4.734)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100434" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.815, 0, 0, 0, 1.815, 0, 0, 0, 1, 14.211, -6.509, 4.767)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100435" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(2.014, 0, 0, 0, 2.014, 0, 0, 0, 1, 15.137, -6.551, 4.736)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100436" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.718, 0, 0, 0, 1.718, 0, 0, 0, 1, 16.141, -6.484, 4.721)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100437" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.771, 0, 0, 0, 1.771, 0, 0, 0, 1, 16.910, -6.506, 4.721)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100438" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.947, 0, 0, 0, 1.947, 0, 0, 0, 1, 17.804, -6.579, 4.724)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100439" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.899, 0, 0, 0, 1.899, 0, 0, 0, 1, 18.623, -6.539, 4.757)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100440" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.786, 0, 0, 0, 1.786, 0, 0, 0, 1, 19.377, -6.516, 4.751)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100441" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.744, 0, 0, 0, 1.744, 0, 0, 0, 1, 20.290, -6.508, 4.737)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100442" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.765, 0, 0, 0, 1.765, 0, 0, 0, 1, 21.161, -6.473, 4.726)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100443" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.835, 0, 0, 0, 1.835, 0, 0, 0, 1, 21.896, -6.516, 4.739)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100444" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.762, 0, 0, 0, 1.762, 0, 0, 0, 1, 22.605, -6.455, 4.737)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100445" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(2.020, 0, 0, 0, 2.020, 0, 0, 0, 1, 23.484, -6.580, 4.727)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100446" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.787, 0, 0, 0, 1.787, 0, 0, 0, 1, 24.405, -6.482, 4.735)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100447" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.900, 0, 0, 0, 1.900, 0, 0, 0, 1, 25.127, -6.530, 4.763)
+flip_h = true
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100448" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.990, 0, 0, 0, 1.990, 0, 0, 0, 1, 26.068, -6.577, 4.738)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100449" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(2.026, 0, 0, 0, 2.026, 0, 0, 0, 1, 27.179, -6.587, 4.762)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100450" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.734, 0, 0, 0, 1.734, 0, 0, 0, 1, 28.020, -6.437, 4.759)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100451" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.760, 0, 0, 0, 1.760, 0, 0, 0, 1, 28.784, -6.487, 4.742)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100452" type="Sprite3D" parent="Przód/Warstwa 5"]
+transform = Transform3D(1.882, 0, 0, 0, 1.882, 0, 0, 0, 1, 29.552, -6.535, 4.733)
+modulate = Color(0.427, 0.457, 0.547, 1)
+texture = ExtResource("t142")
+
+[node name="Warstwa 6" type="Node3D" parent="Przód"]
+
+[node name="noc_pas_04_100453" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.931, 0, 0, 0, 1.931, 0, 0, 0, 1, 0.194, -5.558, 5.291)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t140")
+
+[node name="noc_wysoka_02_100454" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.688, 0, 0, 0, 1.688, 0, 0, 0, 1, 0.898, -5.848, 5.381)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100455" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.582, 0, 0, 0, 1.582, 0, 0, 0, 1, 1.609, -5.855, 5.286)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100456" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.668, 0, 0, 0, 1.668, 0, 0, 0, 1, 2.438, -5.925, 5.227)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_03_100457" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.993, 0, 0, 0, 1.993, 0, 0, 0, 1, 3.051, -5.605, 5.117)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t139")
+
+[node name="noc_pas_03_100458" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.708, 0, 0, 0, 1.708, 0, 0, 0, 1, 3.823, -5.485, 5.357)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t139")
+
+[node name="noc_wysoka_01_100459" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.389, 0, 0, 0, 1.389, 0, 0, 0, 1, 4.579, -5.782, 5.276)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100460" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.780, 0, 0, 0, 1.780, 0, 0, 0, 1, 5.137, -5.951, 5.212)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_pas_02_100461" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.869, 0, 0, 0, 1.869, 0, 0, 0, 1, 5.869, -5.618, 5.303)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t138")
+
+[node name="noc_pas_04_100462" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.603, 0, 0, 0, 1.603, 0, 0, 0, 1, 6.719, -5.540, 5.232)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t140")
+
+[node name="noc_wysoka_02_100463" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.411, 0, 0, 0, 1.411, 0, 0, 0, 1, 7.503, -5.804, 5.139)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_pas_03_100464" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.524, 0, 0, 0, 1.524, 0, 0, 0, 1, 8.228, -5.467, 5.283)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t139")
+
+[node name="noc_pas_04_100465" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.767, 0, 0, 0, 1.767, 0, 0, 0, 1, 8.984, -5.501, 5.356)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t140")
+
+[node name="noc_wysoka_01_100466" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.544, 0, 0, 0, 1.544, 0, 0, 0, 1, 9.800, -5.813, 5.271)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_03_100467" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.625, 0, 0, 0, 1.625, 0, 0, 0, 1, 10.358, -5.455, 5.367)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t139")
+
+[node name="noc_wysoka_01_100468" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.460, 0, 0, 0, 1.460, 0, 0, 0, 1, 11.155, -5.858, 5.134)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100469" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.542, 0, 0, 0, 1.542, 0, 0, 0, 1, 11.785, -5.790, 5.282)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100470" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.442, 0, 0, 0, 1.442, 0, 0, 0, 1, 12.401, -5.844, 5.111)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_02_100471" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.825, 0, 0, 0, 1.825, 0, 0, 0, 1, 13.114, -5.542, 5.373)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t138")
+
+[node name="noc_wysoka_01_100472" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.574, 0, 0, 0, 1.574, 0, 0, 0, 1, 13.796, -5.883, 5.147)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100473" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.748, 0, 0, 0, 1.748, 0, 0, 0, 1, 14.323, -5.978, 5.172)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100474" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.619, 0, 0, 0, 1.619, 0, 0, 0, 1, 15.077, -5.873, 5.195)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100475" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.693, 0, 0, 0, 1.693, 0, 0, 0, 1, 15.846, -5.839, 5.381)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100476" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.724, 0, 0, 0, 1.724, 0, 0, 0, 1, 16.598, -5.932, 5.249)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100477" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.391, 0, 0, 0, 1.391, 0, 0, 0, 1, 17.293, -5.758, 5.311)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_04_100478" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.669, 0, 0, 0, 1.669, 0, 0, 0, 1, 17.974, -5.511, 5.295)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t140")
+
+[node name="noc_pas_03_100479" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.704, 0, 0, 0, 1.704, 0, 0, 0, 1, 18.626, -5.504, 5.268)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t139")
+
+[node name="noc_wysoka_01_100480" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.482, 0, 0, 0, 1.482, 0, 0, 0, 1, 19.210, -5.806, 5.195)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100481" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.617, 0, 0, 0, 1.617, 0, 0, 0, 1, 19.961, -5.867, 5.310)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100482" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.418, 0, 0, 0, 1.418, 0, 0, 0, 1, 20.707, -5.727, 5.363)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100483" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.736, 0, 0, 0, 1.736, 0, 0, 0, 1, 21.245, -5.928, 5.192)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_pas_04_100484" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.627, 0, 0, 0, 1.627, 0, 0, 0, 1, 22.005, -5.530, 5.136)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t140")
+
+[node name="noc_wysoka_02_100485" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.563, 0, 0, 0, 1.563, 0, 0, 0, 1, 22.691, -5.825, 5.246)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100486" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.472, 0, 0, 0, 1.472, 0, 0, 0, 1, 23.343, -5.791, 5.377)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_01_100487" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.565, 0, 0, 0, 1.565, 0, 0, 0, 1, 23.880, -5.477, 5.297)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t137")
+
+[node name="noc_wysoka_02_100488" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.570, 0, 0, 0, 1.570, 0, 0, 0, 1, 24.562, -5.827, 5.369)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100489" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.689, 0, 0, 0, 1.689, 0, 0, 0, 1, 25.301, -5.923, 5.147)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_pas_04_100490" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.578, 0, 0, 0, 1.578, 0, 0, 0, 1, 26.016, -5.515, 5.144)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t140")
+
+[node name="noc_wysoka_02_100491" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.445, 0, 0, 0, 1.445, 0, 0, 0, 1, 26.788, -5.814, 5.151)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100492" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.768, 0, 0, 0, 1.768, 0, 0, 0, 1, 27.426, -5.973, 5.100)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100493" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.625, 0, 0, 0, 1.625, 0, 0, 0, 1, 28.292, -5.862, 5.300)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_pas_04_100494" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.737, 0, 0, 0, 1.737, 0, 0, 0, 1, 28.942, -5.579, 5.177)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t140")
+
+[node name="noc_wysoka_02_100495" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.310, 0, 0, 0, 1.310, 0, 0, 0, 1, 29.529, -5.696, 5.396)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_pas_04_100496" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.556, 0, 0, 0, 1.556, 0, 0, 0, 1, 30.019, -5.499, 5.327)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t140")
+
+[node name="noc_wysoka_01_100497" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.871, 0, 0, 0, 1.871, 0, 0, 0, 1, 0.194, -6.418, 5.444)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100498" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.721, 0, 0, 0, 1.721, 0, 0, 0, 1, 1.003, -6.351, 5.443)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100499" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.886, 0, 0, 0, 1.886, 0, 0, 0, 1, 1.819, -6.403, 5.455)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100500" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.862, 0, 0, 0, 1.862, 0, 0, 0, 1, 2.754, -6.415, 5.453)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100501" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.688, 0, 0, 0, 1.688, 0, 0, 0, 1, 3.503, -6.366, 5.427)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100502" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.691, 0, 0, 0, 1.691, 0, 0, 0, 1, 4.276, -6.370, 5.442)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100503" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.645, 0, 0, 0, 1.645, 0, 0, 0, 1, 5.196, -6.352, 5.436)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100504" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.618, 0, 0, 0, 1.618, 0, 0, 0, 1, 5.926, -6.338, 5.425)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100505" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.876, 0, 0, 0, 1.876, 0, 0, 0, 1, 6.568, -6.395, 5.467)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100506" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.720, 0, 0, 0, 1.720, 0, 0, 0, 1, 7.369, -6.337, 5.465)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100507" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.856, 0, 0, 0, 1.856, 0, 0, 0, 1, 8.142, -6.388, 5.445)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100508" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.764, 0, 0, 0, 1.764, 0, 0, 0, 1, 8.964, -6.359, 5.461)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100509" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.735, 0, 0, 0, 1.735, 0, 0, 0, 1, 9.898, -6.359, 5.459)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100510" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.700, 0, 0, 0, 1.700, 0, 0, 0, 1, 10.668, -6.318, 5.443)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100511" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.580, 0, 0, 0, 1.580, 0, 0, 0, 1, 11.585, -6.280, 5.458)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100512" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.697, 0, 0, 0, 1.697, 0, 0, 0, 1, 12.443, -6.360, 5.442)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100513" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.615, 0, 0, 0, 1.615, 0, 0, 0, 1, 13.131, -6.294, 5.439)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100514" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.796, 0, 0, 0, 1.796, 0, 0, 0, 1, 14.056, -6.406, 5.443)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100515" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.839, 0, 0, 0, 1.839, 0, 0, 0, 1, 14.931, -6.418, 5.461)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100516" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.692, 0, 0, 0, 1.692, 0, 0, 0, 1, 15.961, -6.328, 5.467)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100517" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.615, 0, 0, 0, 1.615, 0, 0, 0, 1, 16.665, -6.318, 5.452)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100518" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.855, 0, 0, 0, 1.855, 0, 0, 0, 1, 17.392, -6.394, 5.459)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100519" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.764, 0, 0, 0, 1.764, 0, 0, 0, 1, 18.365, -6.362, 5.455)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100520" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.886, 0, 0, 0, 1.886, 0, 0, 0, 1, 19.133, -6.430, 5.426)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100521" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.704, 0, 0, 0, 1.704, 0, 0, 0, 1, 20.102, -6.345, 5.446)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100522" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.812, 0, 0, 0, 1.812, 0, 0, 0, 1, 20.863, -6.439, 5.430)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100523" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.690, 0, 0, 0, 1.690, 0, 0, 0, 1, 21.805, -6.325, 5.421)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100524" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.799, 0, 0, 0, 1.799, 0, 0, 0, 1, 22.692, -6.392, 5.425)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100525" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.878, 0, 0, 0, 1.878, 0, 0, 0, 1, 23.685, -6.424, 5.469)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100526" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.882, 0, 0, 0, 1.882, 0, 0, 0, 1, 24.687, -6.433, 5.450)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100527" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.633, 0, 0, 0, 1.633, 0, 0, 0, 1, 25.464, -6.302, 5.457)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100528" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.770, 0, 0, 0, 1.770, 0, 0, 0, 1, 26.318, -6.395, 5.424)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100529" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.739, 0, 0, 0, 1.739, 0, 0, 0, 1, 27.283, -6.348, 5.458)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100530" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.789, 0, 0, 0, 1.789, 0, 0, 0, 1, 28.188, -6.389, 5.455)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100531" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.734, 0, 0, 0, 1.734, 0, 0, 0, 1, 28.904, -6.361, 5.430)
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100532" type="Sprite3D" parent="Przód/Warstwa 6"]
+transform = Transform3D(1.886, 0, 0, 0, 1.886, 0, 0, 0, 1, 29.754, -6.454, 5.466)
+flip_h = true
+modulate = Color(0.333, 0.363, 0.453, 1)
+texture = ExtResource("t142")
+
+[node name="Warstwa 7" type="Node3D" parent="Przód"]
+
+[node name="noc_wysoka_01_100533" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.521, 0, 0, 0, 1.521, 0, 0, 0, 1, 0.178, -5.719, 5.984)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_01_100534" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.713, 0, 0, 0, 1.713, 0, 0, 0, 1, 0.709, -5.405, 5.965)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t137")
+
+[node name="noc_wysoka_02_100535" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.475, 0, 0, 0, 1.475, 0, 0, 0, 1, 1.412, -5.753, 5.804)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_pas_03_100536" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.381, 0, 0, 0, 1.381, 0, 0, 0, 1, 2.130, -5.332, 5.993)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t139")
+
+[node name="noc_wysoka_01_100537" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.493, 0, 0, 0, 1.493, 0, 0, 0, 1, 2.696, -5.675, 6.097)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100538" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.665, 0, 0, 0, 1.665, 0, 0, 0, 1, 3.333, -5.832, 5.818)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_kepka_b_15_100539" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(2.753, 0, 0, 0, 2.753, 0, 0, 0, 1, 3.889, -5.352, 6.023)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t78")
+
+[node name="noc_wysoka_01_100540" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.493, 0, 0, 0, 1.493, 0, 0, 0, 1, 4.057, -5.734, 5.890)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_03_100541" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.569, 0, 0, 0, 1.569, 0, 0, 0, 1, 4.668, -5.384, 5.957)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t139")
+
+[node name="noc_wysoka_02_100542" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.591, 0, 0, 0, 1.591, 0, 0, 0, 1, 5.181, -5.740, 6.033)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100543" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.292, 0, 0, 0, 1.292, 0, 0, 0, 1, 5.764, -5.666, 5.839)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_pas_02_100544" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.761, 0, 0, 0, 1.761, 0, 0, 0, 1, 6.429, -5.521, 5.833)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t138")
+
+[node name="noc_wysoka_02_100545" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.264, 0, 0, 0, 1.264, 0, 0, 0, 1, 7.078, -5.627, 5.932)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100546" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.347, 0, 0, 0, 1.347, 0, 0, 0, 1, 7.502, -5.638, 5.982)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_krzak_05_100547" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.594, 0, 0, 0, 1.594, 0, 0, 0, 1, 8.198, -5.358, 6.071)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t132")
+
+[node name="noc_wysoka_01_100548" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.303, 0, 0, 0, 1.303, 0, 0, 0, 1, 8.522, -5.619, 6.017)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_04_100549" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.724, 0, 0, 0, 1.724, 0, 0, 0, 1, 8.997, -5.449, 5.949)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t140")
+
+[node name="noc_wysoka_02_100550" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.557, 0, 0, 0, 1.557, 0, 0, 0, 1, 9.761, -5.785, 5.835)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_pas_02_100551" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.538, 0, 0, 0, 1.538, 0, 0, 0, 1, 10.363, -5.416, 5.958)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t138")
+
+[node name="noc_wysoka_02_100552" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.417, 0, 0, 0, 1.417, 0, 0, 0, 1, 11.092, -5.680, 5.857)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_krzak_08_100553" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.700, 0, 0, 0, 1.700, 0, 0, 0, 1, 11.759, -5.360, 5.819)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t135")
+
+[node name="noc_pas_03_100554" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.529, 0, 0, 0, 1.529, 0, 0, 0, 1, 12.069, -5.405, 5.825)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t139")
+
+[node name="noc_pas_04_100555" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.470, 0, 0, 0, 1.470, 0, 0, 0, 1, 12.579, -5.338, 6.085)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t140")
+
+[node name="noc_wysoka_01_100556" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.367, 0, 0, 0, 1.367, 0, 0, 0, 1, 13.220, -5.655, 5.986)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100557" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.369, 0, 0, 0, 1.369, 0, 0, 0, 1, 13.713, -5.723, 5.847)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100558" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.529, 0, 0, 0, 1.529, 0, 0, 0, 1, 14.401, -5.693, 6.055)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100559" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.546, 0, 0, 0, 1.546, 0, 0, 0, 1, 15.137, -5.676, 6.060)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_kepka_a_58_100560" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(2.266, 0, 0, 0, 2.266, 0, 0, 0, 1, 15.741, -5.285, 5.960)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t57")
+
+[node name="noc_wysoka_01_100561" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.345, 0, 0, 0, 1.345, 0, 0, 0, 1, 15.942, -5.680, 5.918)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100562" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.599, 0, 0, 0, 1.599, 0, 0, 0, 1, 16.533, -5.725, 6.008)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100563" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.460, 0, 0, 0, 1.460, 0, 0, 0, 1, 17.228, -5.741, 5.903)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_04_100564" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.747, 0, 0, 0, 1.747, 0, 0, 0, 1, 17.722, -5.490, 5.917)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t140")
+
+[node name="noc_kepka_a_54_100565" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(3.071, 0, 0, 0, 3.071, 0, 0, 0, 1, 18.516, -5.444, 5.873)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t53")
+
+[node name="noc_pas_04_100566" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.402, 0, 0, 0, 1.402, 0, 0, 0, 1, 18.776, -5.343, 5.993)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t140")
+
+[node name="noc_pas_02_100567" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.617, 0, 0, 0, 1.617, 0, 0, 0, 1, 19.389, -5.449, 5.935)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t138")
+
+[node name="noc_wysoka_02_100568" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.636, 0, 0, 0, 1.636, 0, 0, 0, 1, 20.076, -5.803, 5.856)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100569" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.231, 0, 0, 0, 1.231, 0, 0, 0, 1, 20.871, -5.577, 6.029)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100570" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.500, 0, 0, 0, 1.500, 0, 0, 0, 1, 21.361, -5.695, 6.065)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100571" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.458, 0, 0, 0, 1.458, 0, 0, 0, 1, 22.065, -5.698, 5.961)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100572" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.496, 0, 0, 0, 1.496, 0, 0, 0, 1, 22.770, -5.689, 6.056)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_04_100573" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.686, 0, 0, 0, 1.686, 0, 0, 0, 1, 23.298, -5.435, 6.004)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t140")
+
+[node name="noc_pas_01_100574" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.392, 0, 0, 0, 1.392, 0, 0, 0, 1, 24.010, -5.331, 6.048)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t137")
+
+[node name="noc_wysoka_02_100575" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.596, 0, 0, 0, 1.596, 0, 0, 0, 1, 24.612, -5.765, 5.985)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100576" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.374, 0, 0, 0, 1.374, 0, 0, 0, 1, 25.322, -5.643, 6.053)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100577" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.356, 0, 0, 0, 1.356, 0, 0, 0, 1, 25.863, -5.592, 6.079)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100578" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.345, 0, 0, 0, 1.345, 0, 0, 0, 1, 26.333, -5.693, 5.805)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_kepka_b_08_100579" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(2.779, 0, 0, 0, 2.779, 0, 0, 0, 1, 26.923, -5.367, 5.969)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t71")
+
+[node name="noc_pas_02_100580" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.758, 0, 0, 0, 1.758, 0, 0, 0, 1, 27.133, -5.522, 5.904)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t138")
+
+[node name="noc_pas_03_100581" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.638, 0, 0, 0, 1.638, 0, 0, 0, 1, 27.752, -5.391, 6.031)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t139")
+
+[node name="noc_wysoka_01_100582" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.606, 0, 0, 0, 1.606, 0, 0, 0, 1, 28.298, -5.764, 5.940)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_pas_02_100583" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.565, 0, 0, 0, 1.565, 0, 0, 0, 1, 28.831, -5.400, 6.081)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t138")
+
+[node name="noc_wysoka_02_100584" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.321, 0, 0, 0, 1.321, 0, 0, 0, 1, 29.428, -5.635, 5.993)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100585" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.317, 0, 0, 0, 1.317, 0, 0, 0, 1, 29.931, -5.680, 5.841)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100586" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.516, 0, 0, 0, 1.516, 0, 0, 0, 1, 0.178, -6.117, 6.149)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100587" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.583, 0, 0, 0, 1.583, 0, 0, 0, 1, 1.039, -6.129, 6.143)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100588" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.681, 0, 0, 0, 1.681, 0, 0, 0, 1, 1.676, -6.205, 6.120)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100589" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.576, 0, 0, 0, 1.576, 0, 0, 0, 1, 2.553, -6.148, 6.127)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100590" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.591, 0, 0, 0, 1.591, 0, 0, 0, 1, 3.319, -6.157, 6.169)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100591" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.652, 0, 0, 0, 1.652, 0, 0, 0, 1, 4.175, -6.192, 6.145)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100592" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.585, 0, 0, 0, 1.585, 0, 0, 0, 1, 4.927, -6.132, 6.137)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100593" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.659, 0, 0, 0, 1.659, 0, 0, 0, 1, 5.575, -6.206, 6.142)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100594" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.456, 0, 0, 0, 1.456, 0, 0, 0, 1, 6.419, -6.091, 6.154)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100595" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.543, 0, 0, 0, 1.543, 0, 0, 0, 1, 7.257, -6.128, 6.151)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100596" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.482, 0, 0, 0, 1.482, 0, 0, 0, 1, 7.900, -6.134, 6.146)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100597" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.695, 0, 0, 0, 1.695, 0, 0, 0, 1, 8.719, -6.217, 6.142)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100598" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.509, 0, 0, 0, 1.509, 0, 0, 0, 1, 9.427, -6.108, 6.159)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100599" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.517, 0, 0, 0, 1.517, 0, 0, 0, 1, 10.252, -6.107, 6.168)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100600" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.703, 0, 0, 0, 1.703, 0, 0, 0, 1, 11.004, -6.212, 6.132)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100601" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.552, 0, 0, 0, 1.552, 0, 0, 0, 1, 11.805, -6.132, 6.150)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100602" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.492, 0, 0, 0, 1.492, 0, 0, 0, 1, 12.548, -6.108, 6.169)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100603" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.565, 0, 0, 0, 1.565, 0, 0, 0, 1, 13.202, -6.129, 6.170)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100604" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.546, 0, 0, 0, 1.546, 0, 0, 0, 1, 13.927, -6.126, 6.149)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100605" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.450, 0, 0, 0, 1.450, 0, 0, 0, 1, 14.693, -6.065, 6.169)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100606" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.650, 0, 0, 0, 1.650, 0, 0, 0, 1, 15.489, -6.162, 6.166)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100607" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.546, 0, 0, 0, 1.546, 0, 0, 0, 1, 16.438, -6.157, 6.144)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100608" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.690, 0, 0, 0, 1.690, 0, 0, 0, 1, 17.254, -6.192, 6.154)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100609" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.578, 0, 0, 0, 1.578, 0, 0, 0, 1, 18.065, -6.147, 6.130)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100610" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.619, 0, 0, 0, 1.619, 0, 0, 0, 1, 18.756, -6.177, 6.123)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100611" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.637, 0, 0, 0, 1.637, 0, 0, 0, 1, 19.410, -6.149, 6.170)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100612" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.500, 0, 0, 0, 1.500, 0, 0, 0, 1, 20.192, -6.137, 6.157)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100613" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.494, 0, 0, 0, 1.494, 0, 0, 0, 1, 20.806, -6.135, 6.133)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100614" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.560, 0, 0, 0, 1.560, 0, 0, 0, 1, 21.424, -6.156, 6.147)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100615" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.689, 0, 0, 0, 1.689, 0, 0, 0, 1, 22.264, -6.204, 6.124)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100616" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.551, 0, 0, 0, 1.551, 0, 0, 0, 1, 22.995, -6.141, 6.161)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100617" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.511, 0, 0, 0, 1.511, 0, 0, 0, 1, 23.828, -6.125, 6.140)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100618" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.682, 0, 0, 0, 1.682, 0, 0, 0, 1, 24.530, -6.187, 6.131)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100619" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.648, 0, 0, 0, 1.648, 0, 0, 0, 1, 25.275, -6.173, 6.133)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100620" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.585, 0, 0, 0, 1.585, 0, 0, 0, 1, 26.100, -6.156, 6.138)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_02_100621" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.705, 0, 0, 0, 1.705, 0, 0, 0, 1, 26.897, -6.209, 6.144)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100622" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.670, 0, 0, 0, 1.670, 0, 0, 0, 1, 27.763, -6.176, 6.157)
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_02_100623" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.633, 0, 0, 0, 1.633, 0, 0, 0, 1, 28.509, -6.187, 6.122)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t143")
+
+[node name="noc_wysoka_01_100624" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.577, 0, 0, 0, 1.577, 0, 0, 0, 1, 29.209, -6.170, 6.121)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="noc_wysoka_01_100625" type="Sprite3D" parent="Przód/Warstwa 7"]
+transform = Transform3D(1.510, 0, 0, 0, 1.510, 0, 0, 0, 1, 29.973, -6.118, 6.159)
+flip_h = true
+modulate = Color(0.24, 0.27, 0.36, 1)
+texture = ExtResource("t142")
+
+[node name="Tło trawy" type="Node3D" parent="."]
+
+[node name="tlo_100101" type="Sprite3D" parent="Tło trawy"]
+transform = Transform3D(27.471, 0, 0, 0, 236.075, 0, 0, 0, 1, 1.240, -10.165, 1.4)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t141")
+metadata/ziemia = 512.0
+metadata/dziury = false
+
+[node name="tlo_100102" type="Sprite3D" parent="Tło trawy"]
+transform = Transform3D(27.471, 0, 0, 0, 236.075, 0, 0, 0, 1, 2.520, -10.165, 1.4)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t141")
+metadata/ziemia = 512.0
+metadata/dziury = false
+
+[node name="tlo_100103" type="Sprite3D" parent="Tło trawy"]
+transform = Transform3D(27.471, 0, 0, 0, 236.075, 0, 0, 0, 1, 3.800, -10.165, 1.4)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t141")
+metadata/ziemia = 512.0
+metadata/dziury = false
+
+[node name="tlo_100104" type="Sprite3D" parent="Tło trawy"]
+transform = Transform3D(27.471, 0, 0, 0, 236.075, 0, 0, 0, 1, 5.080, -10.165, 1.4)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t141")
+metadata/ziemia = 512.0
+metadata/dziury = false
+
+[node name="tlo_100105" type="Sprite3D" parent="Tło trawy"]
+transform = Transform3D(27.471, 0, 0, 0, 236.075, 0, 0, 0, 1, 6.360, -10.165, 1.4)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t141")
+metadata/ziemia = 512.0
+metadata/dziury = false
+
+[node name="tlo_100106" type="Sprite3D" parent="Tło trawy"]
+transform = Transform3D(27.471, 0, 0, 0, 236.075, 0, 0, 0, 1, 7.640, -10.165, 1.4)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t141")
+metadata/ziemia = 512.0
+metadata/dziury = false
+
+[node name="tlo_100107" type="Sprite3D" parent="Tło trawy"]
+transform = Transform3D(27.471, 0, 0, 0, 236.075, 0, 0, 0, 1, 8.920, -10.165, 1.4)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t141")
+metadata/ziemia = 512.0
+metadata/dziury = false
+
+[node name="tlo_100108" type="Sprite3D" parent="Tło trawy"]
+transform = Transform3D(27.471, 0, 0, 0, 236.075, 0, 0, 0, 1, 10.200, -10.165, 1.4)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t141")
+metadata/ziemia = 512.0
+metadata/dziury = false
+
+[node name="tlo_100109" type="Sprite3D" parent="Tło trawy"]
+transform = Transform3D(27.471, 0, 0, 0, 236.075, 0, 0, 0, 1, 11.480, -10.165, 1.4)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t141")
+metadata/ziemia = 512.0
+metadata/dziury = false
+
+[node name="tlo_100110" type="Sprite3D" parent="Tło trawy"]
+transform = Transform3D(27.471, 0, 0, 0, 236.075, 0, 0, 0, 1, 12.760, -10.165, 1.4)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t141")
+metadata/ziemia = 512.0
+metadata/dziury = false
+
+[node name="tlo_100111" type="Sprite3D" parent="Tło trawy"]
+transform = Transform3D(27.471, 0, 0, 0, 236.075, 0, 0, 0, 1, 14.040, -10.165, 1.4)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t141")
+metadata/ziemia = 512.0
+metadata/dziury = false
+
+[node name="tlo_100112" type="Sprite3D" parent="Tło trawy"]
+transform = Transform3D(27.471, 0, 0, 0, 236.075, 0, 0, 0, 1, 15.320, -10.165, 1.4)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t141")
+metadata/ziemia = 512.0
+metadata/dziury = false
+
+[node name="tlo_100113" type="Sprite3D" parent="Tło trawy"]
+transform = Transform3D(27.471, 0, 0, 0, 236.075, 0, 0, 0, 1, 16.600, -10.165, 1.4)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t141")
+metadata/ziemia = 512.0
+metadata/dziury = false
+
+[node name="tlo_100114" type="Sprite3D" parent="Tło trawy"]
+transform = Transform3D(27.471, 0, 0, 0, 236.075, 0, 0, 0, 1, 17.880, -10.165, 1.4)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t141")
+metadata/ziemia = 512.0
+metadata/dziury = false
+
+[node name="tlo_100115" type="Sprite3D" parent="Tło trawy"]
+transform = Transform3D(27.471, 0, 0, 0, 236.075, 0, 0, 0, 1, 19.160, -10.165, 1.4)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t141")
+metadata/ziemia = 512.0
+metadata/dziury = false
+
+[node name="tlo_100116" type="Sprite3D" parent="Tło trawy"]
+transform = Transform3D(27.471, 0, 0, 0, 236.075, 0, 0, 0, 1, 20.440, -10.165, 1.4)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t141")
+metadata/ziemia = 512.0
+metadata/dziury = false
+
+[node name="tlo_100117" type="Sprite3D" parent="Tło trawy"]
+transform = Transform3D(27.471, 0, 0, 0, 236.075, 0, 0, 0, 1, 21.720, -10.165, 1.4)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t141")
+metadata/ziemia = 512.0
+metadata/dziury = false
+
+[node name="tlo_100118" type="Sprite3D" parent="Tło trawy"]
+transform = Transform3D(27.471, 0, 0, 0, 236.075, 0, 0, 0, 1, 23.000, -10.165, 1.4)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t141")
+metadata/ziemia = 512.0
+metadata/dziury = false
+
+[node name="tlo_100119" type="Sprite3D" parent="Tło trawy"]
+transform = Transform3D(27.471, 0, 0, 0, 236.075, 0, 0, 0, 1, 24.280, -10.165, 1.4)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t141")
+metadata/ziemia = 512.0
+metadata/dziury = false
+
+[node name="tlo_100120" type="Sprite3D" parent="Tło trawy"]
+transform = Transform3D(27.471, 0, 0, 0, 236.075, 0, 0, 0, 1, 25.560, -10.165, 1.4)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t141")
+metadata/ziemia = 512.0
+metadata/dziury = false
+
+[node name="tlo_100121" type="Sprite3D" parent="Tło trawy"]
+transform = Transform3D(27.471, 0, 0, 0, 236.075, 0, 0, 0, 1, 26.840, -10.165, 1.4)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t141")
+metadata/ziemia = 512.0
+metadata/dziury = false
+
+[node name="tlo_100122" type="Sprite3D" parent="Tło trawy"]
+transform = Transform3D(27.471, 0, 0, 0, 236.075, 0, 0, 0, 1, 28.120, -10.165, 1.4)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t141")
+metadata/ziemia = 512.0
+metadata/dziury = false
+
+[node name="tlo_100123" type="Sprite3D" parent="Tło trawy"]
+transform = Transform3D(27.471, 0, 0, 0, 236.075, 0, 0, 0, 1, 29.400, -10.165, 1.4)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t141")
+metadata/ziemia = 512.0
+metadata/dziury = false
+
+[node name="tlo_100124" type="Sprite3D" parent="Tło trawy"]
+transform = Transform3D(1.717, 0, 0, 0, 236.075, 0, 0, 0, 1, 30.080, -10.165, 1.4)
+modulate = Color(0.75, 0.77, 0.85, 1)
+texture = ExtResource("t141")
+metadata/ziemia = 512.0
+metadata/dziury = false
+
+[node name="Rekwizyty" type="Node3D" parent="."]
+
+[node name="skrzynka_1_100626" type="Sprite3D" parent="Rekwizyty"]
+transform = Transform3D(2.006, 0, 0, 0, 2.006, 0, 0, 0, 1, 6.000, -5.284, 4.222)
+modulate = Color(0.473, 0.503, 0.593, 1)
+texture = ExtResource("t155")
+metadata/ziemia = 512.0
+
+[node name="jablko_9_100627" type="Sprite3D" parent="Rekwizyty"]
+transform = Transform3D(1.559, 0, 0, 0, 1.559, 0, 0, 0, 1, 3.671, -5.275, 3.522)
+modulate = Color(0.567, 0.597, 0.687, 1)
+texture = ExtResource("t154")
+metadata/ziemia = 512.0
+
+[node name="jablko_2_100628" type="Sprite3D" parent="Rekwizyty"]
+transform = Transform3D(1.515, 0, 0, 0, 1.515, 0, 0, 0, 1, 7.824, -5.305, 4.217)
+modulate = Color(0.473, 0.503, 0.593, 1)
+texture = ExtResource("t147")
+metadata/ziemia = 512.0
+
+[node name="skrzynka_2_100629" type="Sprite3D" parent="Rekwizyty"]
+transform = Transform3D(2.011, 0, 0, 0, 2.011, 0, 0, 0, 1, 14.694, -5.266, 4.208)
+modulate = Color(0.473, 0.503, 0.593, 1)
+texture = ExtResource("t156")
+metadata/ziemia = 512.0
+
+[node name="jablko_11_100630" type="Sprite3D" parent="Rekwizyty"]
+transform = Transform3D(1.826, 0, 0, 0, 1.826, 0, 0, 0, 1, 12.479, -5.291, 3.532)
+modulate = Color(0.567, 0.597, 0.687, 1)
+texture = ExtResource("t146")
+metadata/ziemia = 512.0
+
+[node name="skrzynka_3_100631" type="Sprite3D" parent="Rekwizyty"]
+transform = Transform3D(1.870, 0, 0, 0, 1.870, 0, 0, 0, 1, 23.718, -5.265, 4.958)
+flip_h = true
+modulate = Color(0.38, 0.41, 0.5, 1)
+texture = ExtResource("t157")
+metadata/ziemia = 512.0
+
+[node name="jablko_10_100632" type="Sprite3D" parent="Rekwizyty"]
+transform = Transform3D(1.779, 0, 0, 0, 1.779, 0, 0, 0, 1, 18.574, -5.293, 3.529)
+flip_h = true
+modulate = Color(0.567, 0.597, 0.687, 1)
+texture = ExtResource("t145")
+metadata/ziemia = 512.0
+
+[node name="Blisko" type="Node3D" parent="."]
+
+[node name="Piwnica" type="Node3D" parent="."]
+
+[node name="Ziemia" type="Node3D" parent="Piwnica"]
+
+[node name="Brzeg" type="Node3D" parent="Piwnica"]
+
+[node name="Tło" type="Node3D" parent="Piwnica"]
+
+[node name="Warstwa 1" type="Node3D" parent="Piwnica"]
+
+[node name="Warstwa 2" type="Node3D" parent="Piwnica"]
+
+[node name="Warstwa 3" type="Node3D" parent="Piwnica"]
+
+[node name="Warstwa 4" type="Node3D" parent="Piwnica"]
+
+[node name="Warstwa 5" type="Node3D" parent="Piwnica"]
+
+[node name="Sufit" type="Node3D" parent="Piwnica"]
+
+[node name="Blisko" type="Node3D" parent="Piwnica"]
