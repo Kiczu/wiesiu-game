@@ -24,6 +24,8 @@ const DUNGEON_WIESLAW := 0.66
 const FALL_LOOK := 2.5 * 64.0
 ## How quickly the castle camera catches up with a new height (higher is quicker).
 const CAMERA_FALL_RATE := 9.0
+## Falling faster than this (px/s) is a hard landing: the screen shakes and the ground is hit.
+const HARD_LANDING := 1300.0
 const CAMERA_RISE_RATE := 4.0
 ## How long the game stands still when a blow lands, in seconds.
 const HIT_FREEZE := 0.06
@@ -1890,6 +1892,8 @@ func _move_player(delta: float, steer: float, jump_held: bool) -> void:
 		var hard := clampf((_fall_speed - 500.0) / 900.0, 0.0, 1.0)
 		_stretch = Vector2(1.0 + 0.25 * hard + 0.08, 1.0 - 0.3 * hard - 0.08)
 		_dust(player.position, 4 + roundi(hard * 4))
+		if _fall_speed > HARD_LANDING:
+			_land_hard(clampf((_fall_speed - HARD_LANDING) / 700.0, 0.0, 1.0))
 	elif on_floor and absf(v.x) > WALK_SPEED * 0.9 and absf(steer) > 0.1 and signf(steer) != signf(v.x):
 		_dust(player.position, 1)
 	_was_on_floor = on_floor
@@ -5490,6 +5494,19 @@ func _draw_tiles() -> void:
 				v.draw_set_transform(effect["pos"], 0.0, Vector2(1.0, 0.35))
 				v.draw_arc(Vector2.ZERO, 14.0 + t * 40.0, 0.0, TAU, 24, Color(1, 1, 1, 0.7 * (1.0 - t)), 5.0)
 				v.draw_set_transform(Vector2.ZERO)
+			"land":
+				# The ground hit hard: a flat ring of dust and short streaks bursting up from his feet.
+				var t: float = effect["time"] / 0.5
+				var size: float = effect["size"]
+				var fade := 1.0 - t
+				v.draw_set_transform(effect["pos"], 0.0, Vector2(1.0, 0.22))
+				v.draw_arc(Vector2.ZERO, (20.0 + t * 90.0) * size, 0.0, TAU, 32, Color(0.95, 0.9, 0.8, 0.8 * fade), 8.0 * fade + 2.0)
+				v.draw_set_transform(Vector2.ZERO)
+				for k in 7:
+					var angle := -PI / 2.0 + (k - 3) * 0.38
+					var from: Vector2 = effect["pos"] + Vector2.from_angle(angle) * (14.0 + t * 50.0) * size
+					var to := from + Vector2.from_angle(angle) * 22.0 * size * fade
+					v.draw_line(from, to, Color(1, 0.97, 0.88, 0.85 * fade), 4.0 * fade + 1.0)
 			"splat":
 				var t: float = effect["time"] / 0.5
 				for k in 6:
@@ -5807,12 +5824,35 @@ func _move_camera(delta: float) -> void:
 	var falling := not on_floor and player.position.y > _floor_y + 8.0
 	var look := clampf(player.velocity.y / 900.0, 0.0, 1.0) * FALL_LOOK if falling else 0.0
 	_look_down = move_toward(_look_down, look, delta * 600.0)
-	var target := (player.position.y if falling else _floor_y) + _look_down
+	# A fall stops the camera at the floor it ends on, not past it and back up after the landing.
+	var target := minf(player.position.y + _look_down, _landing_y()) if falling else _floor_y
 	# The camera glides to its height: quickly in a fall, gently going up.
 	var rate := CAMERA_FALL_RATE if target > _camera_y else CAMERA_RISE_RATE
 	_camera_y = lerpf(_camera_y, target, 1.0 - exp(-rate * delta))
 	_camera.position = Vector2(0, _camera_y - player.position.y)
 	_camera.offset = Vector2(_look, -FRAME_LOW * SCREEN.y / _camera.zoom.y) + jolt
+
+
+## Where Wiesław's fall ends: the top of the first floor or plank under his feet (INF when none).
+func _landing_y() -> float:
+	var first := int(player.position.y / TILE)
+	for row in range(maxi(first, 0), map.size()):
+		for side in [-1, 1]:
+			var col := int((player.position.x + side * (PLAYER_SIZE.x / 2.0 - 2.0)) / TILE)
+			if col >= 0 and col < map[row].length() and (map[row][col] in SOLID or _is_plank(row, col)):
+				return row * TILE
+	return INF
+
+
+## A hard landing (strength 0..1): the screen shakes, the ground cracks with a ring of dust and
+## grit flies out to both sides.
+func _land_hard(strength: float) -> void:
+	_shake = maxf(_shake, 0.12 + 0.2 * strength)
+	_effects.append({"kind": "land", "pos": player.position, "time": 0.0, "size": 1.0 + strength})
+	for side in [-1, 1]:
+		for k in 3 + roundi(strength * 3):
+			_effects.append({"kind": "dust", "pos": player.position + Vector2(side * randf_range(10, 30), -4),
+				"vel": Vector2(side * randf_range(160, 320), randf_range(-60, -10)), "time": randf_range(0.0, 0.08)})
 
 
 ## Leaves and pollen drift through the air in front of and behind the level, at different depths.
