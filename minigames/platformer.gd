@@ -1477,7 +1477,8 @@ func _add_light(glow: Texture2D, at: Vector2, reach: Vector2, color: Color, flam
 	light.energy = reach.y
 	light.position = at
 	light.shadow_enabled = true
-	light.shadow_filter = Light2D.SHADOW_FILTER_PCF5
+	# Soft shadow edges cost a lot in a browser; there they stay hard.
+	light.shadow_filter = Light2D.SHADOW_FILTER_NONE if OS.has_feature("web") else Light2D.SHADOW_FILTER_PCF5
 	light.shadow_filter_smooth = 3.0
 	light.set_meta("energy", reach.y)
 	_level.add_child(light)
@@ -1636,6 +1637,10 @@ func _draw_door(door: Node2D) -> void:
 func _fit_view() -> void:
 	var window := Vector2(get_window().size)
 	var zoom := Vector2.ONE * maxf(minf(window.x / SCREEN.x, window.y / SCREEN.y), 1.0)
+	# In a browser the level is drawn at the game's own size and scaled up: a big or sharp screen
+	# would otherwise draw every light at several times the pixels.
+	if OS.has_feature("web"):
+		zoom = Vector2.ONE
 	_world.size = Vector2i((SCREEN * zoom).round())
 	_view.size = Vector2(_world.size)
 	_view.scale = Vector2.ONE / zoom
