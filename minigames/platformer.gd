@@ -108,7 +108,7 @@ const LEVEL_KNIGHT := [
 	"########################xxxxx##############            ##################             ##########xx#xx#xxx#######################",
 	"###########################################            ##################             ##########################################",
 ]
-const SOLID := "#BLZ"
+const SOLID := "#LZ"
 ## How long a found hidden room takes to crumble open (seconds, about).
 const SECRET_REVEAL := 1.5
 ## How long each drawn step of a door swinging open shows (seconds).
@@ -774,6 +774,8 @@ func restart() -> void:
 					_boss = EyeBoss.new(self, at)
 					_level.add_child(_boss)
 					_boss.caught.connect(_win)
+				"Z" when _crumbles() and (row == 0 or map[row - 1][col] != "Z") and (col == 0 or map[row][col - 1] != "Z"):
+					_add_crumbling_floor(row, col)
 				"D":
 					_add_drakkar(at)
 	if start_at_exit:
@@ -1022,9 +1024,9 @@ func _find_dressing_holes() -> void:
 	for row in range(1, map.size()):
 		var col := 1
 		while col < map[row].length():
-			if map[row][col - 1] in SOLID and _floor_gap(row, col):
+			if map[row][col - 1] in SOLID and _hole_or_slab(row, col):
 				var end := col
-				while _floor_gap(row, end):
+				while _hole_or_slab(row, end):
 					end += 1
 				if end - col <= 3 and end < map[row].length() and map[row][end] in SOLID:
 					holes.append(Rect2(col * TILE, row * TILE, (end - col) * TILE, 0.0))
@@ -1075,8 +1077,9 @@ void fragment() {
 ## How far from Wiesław (level px) the grass leans, and how far it leans at most.
 const GRASS_REACH := 70.0
 const GRASS_LEAN := 0.6
-## Only the grass Wiesław walks in moves: the layers laid farther in front of the level than this
-## (3D units; the first front layer stands at about 1.8) stay still.
+## All the grass sways in the wind, but only the grass walked in leans away from the feet: the
+## layers laid farther in front of the level than this (3D units; the first front layer stands
+## at about 1.8) do not.
 const GRASS_DEPTH := 1.0
 
 
@@ -1087,7 +1090,7 @@ func _prepare_grass() -> void:
 	shader.code = GRASS_SHADER
 	var materials := {}
 	for picture in _dressing_pictures:
-		if not picture.texture or not "/trawa" in picture.texture.resource_path or picture.global_position.z >= GRASS_DEPTH:
+		if not picture.texture or not "/trawa" in picture.texture.resource_path or picture.texture.resource_path.get_file().begins_with("noc_tlo"):
 			continue
 		if not materials.has(picture.texture):
 			var material := ShaderMaterial.new()
@@ -1096,12 +1099,13 @@ func _prepare_grass() -> void:
 			material.set_shader_parameter("height", picture.texture.get_height() * picture.pixel_size)
 			materials[picture.texture] = material
 		picture.material_override = materials[picture.texture]
-		_grass.append([picture, materials[picture.texture], 0.0, 0.0])
+		if picture.global_position.z < GRASS_DEPTH:
+			_grass.append([picture, materials[picture.texture], 0.0, 0.0])
 	_grass.sort_custom(func(a: Array, b: Array) -> bool: return a[0].global_position.x < b[0].global_position.x)
 
 
-## Leans the tufts near Wiesław away from him (each with a material of its own while it moves),
-## springing back once he is gone.
+## Leans the tufts near Wiesław and near the enemies away from them (each with a material of its
+## own while it moves), springing back once they are gone.
 func _bend_grass(delta: float) -> void:
 	if _dressing_pictures.is_empty() or not player:
 		return
@@ -1109,17 +1113,25 @@ func _bend_grass(delta: float) -> void:
 		_prepare_grass()
 	if _grass.is_empty():
 		return
-	var feet := Vector2(player.position.x, player.position.y + 50.0)
-	var x := feet.x / 100.0
-	# The tufts near him: found from the sorted list.
-	var lo := _grass.bsearch_custom(x - 1.6, func(a, b) -> bool: return (a[0].global_position.x if a is Array else a) < (b[0].global_position.x if b is Array else b))
-	for k in range(lo, _grass.size()):
-		var item: Array = _grass[k]
-		if item[0].global_position.x > x + 1.6:
-			break
-		if not item in _grass_bending:
-			_grass_bending.append(item)
-	var pace := clampf(absf(player.velocity.x) / 300.0, 0.0, 1.0)
+	# Everyone walking near the screen: where the feet are, and how fast they go (0 to 1).
+	var walkers: Array[Vector3] = [Vector3(player.position.x, player.position.y + 50.0, clampf(absf(player.velocity.x) / 300.0, 0.0, 1.0))]
+	var others: Array[Dictionary] = vikings.duplicate()
+	if _boss:
+		others.append_array(_boss.vikings)
+	for other in others:
+		var body: Node2D = other["node"]
+		if is_instance_valid(body) and int(other.get("health", 1)) > 0 and absf(body.position.x - player.position.x) < 1200.0:
+			walkers.append(Vector3(body.position.x, body.position.y, 0.6))
+	for walker in walkers:
+		var x := walker.x / 100.0
+		# The tufts near: found from the sorted list.
+		var lo := _grass.bsearch_custom(x - 1.6, func(a, b) -> bool: return (a[0].global_position.x if a is Array else a) < (b[0].global_position.x if b is Array else b))
+		for k in range(lo, _grass.size()):
+			var item: Array = _grass[k]
+			if item[0].global_position.x > x + 1.6:
+				break
+			if not item in _grass_bending:
+				_grass_bending.append(item)
 	var eye := _dressing_camera.position
 	for item: Array in _grass_bending.duplicate():
 		var picture: Sprite3D = item[0]
@@ -1127,11 +1139,16 @@ func _bend_grass(delta: float) -> void:
 		var bottom := -(picture.global_position.y - picture.texture.get_height() * picture.pixel_size * picture.global_basis.y.y / 2.0) * 100.0
 		# Where on the level plane the tuft stands as seen from the camera (as in _clear_dressing_holes).
 		var near := (eye.z - picture.global_position.z) / eye.z
-		var apart := (eye.x + (picture.global_position.x - eye.x) / near) * 100.0 - feet.x
+		var middle := (eye.x + (picture.global_position.x - eye.x) / near) * 100.0
 		var half := picture.texture.get_width() * picture.pixel_size * absf(picture.global_basis.x.x) * 50.0
 		var reach := GRASS_REACH + half * 0.5
-		if picture.visible and absf(apart) < reach and absf(bottom - feet.y) < 90.0:
-			target = signf(apart) * GRASS_LEAN * (1.0 - absf(apart) / reach) * (0.5 + 0.5 * pace)
+		# Away from whoever is nearest.
+		var nearest := reach
+		for walker in walkers:
+			var apart := middle - walker.x
+			if picture.visible and absf(apart) < nearest and absf(bottom - walker.y) < 90.0:
+				nearest = absf(apart)
+				target = signf(apart) * GRASS_LEAN * (1.0 - absf(apart) / reach) * (0.5 + 0.5 * walker.z)
 		# A spring: towards the target, with some swing.
 		item[3] = (item[3] + (target - item[2]) * 90.0 * delta) * maxf(0.0, 1.0 - 8.0 * delta)
 		item[2] += item[3] * delta
@@ -1145,6 +1162,13 @@ func _bend_grass(delta: float) -> void:
 			item[3] = 0.0
 			picture.material_override = item[1]
 			_grass_bending.erase(item)
+
+
+## A way down through a floor, or a slab over one that gives way underfoot.
+func _hole_or_slab(row: int, col: int) -> bool:
+	if col < map[row].length() and map[row][col] == "Z" and _crumbles():
+		return map[row - 1][col] != "Z"
+	return _floor_gap(row, col)
 
 
 ## Whether a cell of a floor's row is a way down through it (open, or a ladder's top).
@@ -1492,6 +1516,8 @@ func _add_occluders() -> void:
 
 
 func _add_drakkar(at: Vector2) -> void:
+	if not dungeon and _art.get("no_drakkar", false):
+		return  # the way out is just the end of the level: the ship waits in the next one
 	if dungeon:
 		var door := Node2D.new()
 		door.position = at
@@ -2056,6 +2082,55 @@ func _lever_near() -> Vector2i:
 	return Vector2i(-1, -1)
 
 
+## Whether Z cells are slabs of floor that give way underfoot (outside the castle, where the
+## ground is drawn with rims) instead of trapdoors opened by levers.
+func _crumbles() -> bool:
+	return not dungeon and _art.has("rims")
+
+
+## A slab over the Z cells joined to the top-left one at row, col.
+func _add_crumbling_floor(row: int, col: int) -> void:
+	var cells: Array[Vector2i] = []
+	var width := 0
+	while col + width < map[row].length() and map[row][col + width] == "Z":
+		width += 1
+	var height := 0
+	while row + height < map.size() and map[row + height][col] == "Z":
+		height += 1
+	for r in range(row, row + height):
+		for c in range(col, col + width):
+			if map[r][c] == "Z":
+				cells.append(Vector2i(c, r))
+	var slab := CrumblingFloor.new(Rect2(col * TILE, row * TILE, width * TILE, height * TILE), cells, self)
+	var rims: Dictionary = _art["rims"]
+	var top: Dictionary = rims.get("top_under", rims.get("top", {}))
+	if not top.is_empty():
+		slab.picture = top["pictures"][0]
+		slab.picture_scale = top["scale"]
+		slab.surface = top["surface"]
+	slab.dark = _art.get("ground_dark", Color.BLACK)
+	slab.started_trembling.connect(func(at: Vector2) -> void:
+		_dust(at, 3)
+		_play("bump"))
+	slab.gave_way.connect(_crumble)
+	_level.add_child(slab)
+	_level.move_child(slab, _tiles.get_index() + 1)
+
+
+## A slab gave way: its cells open, and the pictures in front leave the new hole open too.
+func _crumble(cells: Array[Vector2i]) -> void:
+	for cell in cells:
+		map[cell.y] = map[cell.y].substr(0, cell.x) + "z" + map[cell.y].substr(cell.x + 1)
+	if not cells.is_empty():
+		_dust(Vector2((cells[0].x + 0.5) * TILE, cells[0].y * TILE), 8)
+		_shake = maxf(_shake, 0.15)
+	_build_collision()
+	_redraw_static()
+	_dressing_holes.clear()
+	_find_dressing_holes()
+	_play("bump")
+
+
 ## Pulling a lever opens the trapdoor nearest to it: every Z cell joined to that one.
 func _pull(lever: Vector2i) -> void:
 	map[lever.y] = map[lever.y].substr(0, lever.x) + "e" + map[lever.y].substr(lever.x + 1)
@@ -2098,6 +2173,8 @@ func _draw_lever(v: Node2D, at: Vector2, pulled: bool) -> void:
 ## hanging down from its hinge in the top cell. Pictures zapadnia and zapadnia_otwarta, when drawn,
 ## sit in the top cell.
 func _draw_trapdoor(v: Node2D, row: int, col: int, at: Vector2) -> void:
+	if _crumbles():
+		return  # a slab of floor that draws itself (CrumblingFloor), then an open hole
 	var open := map[row][col] == "z"
 	var top := row == 0 or map[row - 1][col] != map[row][col]
 	var picture := "zapadnia_otwarta" if open else "zapadnia"
@@ -2878,6 +2955,8 @@ func _load_art_set(dir: String) -> Dictionary:
 		art_set["rope_plank"]["texture"] = load(dir + str(rope_plank["file"]))
 	if spec.has("moonlight"):
 		art_set["moonlight"] = spec["moonlight"]
+	if spec.get("no_drakkar", false):
+		art_set["no_drakkar"] = true
 	# The castle's camera (kept to the floor, Wiesław low in the frame) for this outdoor level too.
 	if spec.get("castle_camera", false):
 		art_set["castle_camera"] = true
@@ -4689,8 +4768,15 @@ func _draw_organic_ground(v: Node2D, span: Vector2i) -> void:
 		for picture: Texture2D in batches:
 			_batch_draw(v, batches[picture], picture, Color.WHITE)
 	if rims.has("corner"):
-		var corner: Dictionary = rims["corner"]
+		var top_floor := int(_floors[0].z / TILE) if not _floors.is_empty() and rims.has("top_under") else -1
 		for spot: Array in corner_spots:
+			# The grassy corner belongs to the surface; the cellars' floors get their own
+			# ("corner_under"), or none.
+			var corner: Dictionary = rims["corner"]
+			if top_floor >= 0 and (spot[0] as Vector2).y > (top_floor + 0.5) * TILE:
+				if not rims.has("corner_under"):
+					continue
+				corner = rims["corner_under"]
 			var pictures: Array = corner["pictures"]
 			var picture: Texture2D = pictures[posmod(spot[2], pictures.size())]
 			var size: Vector2 = picture.get_size() * float(corner["scale"])
@@ -4894,6 +4980,14 @@ func _draw_holes(v: Node2D, span: Vector2i) -> void:
 			end += 1
 		var middle := (col + end) * TILE / 2.0
 		v.draw_texture_rect(picture, Rect2(Vector2(middle, row * TILE) - anchor * scale, picture.get_size() * scale), false)
+		if end - col <= 3 and not "H" in map[row].substr(col, end - col):
+			# Night air in the mouth of a pit, thinning out downwards, so it is not a black box.
+			var air := Color(str(hole.get("air", "2a3560")))
+			var left := col * TILE + 6.0
+			var right := end * TILE - 6.0
+			var top := float(row * TILE)
+			v.draw_polygon(PackedVector2Array([Vector2(left, top), Vector2(right, top), Vector2(right - 14.0, top + 150.0), Vector2(left + 14.0, top + 150.0)]),
+				PackedColorArray([Color(air, 0.85), Color(air, 0.85), Color(air, 0.0), Color(air, 0.0)]))
 
 
 func _draw_plank(v: Node2D, row: int, col: int, at: Vector2) -> void:
@@ -5717,6 +5811,16 @@ func _place_decor() -> void:
 			for r in range(row - 1, row + 2):
 				for c in range(col - around, col + around + 1):
 					taken[Vector2i(c, r)] = true
+	# And the middle of every picture laid on the ground (a tree's trunk).
+	for entry: Dictionary in scene_pictures:
+		if entry["layer"] != "ground":
+			continue
+		var picture: Sprite2D = entry["node"]
+		var area: Rect2 = picture.transform * picture.get_rect()
+		var foot := int(area.end.y / TILE) - 1
+		for c in range(int((area.get_center().x - area.size.x * 0.2) / TILE) - 1, int((area.get_center().x + area.size.x * 0.2) / TILE) + 2):
+			for r in range(foot - 1, foot + 1):
+				taken[Vector2i(c, r)] = true
 	for row in range(1, map.size() - 2):
 		var part := "dungeon" if _castle_part(row) == "deep" else _castle_part(row)
 		for col in range(1, map[row].length() - 1):
