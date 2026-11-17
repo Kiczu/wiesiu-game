@@ -2,6 +2,39 @@ extends Node
 ## Plays the whole demo without clicks and checks it can be finished.
 ## Run: godot --headless --path . res://tests/walkthrough.tscn
 
+## Test maps, one character per tile as in PlatformerGame (a level in the style of Super Mario).
+const LEVEL := [
+	"                                                                                                                                                                          ",
+	"                                                                                                                                                                          ",
+	"                                                                                                                                                                          ",
+	"                                                                                                        a a a                                                             ",
+	"                                                     a  a  a                                                                                                              ",
+	"         BBB                     aaa                                      BBBBB                        =====                        V                                     ",
+	"                                                  #  ===  ===                                                                     ######    B             ##              ",
+	"    a a        a a              ===              ##                                   a a         ===          ===                                       ###              ",
+	"                                     a          ###            a                                                           a   a                        ####              ",
+	" P                       ##       V  #         ####          x     C       V        V                                    B   x   B          a      V   #####        D     ",
+	"#############################  ####################       ######################################                  ########################################################",
+	"#############################  ####################       ######################################                  ########################################################",
+]
+## A level in the style of Apple Knight: ground at many heights, walls to climb with the double
+## jump, spike pits, crates to break with the sword, Vikings on ledges.
+const LEVEL_KNIGHT := [
+	"                                                                                                                                ",
+	"                                                                                                                                ",
+	"                                                                                                                                ",
+	"                                                                 aaaS                                                           ",
+	"                                                   a            ######             a                                            ",
+	"                                      TaaaB       ===           ######            ===     V   B                                 ",
+	"                  aa      a          ######   a                                       ##########                                ",
+	"                     V B ===         ######  ===                              ===     ##########  a  a             B V          ",
+	"      a a a      #######         B V ######                                           ##########  #  #           #####          ",
+	"  P           ##########     ##############             C    VBB      V   ===         ##########  #  #      V  T #####   C  D   ",
+	"########################xxxxx##############            ##################             ##########xx#xx#xxx#######################",
+	"###########################################            ##################             ##########################################",
+]
+
+
 var _failed := false
 var _main: Node
 
@@ -155,7 +188,7 @@ func _check_flight_game() -> void:
 
 func _check_platformer() -> void:
 	var level := PlatformerGame.new()
-	level.layout = "mario"
+	level.level_map = LEVEL
 	level.auto_input = true
 	add_child(level)
 	await _physics(20)
@@ -255,28 +288,28 @@ func _check_platformer() -> void:
 	await _physics(10)
 	level.input_x = 0.0
 	_check(player.position.x > before and level._wieslaw.pose == "run", "platformer: Wiesław runs")
-	player.position = Vector2((level.LEVEL[9].find("D") + 0.5) * PlatformerGame.TILE, 640.0)
+	player.position = Vector2((LEVEL[9].find("D") + 0.5) * PlatformerGame.TILE, 640.0)
 	await _physics(3)
 	_check(level.state == "won", "platformer: reaching the drakkar wins")
 	# The Apple Knight style map: same width in every row, a start and a drakkar, crates break.
-	level.layout = "knight"
+	level.level_map = LEVEL_KNIGHT
 	level.restart()
 	await _physics(5)
 	var widths := {}
-	for row in PlatformerGame.LEVEL_KNIGHT:
+	for row in LEVEL_KNIGHT:
 		widths[row.length()] = true
 	var crate_row := -1
-	for row in PlatformerGame.LEVEL_KNIGHT.size():
-		if PlatformerGame.LEVEL_KNIGHT[row].contains("B"):
+	for row in LEVEL_KNIGHT.size():
+		if LEVEL_KNIGHT[row].contains("B"):
 			crate_row = row
 			break
-	var crate := Vector2((PlatformerGame.LEVEL_KNIGHT[crate_row].find("B") + 0.5) * PlatformerGame.TILE, (crate_row + 0.5) * PlatformerGame.TILE)
+	var crate := Vector2((LEVEL_KNIGHT[crate_row].find("B") + 0.5) * PlatformerGame.TILE, (crate_row + 0.5) * PlatformerGame.TILE)
 	var before_apples := level.apples
 	level._break_crate(crate)
 	_check(widths.size() == 1 and level.player.is_on_floor() and level.tile_at(crate) == " " and level.apples == before_apples + PlatformerGame.CRATE_APPLES, "platformer: the knight map loads and its crates break into apples")
 	# The sword leaves a treasure chest shut; F opens it, and it stays open and gives apples and a lost heart back.
 	var chest_row := 9
-	var chest := Vector2((PlatformerGame.LEVEL_KNIGHT[chest_row].find("T") + 0.5) * PlatformerGame.TILE, (chest_row + 0.5) * PlatformerGame.TILE)
+	var chest := Vector2((LEVEL_KNIGHT[chest_row].find("T") + 0.5) * PlatformerGame.TILE, (chest_row + 0.5) * PlatformerGame.TILE)
 	level.player.position = Vector2(chest.x - 58.0, 640.0)
 	level.lives = PlatformerGame.LIVES - 1
 	before_apples = level.apples
@@ -290,7 +323,7 @@ func _check_platformer() -> void:
 	_check(shut and level.tile_at(chest) == "t" and level.apples == before_apples + PlatformerGame.CHEST_APPLES and level.lives == PlatformerGame.LIVES, "platformer: F, not the sword, opens a treasure chest for apples and a heart")
 	# The royal chest is two tiles wide; F at its right half opens it and fills every heart.
 	var royal_row := 3
-	var royal := Vector2((PlatformerGame.LEVEL_KNIGHT[royal_row].find("S") + 1.5) * PlatformerGame.TILE, (royal_row + 0.5) * PlatformerGame.TILE)
+	var royal := Vector2((LEVEL_KNIGHT[royal_row].find("S") + 1.5) * PlatformerGame.TILE, (royal_row + 0.5) * PlatformerGame.TILE)
 	level.lives = 1
 	before_apples = level.apples
 	level.player.position = Vector2(royal.x, (royal_row + 1) * PlatformerGame.TILE)
@@ -301,7 +334,6 @@ func _check_platformer() -> void:
 	await _crates_both_sides()
 	await _eye_grabbed_early()
 	await _wall_slide()
-	await _level_art_setting()
 	await _eye_boss()
 	# Every campaign level is a rectangle with a start and a drakkar at the end, and loads.
 	for spec in PlatformerCampaign.levels():
@@ -376,21 +408,6 @@ func _eye_grabbed_early() -> void:
 
 
 ## In the air against a wall he slides down slowly, and jump pushes him up and away from it.
-## The settings page picks the level art for a level already being played.
-func _level_art_setting() -> void:
-	var stage := PlatformerGame.new()
-	stage.auto_input = true
-	add_child(stage)
-	await _physics(2)
-	var before: String = Game.level_art
-	for art in ["piksele", "kreskowka"]:
-		Game.level_art = art
-		get_tree().call_group("platformer", "use_level_art")
-		_check(stage._art.is_empty() or stage._art["name"] == art, "settings: level art %s" % art)
-	Game.level_art = before
-	stage.queue_free()
-
-
 func _wall_slide() -> void:
 	var rows: Array[String] = []
 	for i in 9:

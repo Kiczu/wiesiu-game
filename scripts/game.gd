@@ -39,10 +39,6 @@ var text_speed := 1.0
 var fullscreen := not OS.has_feature("web")
 ## Platformer sound: "sounds" (no music), "all" (with music) or "silent"; M goes round them.
 var sound := "sounds"
-## Platformer level art: "kreskowka" (cartoon) or "piksele" (pixel art); L or the settings page switches it.
-var level_art := "kreskowka"
-## Castle art: "grube" (chunky pixels like the orchard) or "drobne" (finer, more detailed).
-var castle_detail := "grube"
 ## Slot to load after the scene reloads (loading from the pause menu).
 var pending_load := -1
 
@@ -144,8 +140,6 @@ func load_settings() -> void:
 		text_speed = config.get_value("game", "text_speed", text_speed)
 		fullscreen = config.get_value("game", "fullscreen", fullscreen)
 		sound = config.get_value("game", "sound", sound)
-		level_art = config.get_value("game", "level_art", level_art)
-		castle_detail = config.get_value("game", "castle_detail", castle_detail)
 
 
 func save_settings() -> void:
@@ -153,8 +147,6 @@ func save_settings() -> void:
 	config.set_value("game", "text_speed", text_speed)
 	config.set_value("game", "fullscreen", fullscreen)
 	config.set_value("game", "sound", sound)
-	config.set_value("game", "level_art", level_art)
-	config.set_value("game", "castle_detail", castle_detail)
 	config.save(SETTINGS_PATH)
 
 

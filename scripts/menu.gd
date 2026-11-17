@@ -140,16 +140,6 @@ func _settings_page() -> void:
 		Game.text_speed = TEXT_SPEEDS[names[(names.find(speed_name) + 1) % names.size()]]
 		Game.save_settings()
 		_settings_page())
-	_button("Grafika: " + ("piksele" if Game.level_art == "piksele" else "kreskówka"), func() -> void:
-		Game.level_art = "kreskowka" if Game.level_art == "piksele" else "piksele"
-		Game.save_settings()
-		get_tree().call_group("platformer", "use_level_art")
-		_settings_page())
-	_button("Zamek: " + ("szczegółowy" if Game.castle_detail == "drobne" else "grube piksele"), func() -> void:
-		Game.castle_detail = "grube" if Game.castle_detail == "drobne" else "drobne"
-		Game.save_settings()
-		get_tree().call_group("platformer", "use_level_art")
-		_settings_page())
 	_button("Wstecz", _back)
 	_focus_first()
 
