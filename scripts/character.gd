@@ -87,10 +87,6 @@ func _process(delta: float) -> void:
 		_anim += delta
 		queue_redraw()
 	_stepping = false
-	# Fake depth: characters lower on screen are closer, so larger.
-	var room := get_parent() as Room
-	if room:
-		scale = Vector2.ONE * room.depth_scale(position.y)
 
 
 func _draw() -> void:

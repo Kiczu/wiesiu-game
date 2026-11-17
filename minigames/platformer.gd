@@ -2344,7 +2344,6 @@ func _win() -> void:
 	state = "won"
 	_stop_music()
 	_play("win")
-	Game.set_flag("jablka_proba", apples)
 
 
 ## A Viking of the eye fight runs into Wiesław.

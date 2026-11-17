@@ -114,7 +114,6 @@ func step(delta: float, steer: float) -> void:
 	if state == "" and elapsed >= DURATION:
 		state = "won"
 		objects.clear()
-		Game.set_flag("lot_jablka", apples)
 
 
 func _hit() -> void:
