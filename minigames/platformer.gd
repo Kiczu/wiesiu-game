@@ -584,6 +584,9 @@ const SLOT := 52.0
 ## Wiesław's own torch, found in the dungeons, and whether he holds it lit. Both go on from level
 ## to level.
 var torch := false
+## The weapon in Wiesław's hand (a name from art/platformer/bron/bronie.json), or "" for none until
+## it is drawn to fit him. It lives in his equipment, not in the bar, and is changed only at a rest stop.
+var weapon := ""
 var torch_lit := false
 ## How far the torch in hand shines (tiles) and how bright.
 const LIGHT_HELD := Vector2(6.5, 1.6)
@@ -1656,6 +1659,7 @@ func _add_player() -> void:
 	player.add_child(shape)
 	_wieslaw = CutoutCharacter.new()
 	_wieslaw.scale = Vector2.ONE * _wieslaw_size()
+	_wieslaw.weapon = weapon
 	player.add_child(_wieslaw)
 	_camera = Camera2D.new()
 	_camera.limit_left = 0
@@ -2883,7 +2887,10 @@ func _redraw() -> void:
 	if _moon_light and _camera:
 		_moon_light.position = _camera.get_screen_center_position() + _moon_light.get_meta("from")
 	if _torch_light and player:
-		_torch_light.position = player.position + Vector2(_wieslaw.facing * 30.0, -80)
+		var flame := _wieslaw.frame_point("flame")
+		if not flame.is_finite():
+			flame = _wieslaw.frame_point("far_hand") + Vector2(0, -40)
+		_torch_light.position = player.position + (_wieslaw.transform * flame if flame.is_finite() else Vector2(_wieslaw.facing * 30.0, -80))
 		_torch_light.energy = LIGHT_HELD.y * (0.88 + 0.12 * sin(_anim * 11.0) * sin(_anim * 6.7))
 		if torch_lit:
 			_held_torch.queue_redraw()
@@ -6573,12 +6580,17 @@ func use_item() -> void:
 ## The torch in Wiesław's hand and its light, which go with him.
 func _add_held_torch() -> void:
 	_held_torch = Node2D.new()
-	_held_torch.z_index = 1
 	_held_torch.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	# Frames drawn with the torch show it themselves; in others it goes in his free far hand, when
+	# the frame marks it (behind him, as the first thing the puppet draws), and is put away for
+	# the rest.
 	_held_torch.draw.connect(func() -> void:
-		if torch_lit:
-			_draw_torch(_held_torch, Vector2(_wieslaw.facing * 30.0, -40.0), 0.25 * _wieslaw.facing, 1.5))
-	player.add_child(_held_torch)
+		var hand := _wieslaw.frame_point("far_hand")
+		if torch_lit and hand.is_finite() and not _wieslaw.frame_point("flame").is_finite():
+			var size := _wieslaw_size()
+			_draw_torch(_held_torch, hand + Vector2(0, -2) / size, -0.25, 1.2 / size))
+	_wieslaw.add_child(_held_torch)
+	_wieslaw.move_child(_held_torch, 0)
 	var glow := _light_texture()
 	_torch_light = PointLight2D.new()
 	_torch_light.texture = glow
@@ -6595,6 +6607,8 @@ func _add_held_torch() -> void:
 
 
 func _update_torch() -> void:
+	if _wieslaw:
+		_wieslaw.holding = "pochodnia" if torch and torch_lit else ""
 	if _torch_light:
 		_torch_light.visible = torch_lit
 	if _held_torch:
