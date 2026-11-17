@@ -1,14 +1,16 @@
 # Wiesław – the game
 
-A point-and-click adventure based on the comic series „Wiesław – Baśnie słowiańskie” by Maciej Kisiel.
+A side-view platformer for kids based on the comic series „Wiesław – Baśnie słowiańskie” by Maciej Kisiel.
 
-The current build is a playable prototype with **placeholder art** (simple shapes). The point is to check the gameplay before the real art is drawn.
+The current build is a trial version of Book I („O dwóch takich co ukradli jabłka”). The art is a stand-in until the final art is drawn.
 
 ## Running
 
 1. Download **Godot 4.4.1** (standard build, not .NET): https://godotengine.org/download/archive/4.4.1-stable/
 2. In Godot, click **Import** and select `project.godot`.
 3. Press **F5**.
+
+The art lives in `art/`, which is kept out of the repository. Without it the game falls back to placeholder shapes.
 
 ## Browser build (itch.io)
 
@@ -18,66 +20,74 @@ The current build is a playable prototype with **placeholder art** (simple shape
 
 The Web preset is single-threaded, so itch.io's *SharedArrayBuffer support* option is not needed. In the browser the game starts inside the page; F11 or the itch.io button switches to fullscreen.
 
-## Menu and saving
+## Menu and settings
 
-The game opens on the main menu (continue, new game, load, settings). Esc opens the pause menu, where the game can be saved to one of 3 slots. The game also autosaves on every room change. Saves and settings are stored in Godot's user folder (on Windows `%APPDATA%\Godot\app_userdata\<project name>`).
+The game opens on the main menu (new game, settings). Esc opens the pause menu. Settings (fullscreen, sound) are stored in Godot's user folder (on Windows `%APPDATA%\Godot\app_userdata\<project name>`).
 
 ## Controls
 
-Keyboard:
+- **A/D or arrows**: walk
+- **W or up**: jump, hold for a higher jump, press again in the air for a second jump; against a wall in the air Wiesław slides down slowly and W pushes him off it
+- **W/S at a ladder**: climb; A or D steps off
+- **Space or left click**: attack
+- **E or right click**: use the thing chosen in the bar at the bottom (throw an apple, drink a mug, light the torch)
+- **1-5, the mouse wheel or a tap on the bar**: choose a thing; a slot dragged onto another swaps them
+- **F**: open chests and doors, talk, pull levers
+- **M**: sounds, silence, sounds with music
+- **Esc**: pause menu
+- **F11**: fullscreen or window
+- **F3**: frames per second
 
-- **WASD / arrows**: walk; an object is highlighted when Wiesław stands next to it and faces it
-- **E / Space / Enter**: use or talk to the highlighted object (with the selected item, if any); skip a line of dialogue
-- **Q**: look at the highlighted object
-- **I / Tab**: open the backpack
-- **1-9**: select an item from the backpack, or pick a dialogue option
-- **Esc**: put the selected item back, close the backpack; with nothing selected it opens the pause menu
-- **F11**: switch between full screen (the default) and a window
+## The story so far
 
-Mouse (also for tablets):
+**Nowa gra** plays the levels of `PlatformerCampaign` (`minigames/platformer_campaign.gd`) in story order, each after its comic pages (`minigames/book_one_story.gd`):
 
-- **Left click**: walk, use an object, talk
-- **Right click**: look at an object, or put back the selected item
-- **Backpack (bottom right)**: open the inventory; pick an item, then click an object to use it on
-- **Click during dialogue**: skip the line
+1. **The castle dungeons** (`levels/01_lochy_zamku.tscn`): halls above the start, two levels of dungeons below, joined by holes and ladders; a torch lies under the start ladder, and the door out opens with F.
+2. **The orchard at night** (`levels/02_sad_noca.tscn`): the trees above, cellars and tunnels under the ground reached by ladder shafts, crumbling floors, and Wiesław's brothers Lesław and Czesław selling a heart and a mug of nalewka for apples.
+3. **The fight for the magic eye** (`levels/03_oko_wikingow.tscn`): two Vikings share one eye and only the blind one can be hit; a beaten Viking drops the eye, and Wiesław wins by picking it up. The drakkar hangs above with a rope ladder to its deck.
 
-## Demo: Book I, "O dwóch takich co ukradli jabłka"
+Then come the comic ending and the end screen. Apples, mugs, the torch and the bar go on from level to level, and going left out of a level leads back to the one before.
 
-The game starts in the throne room: Prince Jarosław's apples are stolen at night and both older brothers have failed, so Wiesław takes over. Solution (spoiler): take the cup from the table in the throne room, go through the door to the orchard, fill it at the mead barrel and give it to Czesław so he falls asleep, pick an apple, hide in the bushes, throw the apple at the Vikings to grab their shared magic eye, then use the eye on them.
+Vikings and rats chase Wiesław; Vikings take four hits, rats one. Thorns and enemies cost one of three hearts, and a pit sends him back to the last flag. Crates break into apples, a treasure chest gives apples and a lost heart, the big royal chest fifteen apples and every heart. A mug of nalewka keeps him from harm for two seconds.
 
-## Mini-game: the flight to Munina
+`minigames/flight.gd` is a drakkar flight mini-game (dodge birds and clouds, catch apples), kept as the way from the eye fight to the next place once there is one. To try it, open `minigames/flight.tscn` and press **F6**.
 
-After the orchard the drakkar flies to Munina as a short mini-game (40 s): steer up and down with W/S, the arrows or by holding the mouse, dodge birds and storm clouds and catch apples. Three hits and the flight starts over. To try it alone, open `minigames/flight.tscn` in Godot and press **F6** (it loops after landing). More mini-games go in `minigames/` and are started with `go_to(room, caption, minigame)`.
+## Making levels
 
-## Platformer version (trial)
+Levels are scenes painted in the editor, in `levels/`. Open one, pick a tile from the TileMap palette at the bottom (`levels/tiles.tres`, one picture per map letter; the legend is at the top of `minigames/platformer.gd`) and paint on the `Map` node; the right button erases. The level's name, night and dungeon are set on its root node (`scripts/level_map.gd`), and **F6** plays the open level. A new level is a copy of a level scene added to `SCENES` in `platformer_campaign.gd`; `levels/palette.png` holds the palette pictures.
 
-**Nowa gra** in the main menu starts the platformer. Wiesław uses the frame set in `CutoutCharacter.ANIM_DIR` (a set drawn bigger than shown sets `smooth` in frames.json, a `drink` pose plays when he drinks a mug, and a `drink_<item>` pose such as `drink_mug`, when drawn, is used instead for that drink; `drinking` names it) (the adventure above is set aside for now and no longer in the menu; its code and tests stay). It is a Mario-style take: a few comic pages, then one level where the player walks (A/D or arrows) and jumps (W or up, hold for a higher jump, press again in the air for a second jump; in the air against a wall he holds on and slides down slowly, and W pushes him off it, up and away, with the second jump back) after the drakkar, swings his sword (space or a click), uses the thing chosen in the bar at the bottom (E or a right click: throws an apple, drinks a mug, lights the torch; 1-5, the mouse wheel or a tap picks it, and a used-up thing leaves the bar), uses things such as chests and the brothers' stalls (F) and climbs ladders (W and S at a ladder, A or D steps off; past the top he hops onto the ledge). Four hits from the sword or apples knock a Viking out (`VIKING_HEALTH`), thorns and Vikings cost one of three hearts, a pit sends Wiesław back to the last flag. Crates break under the sword or a thrown apple and give apples, Wiesław's brothers Lesław and Czesław (`M` on the map) sell a heart for 25 apples and a mug of nalewka for 40 in a stall window with one card per item (1 and 2 buy, F leaves); they stand by the drakkar at the end of the orchard, when Wiesław has gathered enough apples to pay; mugs go in the bag and carry on to the next levels, and one drunk from the bar gives two seconds when nothing can hurt him, a treasure chest opens with F for five apples and a lost heart back, and the big royal chest gives fifteen apples and every heart. The `O` tile starts the fight for the magic eye (`minigames/eye_boss.gd`): two Vikings share one eye, and only the blind one can be hit. Going for him makes the other toss him the eye; hits land while it flies, and once he catches it he lunges. A beaten Viking drops the eye and the last one runs for it, then fights like any Viking; Wiesław wins the level as soon as he picks up the eye from the ground, whether or not a Viking is still standing; an apple can also knock the flying eye down. Vikings show a health bar once hit; `sword_damage` and `APPLE_DAMAGE` set how much a hit takes. From the main menu the platformer plays the levels of `PlatformerCampaign` (`minigames/platformer_campaign.gd`) in story order, each after its comic pages: first the castle (`levels/01_lochy_zamku.tscn`, with `dungeon` set on the level: stone floors drawn in code instead of the outdoor art; above the ground Wiesław starts on are the castle's halls with tall windows, banners and torches, below it two levels of dark dungeons, every room eight tiles tall for the double jump, joined by holes and ladders, and the drakkar tile is the door out), then the orchard at night (at the foot of the trees with branches above, and two levels of cellars and tunnels under the ground reached by ladders down shafts or holes, and the brothers' stall before the drakkar), then the fight for the eye. The chase after the drakkar (`levels/poscig.tscn`) is kept out of the story for now. Campaign levels are scenes painted in the editor, in `levels/`: open one, pick a tile from the TileMap palette at the bottom (`levels/tiles.tres`, one picture per map letter: ground, plank, crate, apple, thorns, Viking, flag, start, drakkar, chest, royal chest, ladder, brother, eye fight) and paint on the `Map` node; the right button erases. The level's name and night are set on its root node, and **F6** plays the open level. The royal chest is two tiles wide, so leave the cell on its right empty. A level can be as tall as you like and the camera follows up and down; a ladder painted down through the ground makes a shaft whose top can be stood on, and empty cells under the ground get a dark cave wall. A new level is a copy of a level scene added to `SCENES` in `platformer_campaign.gd`; `levels/palette.png` holds the palette pictures (`LevelMap.LETTERS` gives their letters, left to right). Opened on its own (`minigames/platformer.tscn` and **F6**), it plays the campaign's first level.
+Pictures can be laid by hand in Node2D groups directly under the level root: `Tył` (behind the ground), `Ziemia` (over it), `Przód` and `Pierwszy plan` (in front). Each moves with its own depth; a `glebia` meta on a picture or group overrides it, and hidden pictures are left out. Lights from `levels/swiatla/` can be placed in the scene too. A level `<name>.tscn` can be dressed by a 3D scene `<name>_3d.tscn` beside it (`scripts/level_dressing.gd`).
 
-Wiesław here is a cutout puppet (`scripts/cutout_character.gd`): separate parts turned at their joints, so the author draws each part once. The author's drawn parts go in `art/platformer/wieslaw/`: one PNG per part plus `rig.json` with where each part sits and where its joint is. Ready-made tiles and background layers for the night levels go in `art/platformer/sad/`, with `level.json`, which names the ground-top, ground, deeper ground and plank tiles (a tile wider than 64 px is a strip that runs on across cells) and lists the background layers with how fast each scrolls, where its bottom sits, how far it follows the camera up, whether every other copy is mirrored and how much haze lies over it; `foreground` lists layers once drawn in front of the level (blurred bushes; no longer drawn, they hid the ground), and `haze_color` sets the colour of the air. Without them the level is drawn from plain shapes. The background stands on the ground Wiesław starts on, so the trees grow up from there and the camera going down shows only the underground; the camera is pulled back a little (`VIEW_ZOOM`); far layers (a `follow` below 0.75) move up and down only by that share, so mountains stay in view high up, with clouds (and stars at night) drawn above them, and outdoors it can rise `SKY_ROWS` above the highest thing into open sky (the orchard has planks up above the tree tops). Depth effects are always on: foreground, haze, falling leaves and pollen, shadows under characters, sunbeams and a darker edge, the camera looking ahead and shaking on a hit, and dust and squash on jumps and landings. Drawn pictures for things in the level (`apple`, `crate`, `thorns`, `flag`, `flag_on`, `drakkar` as `.png`) go in `art/platformer/items/`; `chest` and `chest_open` there draw the treasure chests (`chest_royal` and `chest_royal_open` the royal one, two tiles wide), `ladder` draws a ladder tile, `heart` and `heart_empty` replace the lives circles, drawn small and shown 3 times bigger. Music (`music.ogg`, looped) and sound effects (`jump`, `apple`, `bump`, `stomp`, `hurt`, `checkpoint`, `win`, `lose` as `.ogg`) go in `art/platformer/audio/`; the level starts with sounds but no music, and **M** goes round silence, sounds with music and sounds alone. Ready-made frame-by-frame animations take over from the puppet when they are in `art/platformer/wieslaw_klatki_chibi/` (a small pixel-art Wiesław): PNG frames plus `frames.json`, which lists for each pose (idle, run, jump, fall, hurt, win, death, and attack and climb when there are) its speed, whether it loops (climb holds its frame while Wiesław rests on a ladder), its own height when it was drawn at another size, and for each frame the point that stands on the ground. Without any of them the puppet is drawn from placeholder shapes. Vikings drawn as small pixel art go in `art/platformer/viking/` as `<colour>_walk_<n>.png` (green, red and blue, four frames each, drawn facing right with the feet at the bottom middle); each drawn pixel is shown as 3 x 3 screen pixels (`scripts/pixel_viking.gd`).
+Opened on its own (`minigames/platformer.tscn` and **F6**), the platformer plays the campaign's first level.
 
-The level is the text map `LEVEL` at the top of `minigames/platformer.gd`, one character per 64 px tile (the legend is above it). To change the level, edit the map: every row must stay the same length.
+## Art folders
 
-## Demo: Book II, Munina
-
-The drakkar takes Wiesław to Munina, a village where a horned guest called Rokita eats and drinks at the inn without paying. Solution (spoiler): talk to the innkeeper, fill the chipped pot at the tar cauldron, take the sack of feathers by the coop, show the tar and feathers to Rokita, collect the reward from the innkeeper and board the drakkar.
+| Folder in `art/platformer/` | Contents |
+|---|---|
+| `wieslaw_klatki_chibi/` | Wiesław's frames and `frames.json` (poses, speed, feet, hand points) |
+| `zamek/` | Castle tiles, pieces, decorations (`ozdoby/`) and backdrops (`tlo/`) |
+| `sad/` | Orchard art set (`level.json`), grass, trees, props and cellar pieces |
+| `boss/` | The brothers, the eye and the drakkar |
+| `viking/wiking/`, `szczur/` | Viking and rat frames |
+| `items/`, `ui/`, `bron/`, `audio/` | Item pictures, key caps, weapons, music and sounds |
 
 ## Layout
 
 | Path | Contents |
 |---|---|
-| `rooms/sala.gd` | The throne room where Book I starts |
-| `rooms/sad.gd` | The orchard from Book I: objects, dialogue and puzzles |
-| `rooms/munina.gd` | Munina village from the start of Book II |
-| `scripts/game.gd` | Item list and game state (inventory, flags); autoloaded as `Game` |
-| `scripts/room.gd` | Base class for rooms; `go_to` switches to another room |
-| `scripts/character.gd` | Characters (placeholder drawing) |
-| `scripts/hotspot.gd` | Clickable objects |
-| `scripts/placeholder_art.gd` | Placeholder drawings, to be replaced by the author's art |
-| `scripts/menu.gd` | Main menu, pause menu, save/load slots and settings |
-| `minigames/flight.gd` | The drakkar flight mini-game between Book I and Munina |
-| `minigames/platformer.gd` | The platformer level and its text map (platformer version) |
-| `minigames/book_one_story.gd` | Comic pages before and after the platformer level |
-| `scripts/cutout_character.gd` | Cutout puppet: parts, joints and poses (idle, run, jump, fall, hurt, win) |
+| `scripts/main.gd` | Main menu, then the campaign levels and the end screen |
+| `scripts/game.gd` | Settings and keyboard actions; autoloaded as `Game` |
+| `scripts/menu.gd` | Main menu, pause menu and settings |
+| `scripts/ui.gd` | End screen |
 | `scripts/comic.gd` | Comic pages: panels with characters, speech bubbles and captions |
-| `scripts/ui.gd` | Speech, hover label, inventory, dialogue choices, end screen |
-| `tests/walkthrough.gd` | Plays the whole demo automatically |
+| `scripts/level_map.gd` | A level painted in the editor, read back as text rows |
+| `scripts/level_dressing.gd` | The 3D dressing of a level |
+| `scripts/cutout_character.gd` | Wiesław from frames (or a placeholder puppet) |
+| `scripts/pixel_viking.gd`, `scripts/rat.gd` | Viking and rat drawing |
+| `scripts/character.gd`, `scripts/hotspot.gd`, `scripts/placeholder_art.gd` | Placeholder shapes for characters and the drakkar |
+| `minigames/platformer.gd` | The platformer: map legend, movement, enemies, items, drawing |
+| `minigames/platformer_campaign.gd` | Level order |
+| `minigames/eye_boss.gd`, `minigames/flying_ship.gd`, `minigames/crumbling_floor.gd` | The eye fight, the drakkar over it, floors that break |
+| `minigames/book_one_story.gd` | Comic pages before and after the levels |
+| `minigames/flight.gd` | The drakkar flight mini-game |
+| `tests/walkthrough.gd` | Automatic checks of the menu, the flight and the platformer |
