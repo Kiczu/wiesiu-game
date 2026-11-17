@@ -570,8 +570,33 @@ var _look_down := 0.0
 var _camera_y := 0.0
 ## Time left on the mug of nalewka: nothing hurts Wiesław.
 var _shield := 0.0
-## Mugs of nalewka bought from the brothers and kept for later; Q drinks one.
+## Mugs of nalewka bought from the brothers and kept for later; drunk from the bar.
 var mugs := 0
+## The bar of things at the bottom of the screen, slot by slot ("apple", "mug", "torch" or ""
+## for an empty one): 1-5, the mouse wheel or a tap picks one, E or a right click uses it. A thing
+## goes into the first empty slot when Wiesław gets it and leaves the bar when the last one is
+## used up; a slot dragged onto another swaps places with it. Keys and
+## other carried things are shown at the top instead. The bar goes on from level to level.
+var bar: Array[String] = ["", "", "", "", ""]
+const SLOT := 52.0
+## Wiesław's own torch, found in the dungeons, and whether he holds it lit. Both go on from level
+## to level.
+var torch := false
+var torch_lit := false
+## How far the torch in hand shines (tiles) and how bright.
+const LIGHT_HELD := Vector2(6.5, 1.6)
+const TORCH_PICTURE := "res://art/platformer/zamek/pochodnia_sciana_%d.png"
+var _slot := 0
+## The slot being dragged onto another (-1: none).
+var _drag_from := -1
+var _torch_frames_held: Array[Texture2D] = []
+var _torch_light: PointLight2D
+var _held_torch: Node2D
+## The glow of each torch lying in the level to be found (by cell), put out when it is taken.
+var _found_lights := {}
+## A line shown for a while after something new is found.
+var _note := ""
+var _note_time := 0.0
 ## F3 shows the frames per second in the corner (kept between levels).
 static var show_fps := false
 ## The stars of a sky drawn in code: place, size, brightness and twinkle speed, made once.
@@ -693,6 +718,8 @@ func _ready() -> void:
 	_hud.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	front.add_child(_hud)
 	_hud.draw.connect(_draw_hud)
+	while ResourceLoader.exists(TORCH_PICTURE % _torch_frames_held.size()):
+		_torch_frames_held.append(load(TORCH_PICTURE % _torch_frames_held.size()))
 	if Game.fast and not auto_input:
 		state = "won"
 		set_physics_process(false)
@@ -799,6 +826,7 @@ func restart() -> void:
 	_add_player()
 	_add_secrets()
 	_add_dungeon_lights()
+	_add_held_torch()
 	_add_scene_lights()
 	_add_cellar_cover()
 	_add_room_shade()
@@ -2347,6 +2375,7 @@ func drink() -> void:
 		return
 	mugs -= 1
 	learned["mug"] = true
+	_stock_bar()
 	drinking = "mug"
 	_shield = MUG_TIME
 	_play("checkpoint")
@@ -2653,6 +2682,22 @@ func _check_touches() -> void:
 				_set_tile(corner, " ")
 				apples += 1
 				_play("apple")
+			"Q":
+				var cell := Vector2i(floori(corner.x / TILE), floori(corner.y / TILE))
+				if _found_lights.has(cell):
+					_found_lights[cell].queue_free()
+					_torch_lights.erase(_found_lights[cell])
+					_castle_lights.erase(_found_lights[cell])
+					_found_lights.erase(cell)
+				_set_tile(corner, " ")
+				torch = true
+				torch_lit = true
+				_stock_bar()
+				_pick_slot(bar.find("torch"))
+				_update_torch()
+				_note = "Pochodnia! E: zgaś albo zapal. Wybierasz ją klawiszem %d." % (bar.find("torch") + 1)
+				_note_time = 5.0
+				_play("checkpoint")
 			"K":
 				_set_tile(corner, " ")
 				keys += 1
@@ -2721,16 +2766,45 @@ func _hit(fell: bool) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed and _drag_from >= 0:
+		# Let go over the bar: on another slot the two swap places; on the same one it was a tap,
+		# which picks the slot (a second tap on the chosen slot uses it).
+		var onto := _slot_at(event.position)
+		if onto >= 0 and onto != _drag_from:
+			var moved := bar[_drag_from]
+			bar[_drag_from] = bar[onto]
+			bar[onto] = moved
+			if _slot == _drag_from:
+				_slot = onto
+			elif _slot == onto:
+				_slot = _drag_from
+		elif onto == _drag_from:
+			if onto == _slot and state == "":
+				use_item()
+			_pick_slot(onto)
+		_drag_from = -1
+		_hud.queue_redraw()
+		get_viewport().set_input_as_handled()
+		return
 	if not event.is_pressed() or event.is_echo():
 		return
 	if event.is_action("cancel"):
 		pause_requested.emit()
 		get_viewport().set_input_as_handled()
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and _slot_at(event.position) >= 0:
+		_drag_from = _slot_at(event.position)
+		get_viewport().set_input_as_handled()
 	elif state == "" and ((event is InputEventKey and event.physical_keycode == KEY_SPACE) or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT)):
 		attack()
 		get_viewport().set_input_as_handled()
-	elif state == "" and ((event is InputEventKey and event.physical_keycode == KEY_E) or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT)):
-		throw_apple()
+	elif state == "" and event is InputEventKey and event.physical_keycode == KEY_E:
+		use_item()
+		get_viewport().set_input_as_handled()
+	elif state == "" and event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT:
+		use_item()
+		get_viewport().set_input_as_handled()
+	elif event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		_pick_slot(wrapi(_slot + (1 if event.button_index == MOUSE_BUTTON_WHEEL_DOWN else -1), 0, bar.size()))
 		get_viewport().set_input_as_handled()
 	elif event is InputEventKey and event.physical_keycode == KEY_L and (_art_sets.size() > 1 or (dungeon and not _pieces.is_empty())):
 		next_art_set()
@@ -2738,8 +2812,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif not shop.is_empty() and event is InputEventKey and event.physical_keycode in [KEY_1, KEY_2]:
 		buy("heart" if event.physical_keycode == KEY_1 else "mug")
 		get_viewport().set_input_as_handled()
-	elif state == "" and event is InputEventKey and event.physical_keycode == KEY_Q:
-		drink()
+	elif event is InputEventKey and event.physical_keycode >= KEY_1 and event.physical_keycode < KEY_1 + bar.size():
+		_pick_slot(event.physical_keycode - KEY_1)
 		get_viewport().set_input_as_handled()
 	elif state == "" and event is InputEventKey and event.physical_keycode == KEY_F:
 		use()
@@ -2768,6 +2842,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _redraw() -> void:
+	_stock_bar()
 	var span := _visible_columns()
 	for chunk in _chunks:
 		if chunk["dirty"] and chunk["span"].y > span.x - STATIC_CHUNK and chunk["span"].x < span.y + STATIC_CHUNK:
@@ -2798,6 +2873,12 @@ func _redraw() -> void:
 	_shake_near(get_process_delta_time())
 	if _moon_light and _camera:
 		_moon_light.position = _camera.get_screen_center_position() + _moon_light.get_meta("from")
+	if _torch_light and player:
+		_torch_light.position = player.position + Vector2(_wieslaw.facing * 30.0, -80)
+		_torch_light.energy = LIGHT_HELD.y * (0.88 + 0.12 * sin(_anim * 11.0) * sin(_anim * 6.7))
+		if torch_lit:
+			_held_torch.queue_redraw()
+	_note_time = maxf(_note_time - get_process_delta_time(), 0.0)
 	if _player_light and player:
 		_player_light.position = player.position + Vector2(0, -50)
 		var flicker := 0.9 + 0.1 * sin(_anim * 9.0) * sin(_anim * 5.3)
@@ -5204,6 +5285,8 @@ func _draw_static_front(v: Node2D, span: Vector2i) -> void:
 					_draw_trapdoor(v, row, col, at)
 				"d", "e":
 					_draw_lever(v, at, map[row][col] == "e")
+				"Q":
+					_draw_torch(v, at + Vector2(TILE / 2.0, TILE), 0.35, 2.0)
 				"x" when _art.has("spikes"):
 					var spikes: Texture2D = _art["spikes"]
 					v.draw_texture(spikes, at + Vector2((TILE - spikes.get_width()) / 2.0, TILE - spikes.get_height()))
@@ -5598,12 +5681,15 @@ func _draw_first_keys() -> void:
 			_draw_key_line(_hints, [["W"], "albo", ["^"], "skok, w powietrzu jeszcze raz"], over + Vector2(0, 72))
 	if _first_viking_at != Vector2.INF and not learned.has("sword"):
 		var line := [["Spacja"], "miecz"]
-		if apples > 0:
+		if apples > 0 and bar[_slot] == "apple":
 			line.append_array(["|", ["E"], "rzut jabłkiem"])
 		_draw_key_line(_hints, line, _first_viking_at + Vector2(-4 * TILE, -260))
 	if mugs > 0 and not learned.has("mug"):
 		for merchant in merchants:
-			_draw_key_line(_hints, [["Q"], "wypij kufel"], merchant["node"].position + Vector2(0, -260))
+			var line := [["E"], "wypij kufel"]
+			if bar[_slot] != "mug" and "mug" in bar:
+				line = [[str(bar.find("mug") + 1)], "wybierz kufel", "|"] + line
+			_draw_key_line(_hints, line, merchant["node"].position + Vector2(0, -260))
 
 
 static func draw_health_bar(canvas: CanvasItem, center: Vector2, share: float, width := 56.0) -> void:
@@ -6344,32 +6430,12 @@ func _draw_hud() -> void:
 			v.draw_circle(Vector2(40 + i * 40, 40), 14, Color("d62828") if i < lives else Color(0, 0, 0, 0.25))
 	# A light outline keeps the text readable on a drawn background.
 	var halo := Color(1, 1, 1, 0.85)
-	var apples_at := Vector2(40 + LIVES * 54, 50) if _items.has("heart") else Vector2(170, 50)
-	v.draw_string_outline(font, apples_at, "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, 6, halo)
-	v.draw_string(font, apples_at, "Jabłka: %d" % apples, HORIZONTAL_ALIGNMENT_LEFT, -1, 28, ink)
 	if keys > 0:
-		# The keys in hand, under the apples.
-		var key_at := apples_at + Vector2(20, 34)
+		# The keys in hand, beside the hearts.
+		var key_at := (Vector2(40 + LIVES * 54, 50) if _items.has("heart") else Vector2(170, 50)) + Vector2(20, -12)
 		_draw_door_key(v, key_at, 0.8)
 		v.draw_string_outline(font, key_at + Vector2(26, 9), "x%d" % keys, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, 6, halo)
 		v.draw_string(font, key_at + Vector2(26, 9), "x%d" % keys, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, ink)
-	if mugs > 0:
-		# A little mug with its foam, and how many are in the bag.
-		var mug := apples_at + Vector2(170, -26)
-		var count_x := 38.0
-		if _items.has("mug"):
-			var picture: Texture2D = _items["mug"]
-			var size := picture.get_size() * (40.0 / picture.get_height())
-			v.draw_texture_rect(picture, Rect2(mug + Vector2(0, 26 - size.y), size), false)
-			count_x = size.x + 10.0
-		else:
-			v.draw_rect(Rect2(mug, Vector2(22, 26)), Color("c08a4a"))
-			v.draw_rect(Rect2(mug, Vector2(22, 26)), ink, false, 2.0)
-			v.draw_rect(Rect2(mug + Vector2(0, -6), Vector2(22, 7)), Color("f4f0e0"))
-			v.draw_arc(mug + Vector2(24, 13), 7, -PI / 2, PI / 2, 8, ink, 3.0)
-		var count := "x%d (Q)" % mugs
-		v.draw_string_outline(font, mug + Vector2(count_x, 24), count, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, 6, halo)
-		v.draw_string(font, mug + Vector2(count_x, 24), count, HORIZONTAL_ALIGNMENT_LEFT, -1, 24, ink)
 	var modes: Array[String] = []
 	if _music or not _sounds.is_empty():
 		modes.append("M: %s" % {"silent": "cisza", "all": "muzyka i dźwięki"}.get(Game.sound, "same dźwięki"))
@@ -6380,6 +6446,7 @@ func _draw_hud() -> void:
 	var mode := "     ".join(modes)
 	v.draw_string_outline(font, Vector2(0, 48), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 20, 6, halo)
 	v.draw_string(font, Vector2(0, 48), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 20, ink)
+	_draw_hotbar(v)
 	if not shop.is_empty():
 		_draw_shop(v)
 	if level_name != "" and _anim < 3.0:
@@ -6387,10 +6454,12 @@ func _draw_hud() -> void:
 		v.draw_string_outline(font, Vector2(0, 300), level_name, HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 56, 10, Color(halo, fade))
 		v.draw_string(font, Vector2(0, 300), level_name, HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 56, Color(ink, fade))
 	var message := ""
-	if state == "" and _boss:
+	if state == "" and _note_time > 0.0:
+		message = _note
+	elif state == "" and _boss:
 		message = "Dwaj Wikingowie i jedno oko! Bij tego, który nie ma oka.\nKto złapie oko, od razu atakuje. Pokonaj obu i podnieś oko!"
 	elif state == "" and player and player.position.x < 900.0 and _key_frames.is_empty():
-		message = "A/D: chodzenie     W: skok, w powietrzu jeszcze raz     W/S przy drabinie: wspinanie\nSpacja albo klik: miecz     E albo prawy klik: rzut jabłkiem     F: skrzynie, rozmowa i drzwi     Q: kufel"
+		message = "A/D: chodzenie     W: skok, w powietrzu jeszcze raz     W/S przy drabinie: wspinanie\nSpacja albo klik: miecz     E albo prawy klik: użyj rzeczy z paska (1-5 albo kółko myszy wybiera)     F: skrzynie, rozmowa i drzwi"
 	elif state == "lost":
 		message = "Ojej, Wiesław stracił wszystkie serduszka!\nSpacja albo klik: jeszcze raz"
 	elif state == "won" and _boss:
@@ -6402,3 +6471,161 @@ func _draw_hud() -> void:
 	if message != "":
 		v.draw_multiline_string_outline(font, Vector2(0, 110), message, HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 26, -1, 6, halo)
 		v.draw_multiline_string(font, Vector2(0, 110), message, HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 26, -1, ink)
+
+
+## The bar's slot under a point on the screen, or -1.
+func _slot_at(point: Vector2) -> int:
+	for k in bar.size():
+		if _slot_rect(k).grow(4.0).has_point(point):
+			return k
+	return -1
+
+
+func _slot_rect(k: int) -> Rect2:
+	var gap := 10.0
+	var width := bar.size() * SLOT + (bar.size() - 1) * gap
+	return Rect2(Vector2((SCREEN.x - width) / 2.0 + k * (SLOT + gap), SCREEN.y - SLOT - 8.0), Vector2(SLOT, SLOT))
+
+
+## Puts each thing Wiesław has into the bar's first empty slot, if it is not in the bar yet, and
+## takes out what he has no more of. A thing that comes while the chosen slot is empty is chosen.
+func _stock_bar() -> void:
+	for kind in ["apple", "mug", "torch"]:
+		var has: bool = {"apple": apples > 0, "mug": mugs > 0, "torch": torch}[kind]
+		if has and not kind in bar and "" in bar:
+			var k := bar.find("")
+			bar[k] = kind
+			if bar[_slot] == "" or _slot == k:
+				_slot = k
+			_hud.queue_redraw()
+		elif not has and kind in bar:
+			bar[bar.find(kind)] = ""
+			_hud.queue_redraw()
+
+
+func _pick_slot(k: int) -> void:
+	if k < 0 or k >= bar.size():
+		return
+	_slot = k
+	_hud.queue_redraw()
+
+
+## Uses what is in the chosen slot: throws an apple, drinks a mug, lights or puts out the torch.
+func use_item() -> void:
+	_stock_bar()
+	match bar[_slot]:
+		"apple":
+			throw_apple()
+		"mug":
+			drink()
+		"torch":
+			if torch:
+				torch_lit = not torch_lit
+				_update_torch()
+				_play("bump" if not torch_lit else "checkpoint")
+
+
+## The torch in Wiesław's hand and its light, which go with him.
+func _add_held_torch() -> void:
+	_held_torch = Node2D.new()
+	_held_torch.z_index = 1
+	_held_torch.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_held_torch.draw.connect(func() -> void:
+		if torch_lit:
+			_draw_torch(_held_torch, Vector2(_wieslaw.facing * 30.0, -40.0), 0.25 * _wieslaw.facing, 1.5))
+	player.add_child(_held_torch)
+	var glow := _light_texture()
+	_torch_light = PointLight2D.new()
+	_torch_light.texture = glow
+	_torch_light.texture_scale = LIGHT_HELD.x * TILE * 2.0 / glow.get_width()
+	_torch_light.color = TORCH_LIGHT
+	_torch_light.energy = LIGHT_HELD.y
+	_level.add_child(_torch_light)
+	_update_torch()
+	_found_lights.clear()
+	for row in map.size():
+		for col in map[row].length():
+			if map[row][col] == "Q":
+				_found_lights[Vector2i(col, row)] = _add_light(glow, Vector2((col + 0.5) * TILE, row * TILE + 10), LIGHT_TORCH * 0.6, TORCH_LIGHT, true)
+
+
+func _update_torch() -> void:
+	if _torch_light:
+		_torch_light.visible = torch_lit
+	if _held_torch:
+		_held_torch.queue_redraw()
+	_hud.queue_redraw()
+
+
+## A torch standing at foot (its bottom), leaning by turn: the castle's torch picture with its
+## flame flickering, or a stick and a flame drawn in code.
+func _draw_torch(v: CanvasItem, foot: Vector2, turn: float, size: float) -> void:
+	v.draw_set_transform(foot, turn)
+	if not _torch_frames_held.is_empty():
+		var frame: Texture2D = _torch_frames_held[int(_anim * 10.0) % _torch_frames_held.size()]
+		var area := frame.get_size() * size
+		v.draw_texture_rect(frame, Rect2(Vector2(-area.x / 2.0, -area.y), area), false)
+	else:
+		v.draw_rect(Rect2(-4, -48, 8, 48), Color("6b4423"))
+		var flicker := 1.0 + 0.15 * sin(_anim * 13.0)
+		v.draw_circle(Vector2(0, -56), 11.0 * flicker, Color("f28c28"))
+		v.draw_circle(Vector2(0, -54), 6.0 * flicker, Color("ffe08a"))
+	v.draw_set_transform(Vector2.ZERO)
+
+
+## The bar at the bottom of the screen: a slot for each thing, its number, what is in it and how
+## many; the chosen slot framed in gold.
+func _draw_hotbar(v: Node2D) -> void:
+	var font := ThemeDB.fallback_font
+	var pointer := _hud.get_local_mouse_position()
+	var dragged := _drag_from >= 0 and _slot_at(pointer) != _drag_from
+	for k in bar.size():
+		var box := _slot_rect(k)
+		var chosen := k == _slot
+		v.draw_rect(box, Color(0.08, 0.06, 0.1, 0.7 if chosen else 0.5))
+		v.draw_rect(box, Color("f2c14e") if chosen else Color(1, 1, 1, 0.3), false, 4.0 if chosen else 2.0)
+		v.draw_string_outline(font, box.position + Vector2(5, 17), str(k + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, 4, Color.BLACK)
+		v.draw_string(font, box.position + Vector2(5, 17), str(k + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(1, 1, 1, 0.8))
+		if dragged and k == _drag_from:
+			continue  # drawn under the pointer instead
+		var count := _draw_slot_thing(v, bar[k], box.get_center())
+		if count > 0:
+			var text := str(count)
+			v.draw_string_outline(font, Vector2(box.position.x + 4, box.end.y - 6), text, HORIZONTAL_ALIGNMENT_RIGHT, SLOT - 8, 18, 4, Color.BLACK)
+			v.draw_string(font, Vector2(box.position.x + 4, box.end.y - 6), text, HORIZONTAL_ALIGNMENT_RIGHT, SLOT - 8, 18, Color.WHITE)
+	if dragged:
+		_draw_slot_thing(v, bar[_drag_from], pointer)
+	var name: String = {"apple": "Jabłko: rzut", "mug": "Kufel nalewki: wypij", "torch": "Pochodnia: zgaś" if torch_lit else "Pochodnia: zapal"}.get(bar[_slot], "")
+	if name != "":
+		var over := Vector2(0, _slot_rect(0).position.y - 10)
+		v.draw_string_outline(font, over, name + "  [E]", HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 17, 4, Color.BLACK)
+		v.draw_string(font, over, name + "  [E]", HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 17, Color(1, 1, 1, 0.85))
+
+
+## A thing of the bar drawn at a point; returns how many there are (-1: not counted).
+func _draw_slot_thing(v: Node2D, kind: String, middle: Vector2) -> int:
+	match kind:
+		"apple":
+			_draw_slot_picture(v, _items.get("apple"), middle, apples > 0)
+			if not _items.has("apple"):
+				v.draw_circle(middle, 14, Color("d62828") if apples > 0 else Color(0.4, 0.4, 0.4))
+			return apples
+		"mug":
+			_draw_slot_picture(v, _items.get("mug"), middle, mugs > 0)
+			if not _items.has("mug"):
+				v.draw_rect(Rect2(middle - Vector2(11, 13), Vector2(22, 26)), Color("c08a4a"))
+			return mugs
+		"torch":
+			if _torch_frames_held.is_empty():
+				_draw_torch(v, middle + Vector2(0, 26), 0.0, 0.8)
+			else:
+				var frame: Texture2D = _torch_frames_held[int(_anim * 10.0) % _torch_frames_held.size()] if torch_lit else _torch_frames_held[0]
+				_draw_slot_picture(v, frame, middle, torch_lit)
+	return -1
+
+
+func _draw_slot_picture(v: Node2D, picture: Texture2D, middle: Vector2, bright: bool) -> void:
+	if not picture:
+		return
+	var size := picture.get_size() * (38.0 / maxf(picture.get_width(), picture.get_height()))
+	v.draw_texture_rect(picture, Rect2(middle - size / 2.0, size), false, Color.WHITE if bright else Color(0.45, 0.45, 0.5, 0.8))
