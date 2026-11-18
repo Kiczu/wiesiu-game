@@ -31,8 +31,13 @@ func _build() -> void:
 	_end_screen.size = SCREEN
 	_end_screen.hide()
 	add_child(_end_screen)
+	var towel := UiSkin.towel(Rect2(201, 150, 879, 420))
+	if towel:
+		_end_screen.add_child(towel)
 	var box := VBoxContainer.new()
-	box.position = Vector2(240, 220)
+	if towel:
+		box.theme = UiSkin.theme()
+	box.position = Vector2(240, 245)
 	box.custom_minimum_size = Vector2(800, 0)
 	box.add_theme_constant_override("separation", 24)
 	_end_screen.add_child(box)
