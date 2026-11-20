@@ -22,7 +22,12 @@ func _ready() -> void:
 	_background = ColorRect.new()
 	_background.size = SCREEN
 	add_child(_background)
+	var towel := UiSkin.towel(Rect2(400, 80, 480, 576))
+	if towel:
+		add_child(towel)
 	_box = VBoxContainer.new()
+	if towel:
+		_box.theme = UiSkin.theme()
 	_box.position = Vector2(440, 0)
 	_box.custom_minimum_size = Vector2(400, SCREEN.y)
 	_box.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -128,6 +133,8 @@ func _label(text: String, size: int) -> void:
 	label.text = text
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.add_theme_font_size_override("font_size", size)
+	if size >= 56 and UiSkin.has("recznik"):
+		label.add_theme_color_override("font_color", UiSkin.RED)
 	_box.add_child(label)
 
 

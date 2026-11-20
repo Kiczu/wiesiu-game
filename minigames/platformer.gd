@@ -543,7 +543,8 @@ var mugs := 0
 ## used up; a slot dragged onto another swaps places with it. Keys and
 ## other carried things are shown at the top instead. The bar goes on from level to level.
 var bar: Array[String] = ["", "", "", "", ""]
-const SLOT := 52.0
+## A slot is the slot picture (25 pixels) drawn twice its size.
+const SLOT := 50.0
 ## Wiesław's own torch, found in the dungeons, and whether he holds it lit. Both go on from level
 ## to level.
 var torch := false
@@ -2351,7 +2352,7 @@ func hurt_by_boss() -> void:
 	_hit(false)
 
 
-## Q: drinks a mug of nalewka from the bag, and for a while nothing hurts Wiesław.
+## A mug used from the bar is drunk, and for a while nothing hurts Wiesław.
 func drink() -> void:
 	if state != "" or mugs <= 0 or _shield > 0.0:
 		return
@@ -5661,21 +5662,24 @@ func _draw_shop(v: Node2D) -> void:
 	var paper := Color(1, 0.98, 0.9, 0.97)
 	var font := ThemeDB.fallback_font
 	var panel := Rect2(Vector2(340, 190), Vector2(600, 340))
-	v.draw_rect(panel.grow(4), ink)
-	v.draw_rect(panel, Color("c08a4a"))
+	var linen := UiSkin.draw_box(v, "recznik", Rect2(panel.position - Vector2(20, 76), panel.size + Vector2(40, 156)))
+	if not linen:
+		v.draw_rect(panel.grow(4), ink)
+		v.draw_rect(panel, Color("c08a4a"))
 	v.draw_string(font, panel.position + Vector2(0, 42), "%s sprzedaje" % shop["name"], HORIZONTAL_ALIGNMENT_CENTER, panel.size.x, 30, ink)
 	var offers := [
 		{"key": "1", "name": "Serce", "about": "+1 serduszko od razu", "price": HEART_PRICE,
 			"why": "Masz wszystkie serca" if lives >= LIVES else ""},
-		{"key": "2", "name": "Kufel nalewki", "about": "Do torby. Q: 2 s nietykalności", "price": MUG_PRICE, "why": ""},
+		{"key": "2", "name": "Kufel nalewki", "about": "Do paska. E: 2 s nietykalności", "price": MUG_PRICE, "why": ""},
 	]
 	for i in offers.size():
 		var offer: Dictionary = offers[i]
 		if offer["why"] == "" and apples < int(offer["price"]):
 			offer["why"] = "Za mało jabłek"
 		var card := Rect2(panel.position + Vector2(24 + i * 284, 64), Vector2(268, 214))
-		v.draw_rect(card, paper)
-		v.draw_rect(card, ink, false, 3.0)
+		if not (linen and UiSkin.draw_box(v, "slot", card)):
+			v.draw_rect(card, paper)
+			v.draw_rect(card, ink, false, 3.0)
 		var faded: bool = offer["why"] != ""
 		var tint := Color(1, 1, 1, 0.4) if faded else Color.WHITE
 		# The picture.
@@ -6423,7 +6427,14 @@ func _draw_hud() -> void:
 	_draw_hotbar(v)
 	if not shop.is_empty():
 		_draw_shop(v)
-	if level_name != "" and _anim < 3.0:
+	if level_name != "" and _anim < 3.0 and UiSkin.has("nazwa"):
+		# The level's name on an embroidered band at the top, fading out after a few seconds.
+		var fade := clampf(3.0 - _anim, 0.0, 1.0)
+		var width := font.get_string_size(level_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x
+		var band := Rect2(Vector2(roundf((SCREEN.x - width) / 2.0) - 44.0, 24.0), Vector2(snappedf(width + 88.0, 2.0), 66.0))
+		UiSkin.draw_box(v, "nazwa", band, 2.0, fade)
+		v.draw_string(font, Vector2(0, band.get_center().y + 8.0), level_name, HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 30, Color(UiSkin.INK, fade))
+	elif level_name != "" and _anim < 3.0:
 		var fade := clampf(3.0 - _anim, 0.0, 1.0)
 		v.draw_string_outline(font, Vector2(0, 300), level_name, HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 56, 10, Color(halo, fade))
 		v.draw_string(font, Vector2(0, 300), level_name, HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 56, Color(ink, fade))
@@ -6456,9 +6467,9 @@ func _slot_at(point: Vector2) -> int:
 
 
 func _slot_rect(k: int) -> Rect2:
-	var gap := 10.0
+	var gap := 8.0
 	var width := bar.size() * SLOT + (bar.size() - 1) * gap
-	return Rect2(Vector2((SCREEN.x - width) / 2.0 + k * (SLOT + gap), SCREEN.y - SLOT - 8.0), Vector2(SLOT, SLOT))
+	return Rect2(Vector2((SCREEN.x - width) / 2.0 + k * (SLOT + gap), SCREEN.y - SLOT - 32.0), Vector2(SLOT, SLOT))
 
 
 ## Puts each thing Wiesław has into the bar's first empty slot, if it is not in the bar yet, and
@@ -6560,13 +6571,18 @@ func _draw_hotbar(v: Node2D) -> void:
 	var font := ThemeDB.fallback_font
 	var pointer := _hud.get_local_mouse_position()
 	var dragged := _drag_from >= 0 and _slot_at(pointer) != _drag_from
+	# The embroidered strip under the slots, its bands above and below them.
+	var first := _slot_rect(0)
+	var strip := Rect2(first.position - Vector2(14, 22), Vector2(_slot_rect(bar.size() - 1).end.x - first.position.x + 28, SLOT + 46))
+	var linen := UiSkin.draw_box(v, "pasek", strip)
 	for k in bar.size():
 		var box := _slot_rect(k)
 		var chosen := k == _slot
-		v.draw_rect(box, Color(0.08, 0.06, 0.1, 0.7 if chosen else 0.5))
-		v.draw_rect(box, Color("f2c14e") if chosen else Color(1, 1, 1, 0.3), false, 4.0 if chosen else 2.0)
-		v.draw_string_outline(font, box.position + Vector2(5, 17), str(k + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, 4, Color.BLACK)
-		v.draw_string(font, box.position + Vector2(5, 17), str(k + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(1, 1, 1, 0.8))
+		if not UiSkin.draw_box(v, "slot_wybrany" if chosen else "slot", box):
+			v.draw_rect(box, Color(0.08, 0.06, 0.1, 0.7 if chosen else 0.5))
+			v.draw_rect(box, Color("f2c14e") if chosen else Color(1, 1, 1, 0.3), false, 4.0 if chosen else 2.0)
+			v.draw_string_outline(font, box.position + Vector2(5, 17), str(k + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, 4, Color.BLACK)
+			v.draw_string(font, box.position + Vector2(5, 17), str(k + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(1, 1, 1, 0.8))
 		if dragged and k == _drag_from:
 			continue  # drawn under the pointer instead
 		var count := _draw_slot_thing(v, bar[k], box.get_center())
@@ -6578,7 +6594,7 @@ func _draw_hotbar(v: Node2D) -> void:
 		_draw_slot_thing(v, bar[_drag_from], pointer)
 	var name: String = {"apple": "Jabłko: rzut", "mug": "Kufel nalewki: wypij", "torch": "Pochodnia: zgaś" if torch_lit else "Pochodnia: zapal"}.get(bar[_slot], "")
 	if name != "":
-		var over := Vector2(0, _slot_rect(0).position.y - 10)
+		var over := Vector2(0, (strip.position.y if linen else first.position.y) - 10)
 		v.draw_string_outline(font, over, name + "  [E]", HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 17, 4, Color.BLACK)
 		v.draw_string(font, over, name + "  [E]", HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 17, Color(1, 1, 1, 0.85))
 

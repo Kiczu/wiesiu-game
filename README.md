@@ -69,6 +69,7 @@ Opened on its own (`minigames/platformer.tscn` and **F6**), the platformer plays
 | `sad/` | Orchard art set (`level.json`), grass, trees, props and cellar pieces |
 | `boss/` | The brothers, the eye and the drakkar |
 | `viking/wiking/`, `szczur/` | Viking and rat frames |
+| `ui/wyszywanka/` | The embroidered linen of the menus, the item bar, the shop and the level name (nine-patches, edges in `scripts/ui_skin.gd`) |
 | `items/`, `ui/`, `bron/`, `audio/` | Item pictures, key caps, weapons, music and sounds |
 
 ## Layout
@@ -79,6 +80,7 @@ Opened on its own (`minigames/platformer.tscn` and **F6**), the platformer plays
 | `scripts/game.gd` | Settings and keyboard actions; autoloaded as `Game` |
 | `scripts/menu.gd` | Main menu, pause menu and settings |
 | `scripts/ui.gd` | End screen |
+| `scripts/ui_skin.gd` | The embroidered look of menus, the item bar, the shop and the level name |
 | `scripts/comic.gd` | Comic pages: panels with characters, speech bubbles and captions |
 | `scripts/level_map.gd` | A level painted in the editor, read back as text rows |
 | `scripts/level_dressing.gd` | The 3D dressing of a level |
