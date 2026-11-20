@@ -12,6 +12,12 @@ const ART_SETS := {"smooth": "res://art/platformer/wieslaw/"}
 ## Ready-made animation frames: frames.json lists, for each pose, its fps, whether it loops and
 ## its frames, each with the point of the image that stands on the ground.
 const ANIM_DIR := "res://art/platformer/wieslaw_klatki_chibi/"
+## Weapons held in the near hand: bronie.json gives each one's picture, the point of its grip and
+## how big it is next to the frames. Frames made for a weapon (poses named "<pose>_bron") mark
+## the hand and the weapon's angle; in the other poses the weapon is put away.
+const WEAPON_DIR := "res://art/platformer/bron/"
+## How much of the frame around the hand is drawn again over the weapon, so the fist holds its grip.
+const FIST := 6.0
 ## Parts drawn behind the body.
 const ART_BEHIND := ["arm_far", "foot_far", "foot_near"]
 ## Height of the drawn Wiesław in pixels, before the scale the game gives the puppet.
@@ -61,6 +67,19 @@ var _anim_time := 0.0
 var robe_color := Color.TRANSPARENT
 ## Holds the current frame (Wiesław resting on the ladder).
 var paused := false
+## The weapon in hand (a name from bronie.json), or "" for none.
+var weapon := "":
+	set(value):
+		weapon = value
+		_load_weapon()
+## What the other hand holds, when there are frames drawn with it (poses named "<pose>_<thing>",
+## e.g. "pochodnia"); "" for nothing. Those frames win over the weapon's.
+var holding := ""
+## The frame shown now.
+var _frame := {}
+var _weapon_sprite: Sprite2D
+var _fist_sprite: Sprite2D
+var _weapon_spec := {}
 
 
 func _ready() -> void:
@@ -162,16 +181,61 @@ func _build_anim(spec: Dictionary) -> void:
 		var pose_spec: Dictionary = spec["poses"][pose_name]
 		var frames := []
 		for frame in pose_spec["frames"]:
-			frames.append({"texture": load(anim_dir() + frame["file"]), "anchor": _vec(frame["anchor"])})
+			var entry := {"texture": load(anim_dir() + frame["file"]), "anchor": _vec(frame["anchor"])}
+			for point in ["flame", "far_hand"]:
+				if frame.has(point):
+					entry[point] = _vec(frame[point])
+			if frame.has("hand"):
+				entry["hand"] = _vec(frame["hand"])
+				entry["angle"] = deg_to_rad(frame.get("angle", 30.0))
+			frames.append(entry)
 		# A pose drawn at another size gives its own height, so it shows at the same size as the rest.
 		var pose_scale: float = ART_HEIGHT / pose_spec.get("height", spec["height"])
 		_anim[pose_name] = {"fps": pose_spec["fps"], "loop": pose_spec["loop"], "frames": frames, "scale": pose_scale}
+		# A swing turns the weapon smoothly from one angle to the other through the pose.
+		if pose_spec.has("swing"):
+			_anim[pose_name]["swing"] = [deg_to_rad(pose_spec["swing"][0]), deg_to_rad(pose_spec["swing"][1])]
+	_load_weapon()
+
+
+func _load_weapon() -> void:
+	if not _anim_sprite:
+		return
+	_weapon_spec = {}
+	if weapon != "" and FileAccess.file_exists(WEAPON_DIR + "bronie.json"):
+		var specs: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(WEAPON_DIR + "bronie.json"))
+		if specs.has(weapon) and ResourceLoader.exists(WEAPON_DIR + specs[weapon]["file"]):
+			_weapon_spec = specs[weapon]
+	if _weapon_spec.is_empty():
+		if _weapon_sprite:
+			_weapon_sprite.visible = false
+			_fist_sprite.visible = false
+		return
+	if not _weapon_sprite:
+		_weapon_sprite = Sprite2D.new()
+		_weapon_sprite.centered = false
+		_weapon_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		add_child(_weapon_sprite)
+		# The fist: a bit of the frame around the hand, drawn over the grip.
+		_fist_sprite = Sprite2D.new()
+		_fist_sprite.centered = false
+		_fist_sprite.region_enabled = true
+		_fist_sprite.texture_filter = _anim_sprite.texture_filter
+		_fist_sprite.material = _anim_sprite.material
+		add_child(_fist_sprite)
+	_weapon_sprite.texture = load(WEAPON_DIR + _weapon_spec["file"])
+	_weapon_sprite.offset = -_vec(_weapon_spec["grip"])
 
 
 func _show_frame(delta: float) -> void:
-	var current: Dictionary = _anim.get(pose, _anim["idle"])
-	if pose != _anim_pose:
-		_anim_pose = pose
+	var shown := pose
+	if holding != "" and _anim.has(pose + "_" + holding):
+		shown = pose + "_" + holding
+	elif not _weapon_spec.is_empty() and _anim.has(pose + "_bron"):
+		shown = pose + "_bron"
+	var current: Dictionary = _anim.get(shown, _anim["idle"])
+	if shown != _anim_pose:
+		_anim_pose = shown
 		_anim_time = 0.0
 	if not paused:
 		_anim_time += delta
@@ -179,9 +243,34 @@ func _show_frame(delta: float) -> void:
 	var index := int(_anim_time * current["fps"])
 	index = index % frames.size() if current["loop"] else mini(index, frames.size() - 1)
 	var frame: Dictionary = frames[index]
+	_frame = frame
 	_anim_sprite.texture = frame["texture"]
 	_anim_sprite.scale = Vector2.ONE * current["scale"]
 	_anim_sprite.position = -frame["anchor"] * _anim_sprite.scale
+	if _weapon_sprite:
+		var held := not _weapon_spec.is_empty() and frame.has("hand")
+		_weapon_sprite.visible = held
+		_fist_sprite.visible = held
+		if held:
+			var hand: Vector2 = (frame["hand"] - frame["anchor"]) * _anim_sprite.scale
+			_weapon_sprite.position = hand
+			_weapon_sprite.rotation = frame["angle"]
+			if current.has("swing"):
+				var through := clampf(_anim_time * current["fps"] / frames.size(), 0.0, 1.0)
+				_weapon_sprite.rotation = lerp_angle(current["swing"][0], current["swing"][1], ease(through, 0.5))
+			_weapon_sprite.scale = _anim_sprite.scale * float(_weapon_spec.get("scale", 1.0))
+			_fist_sprite.texture = frame["texture"]
+			_fist_sprite.region_rect = Rect2(frame["hand"] - Vector2.ONE * FIST, Vector2.ONE * FIST * 2.0)
+			_fist_sprite.scale = _anim_sprite.scale
+			_fist_sprite.position = _anim_sprite.position + (frame["hand"] - Vector2.ONE * FIST) * _anim_sprite.scale
+
+
+## A point marked on the frame shown now ("flame" of a torch drawn in it, "far_hand" holding
+## nothing drawn), in this puppet's own coordinates; Vector2.INF when the frame has no such point.
+func frame_point(point: String) -> Vector2:
+	if not _anim_sprite or not _frame.has(point):
+		return Vector2.INF
+	return (_frame[point] - _frame["anchor"]) * _anim_sprite.scale
 
 
 func _show_art() -> void:

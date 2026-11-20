@@ -78,6 +78,9 @@ func _play_trial() -> void:
 	# Apples go on from level to level, until the drakkar is won back.
 	var apples := 0
 	var mugs := 0
+	var torch := false
+	var torch_lit := false
+	var bar: Array[String] = ["", "", "", "", ""]
 	var levels := PlatformerCampaign.levels()
 	var index := 0
 	var back := false
@@ -87,6 +90,9 @@ func _play_trial() -> void:
 		var stage := PlatformerGame.new()
 		# Mugs bought from the brothers go on to the next levels.
 		stage.mugs = mugs
+		stage.torch = torch
+		stage.torch_lit = torch_lit
+		stage.bar = bar.duplicate()
 		stage.start_apples = apples
 		stage.level_map = spec["map"]
 		stage.night = spec["night"]
@@ -110,6 +116,9 @@ func _play_trial() -> void:
 			await part.finished
 			part.queue_free()
 		mugs = stage.mugs
+		torch = stage.torch
+		torch_lit = stage.torch_lit
+		bar = stage.bar.duplicate()
 		apples = stage.apples
 		back = stage.went_back
 		index += -1 if back else 1
