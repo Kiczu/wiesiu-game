@@ -130,8 +130,9 @@ const COYOTE_TIME := 0.1
 const JUMP_BUFFER := 0.12
 const HURT_TIME := 1.5
 const VIKING_SPEED := 70.0
-## How close in front (px) Wiesław must be for a Viking to swing his axe, and the rest between swings.
-const VIKING_REACH := 110.0
+## How close in front (px, middle to middle) Wiesław must be for a Viking to swing his short axe,
+## and the rest between swings. Kept below the sword's reach, so Wiesław can strike first.
+const VIKING_REACH := 76.0
 const VIKING_SWING_REST := 1.0
 ## A Viking sees Wiesław this many tiles ahead (and hears him this close behind), stands startled
 ## for VIKING_NOTICE seconds, runs at him at VIKING_CHASE_SPEED and gives up VIKING_FORGET seconds
@@ -276,10 +277,11 @@ const KEY_PRESS_EVERY := 1.4
 const OUTSIDE_SIDES := 3
 ## How far the camera looks ahead in the running direction.
 const LOOK_AHEAD := 140.0
-## Sword: how long a swing lasts, how soon the next one can start, how far it reaches.
+## Sword: how long a swing lasts, how soon the next one can start, how far it reaches in front of
+## Wiesław's middle (an enemy is hit when his body is within it).
 const ATTACK_TIME := 0.3
 const ATTACK_COOLDOWN := 0.35
-const ATTACK_REACH := 84.0
+const ATTACK_REACH := 104.0
 ## A Viking's health; the sword and a thrown apple each take away their damage.
 const VIKING_HEALTH := 40
 const APPLE_DAMAGE := 10
@@ -2564,6 +2566,10 @@ func _move_vikings(delta: float) -> void:
 			var below := tile_at(front + Vector2(0, 10))
 			if tile_at(front + Vector2(0, -10)) in SOLID or not (below in SOLID or below == "="):
 				speed = 0.0
+			# Close enough to swing: he stops instead of walking into Wiesław.
+			var gap: float = (player.position.x - node.position.x) * viking["dir"]
+			if gap > 0.0 and gap < VIKING_REACH * 0.8:
+				speed = 0.0
 			node.set("running", speed > 0.0)
 			if node is PixelViking and node.frames_of("run") > 0:
 				node.pose = "run"
@@ -2698,10 +2704,9 @@ func _check_touches() -> void:
 				if not dungeon and not _ship:
 					_win()
 					return
+	# Only rats bite on touch; a Viking hurts with his axe alone, so running into one is safe.
 	for viking in vikings.duplicate():
-		var node: Node2D = viking["node"]
-		var them := _enemy_box(viking)
-		if not me.intersects(them) or viking["stun"] > 0.0:
+		if viking.get("kind", "") != "rat" or viking["stun"] > 0.0 or not me.intersects(_enemy_box(viking)):
 			continue
 		_hit(false)
 

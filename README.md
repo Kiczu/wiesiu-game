@@ -48,7 +48,7 @@ The game opens on the main menu (new game, settings). Esc opens the pause menu. 
 
 Then come the comic ending and the end screen. Apples, mugs, the torch and the bar go on from level to level, and going left out of a level leads back to the one before.
 
-Vikings and rats chase Wiesław; Vikings take four hits, rats one. Thorns and enemies cost one of three hearts, and a pit sends him back to the last flag. Crates break into apples, a treasure chest gives apples and a lost heart, the big royal chest fifteen apples and every heart. A mug of nalewka keeps him from harm for two seconds.
+Vikings and rats chase Wiesław; Vikings take four hits, rats one. Thorns, rat bites and Viking axe blows cost one of three hearts (running into a Viking is safe, and the sword reaches further than his axe), and a pit sends him back to the last flag. Crates break into apples, a treasure chest gives apples and a lost heart, the big royal chest fifteen apples and every heart. A mug of nalewka keeps him from harm for two seconds.
 
 `minigames/flight.gd` is a drakkar flight mini-game (dodge birds and clouds, catch apples), kept as the way from the eye fight to the next place once there is one. To try it, open `minigames/flight.tscn` and press **F6**.
 
