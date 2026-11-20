@@ -224,6 +224,19 @@ func _check_platformer() -> void:
 		await _physics(30)
 	_check(hit_once and level.vikings.size() == count - 1, "platformer: sword hits knock a Viking out")
 	await _physics(60)
+	# A rat goes down with one sword hit.
+	level._add_rat(level.vikings[0]["node"].position + Vector2(-200, 0))
+	var rat: Node2D = level.vikings[-1]["node"]
+	count = level.vikings.size()
+	player.position = rat.position + Vector2(-80, 0)
+	player.velocity = Vector2.ZERO
+	level._wieslaw.facing = 1
+	await _physics(1)
+	level.attack()
+	await _physics(3)
+	_check(level.vikings.size() == count - 1, "platformer: one sword hit knocks a rat out")
+	level.lives = PlatformerGame.LIVES
+	await _physics(60)
 	# Walk into a Viking.
 	viking = level.vikings[0]["node"]
 	player.position = viking.position + Vector2(-10, 0)
@@ -305,7 +318,21 @@ func _check_platformer() -> void:
 		_check(same_width and joined.count("P") == 1 and (joined.contains("D") or joined.contains("O")) and stage.player.is_on_floor(), "platformer: campaign level %s loads" % spec["name"])
 		if spec["name"] == "Sad nocą":
 			await _climb_to_chest(stage)
+		if spec["dungeon"]:
+			await _castle_door(stage)
 		stage.queue_free()
+
+
+## In the castle, walking into the exit door does not end the level; F at the door opens it.
+func _castle_door(stage: PlatformerGame) -> void:
+	for row in stage.map.size():
+		var col: int = stage.map[row].find("D")
+		if col >= 0:
+			stage.player.position = Vector2((col + 0.5) * PlatformerGame.TILE, (row + 1) * PlatformerGame.TILE - 2)
+	await _physics(3)
+	var walked_in := stage.state
+	stage.use()
+	_check(walked_in == "" and stage.state == "won", "platformer: the castle door opens with F, not by walking into it")
 
 
 ## A brother sells a heart and a mug of nalewka for apples; with the mug a Viking does no harm.

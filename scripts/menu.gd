@@ -145,6 +145,11 @@ func _settings_page() -> void:
 		Game.save_settings()
 		get_tree().call_group("platformer", "use_level_art")
 		_settings_page())
+	_button("Zamek: " + ("szczegółowy" if Game.castle_detail == "drobne" else "grube piksele"), func() -> void:
+		Game.castle_detail = "grube" if Game.castle_detail == "drobne" else "drobne"
+		Game.save_settings()
+		get_tree().call_group("platformer", "use_level_art")
+		_settings_page())
 	_button("Wstecz", _back)
 	_focus_first()
 
