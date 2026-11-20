@@ -29,6 +29,12 @@ const LUNGE_TIME := 0.35
 ## How far either side of where the fight was placed the Vikings may go.
 const ARENA := 6.5 * PlatformerGame.TILE
 const EYE_RADIUS := 16.0
+## The brothers' and the eye's own pictures, when the art is there: brat_1.png and brat_2.png
+## (standing, feet on the bottom line of the picture), oko.png and oko_atak.png (the eye thrown).
+const ART := "res://art/platformer/boss/"
+const ART_SCALE := 2.0
+## Where the feet are in a brother's picture, from its top left.
+const ART_FEET := Vector2(32, 62)
 const SIZE := Vector2(60, 120)
 
 var game: PlatformerGame
@@ -47,6 +53,8 @@ var _to := 0
 ## The eye lies on the ground until a Viking (or Wiesław) gets to it.
 var _on_ground := false
 var _time := 0.0
+var _eye_art: Texture2D
+var _eye_thrown: Texture2D
 
 
 func _init(at_game: PlatformerGame, at: Vector2) -> void:
@@ -58,7 +66,12 @@ func _init(at_game: PlatformerGame, at: Vector2) -> void:
 func _ready() -> void:
 	for i in 2:
 		var body: Node2D
-		if PixelViking.has_art():
+		if ResourceLoader.exists(ART + "brat_%d.png" % (i + 1)):
+			var brother := Brother.new()
+			brother.texture = load(ART + "brat_%d.png" % (i + 1))
+			brother.load_frames(ART + "brat_%d" % (i + 1))
+			body = brother
+		elif PixelViking.has_art():
 			var pixel := PixelViking.new()
 			pixel.colour = PixelViking.COLOURS[i]
 			pixel.scale = Vector2(1.3, 1.3)
@@ -75,6 +88,9 @@ func _ready() -> void:
 		vikings.append({"node": body, "dir": 1.0 if i == 0 else -1.0, "stun": 0.0, "push": 0.0, "health": HEALTH,
 			"lunge": 0.0, "rest": 0.0})
 	eye = _head(0)
+	if ResourceLoader.exists(ART + "oko.png"):
+		_eye_art = load(ART + "oko.png")
+		_eye_thrown = load(ART + "oko_atak.png") if ResourceLoader.exists(ART + "oko_atak.png") else _eye_art
 
 
 func _head(i: int) -> Vector2:
@@ -158,6 +174,7 @@ func _walk(i: int, delta: float) -> void:
 	var viking := vikings[i]
 	var node: Node2D = viking["node"]
 	viking["rest"] = maxf(viking["rest"] - delta, 0.0)
+	node.set("pose", "hurt" if viking["stun"] > 0.0 else ("run" if viking["lunge"] > 0.0 or i == holder else "walk"))
 	if viking["stun"] > 0.0:
 		viking["stun"] -= delta
 		_move(node, viking["push"] * delta)
@@ -261,8 +278,8 @@ func _draw() -> void:
 	for i in 2:
 		if not _standing(i):
 			continue
-		# Above the helmet and its horns.
-		var head: Vector2 = vikings[i]["node"].position + Vector2(0, -185)
+		# Above the head (the old Vikings' helmets have horns).
+		var head: Vector2 = vikings[i]["node"].position + Vector2(0, -150 if vikings[i]["node"] is Brother else -185)
 		PlatformerGame.draw_health_bar(self, head + Vector2(0, -6), float(vikings[i]["health"]) / HEALTH, 70.0)
 		var bob := sin(_time * 4.0 + i) * 4.0
 		if i != holder:
@@ -280,6 +297,15 @@ func _draw() -> void:
 
 func _draw_eye(at: Vector2, size: float) -> void:
 	var r := EYE_RADIUS * size
+	if _eye_art:
+		draw_circle(at, r + 8, Color(0.85, 1.0, 0.45, 0.2 + 0.1 * sin(_time * 8.0)))
+		var picture := _eye_thrown if holder < 0 and not _on_ground and not won else _eye_art
+		# The eyeball fills about two thirds of its picture.
+		var side := r * 3.2
+		draw_set_transform(at, sin(_time * 2.0) * 0.15 if holder < 0 else 0.0)
+		draw_texture_rect(picture, Rect2(-Vector2(side, side) / 2.0, Vector2(side, side)), false)
+		draw_set_transform(Vector2.ZERO)
+		return
 	draw_circle(at, r + 6, Color(1, 0.9, 0.5, 0.35 + 0.15 * sin(_time * 8.0)))
 	draw_circle(at, r, Color.WHITE)
 	draw_arc(at, r, 0.0, TAU, 24, Color("2b1d14"), 2.5)
@@ -287,3 +313,57 @@ func _draw_eye(at: Vector2, size: float) -> void:
 	draw_circle(at + look, r * 0.5, Color("3a7bd5"))
 	draw_circle(at + look, r * 0.22, Color("10141c"))
 	draw_circle(at + look + Vector2(-r * 0.15, -r * 0.15), r * 0.1, Color.WHITE)
+
+
+## A brother drawn from his pictures: frames of "walk", "run" and "hurt" from a folder named like
+## his standing picture (brat_1/walk_0.png ...; drawn facing right, feet at FRAME_FEET) when they
+## are there, or else the standing picture alone, bobbing as he walks. "facing" turns him.
+class Brother:
+	extends Node2D
+
+	const FRAME_FEET := Vector2(46, 78)
+	const FRAME_RATE := 9.0
+
+	var texture: Texture2D
+	var frames := {}
+	var facing := 1
+	var running := true
+	var pose := "walk":
+		set(value):
+			if value != pose:
+				pose = value
+				_time = 0.0
+	var _time := 0.0
+
+	func _ready() -> void:
+		texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+
+	## Loads the frames of every pose there is in the folder.
+	func load_frames(folder: String) -> void:
+		for kind: String in ["walk", "run", "hurt"]:
+			var set_of: Array[Texture2D] = []
+			while ResourceLoader.exists("%s/%s_%d.png" % [folder, kind, set_of.size()]):
+				set_of.append(load("%s/%s_%d.png" % [folder, kind, set_of.size()]))
+			if not set_of.is_empty():
+				frames[kind] = set_of
+		if frames.has("walk") and not frames.has("run"):
+			frames["run"] = frames["walk"]
+
+	func _process(delta: float) -> void:
+		_time += delta
+		queue_redraw()
+
+	func _draw() -> void:
+		if frames.has(pose) or frames.has("walk"):
+			var set_of: Array = frames.get(pose, frames["walk"])
+			var at := int(_time * FRAME_RATE)
+			# Being hit plays once and holds; the rest go round. Standing still: the first frame.
+			at = mini(at, set_of.size() - 1) if pose == "hurt" else (at % set_of.size() if running else 0)
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2(facing * EyeBoss.ART_SCALE, EyeBoss.ART_SCALE))
+			draw_texture(set_of[at], -FRAME_FEET)
+			return
+		if not texture:
+			return
+		var step := absf(sin(_time * 9.0)) * 4.0 if running else 0.0
+		draw_set_transform(Vector2(0, -step), sin(_time * 9.0) * 0.04 if running else 0.0, Vector2(facing * EyeBoss.ART_SCALE, EyeBoss.ART_SCALE))
+		draw_texture(texture, -EyeBoss.ART_FEET)

@@ -399,6 +399,8 @@ var _back: CanvasLayer
 var _world: SubViewport
 var _view: SubViewportContainer
 var _drakkar: Node2D
+## The drakkar hanging in the air over the eye fight (a D in a level with O), or null.
+var _ship: FlyingShip
 var _items := {}
 ## A blank key cap pressed down and back up, with the key's letter drawn on it (art/platformer/ui).
 var _key_frames: Array[Texture2D] = []
@@ -727,6 +729,7 @@ func restart() -> void:
 	_shield = 0.0
 	shop = {}
 	_boss = null
+	_ship = null
 	merchants.clear()
 	vikings.clear()
 	if not level_map.is_empty():
@@ -777,7 +780,10 @@ func restart() -> void:
 				"Z" when _crumbles() and (row == 0 or map[row - 1][col] != "Z") and (col == 0 or map[row][col - 1] != "Z"):
 					_add_crumbling_floor(row, col)
 				"D":
-					_add_drakkar(at)
+					if map.any(func(r: String) -> bool: return "O" in r) and FlyingShip.has_art():
+						_add_ship(row, col)
+					else:
+						_add_drakkar(at)
 	if start_at_exit:
 		# Back from the next level: in front of the way out, facing back in.
 		for row in map.size():
@@ -1538,6 +1544,19 @@ func _add_drakkar(at: Vector2) -> void:
 		hotspot.position = at + Vector2(60, 0)
 		_drakkar = hotspot
 	_level.add_child(_drakkar)
+
+
+## The eye fight's drakkar, its deck under the D cell, and its ladder down to the H cells under it.
+func _add_ship(row: int, col: int) -> void:
+	var middle := (col + 0.5) * TILE
+	var ladder := floori(FlyingShip.ladder_x(middle) / TILE)
+	var bottom := row + 1
+	while bottom + 1 < map.size() and map[bottom + 1][ladder] == "H":
+		bottom += 1
+	_ship = FlyingShip.new(middle, (row + 1) * TILE, (bottom + 1) * TILE)
+	_ship.set_meta("ladder", ladder)
+	_level.add_child(_ship)
+	_level.move_child(_ship, _tiles.get_index() + 1)
 
 
 ## The way out of the dungeons: an arched wooden door with daylight around it, two tiles tall.
@@ -2646,8 +2665,9 @@ func _check_touches() -> void:
 				_play("checkpoint")
 				_set_tile(corner, "c")
 			"D":
-				# The castle's exit door is opened with F instead (see use()).
-				if not dungeon:
+				# The castle's exit door is opened with F instead (see use()); the eye fight's
+				# drakkar is no way out.
+				if not dungeon and not _ship:
 					_win()
 					return
 	for viking in vikings.duplicate():
@@ -3157,6 +3177,9 @@ func _draw_night_sky(v: Node2D, scroll: float, sky: Dictionary) -> void:
 	var moon: Dictionary = sky["moon"]
 	var place: Array = moon.get("at", [0.5, 0.2])
 	var centre := Vector2(float(place[0]) * SCREEN.x, float(place[1]) * SCREEN.y)
+	# Hung in the sky, not on the screen: it goes by like the farthest layer ("speed": its share
+	# of the camera's way sideways, "follow": of its way up and down from the starting ground).
+	centre += Vector2(-scroll * float(moon.get("speed", 0.0)) * VIEW_ZOOM, (_ground_line() - GROUND_LINE) * float(moon.get("follow", 0.0)))
 	var radius := float(moon.get("radius", 64.0))
 	var glow := Color(str(moon.get("glow", "c8d4ff")))
 	# A soft glow: many faint circles, so no rings show.
@@ -5191,6 +5214,8 @@ func _draw_static_front(v: Node2D, span: Vector2i) -> void:
 				"C", "c" when _items.has("flag"):
 					var texture: Texture2D = _items["flag_on" if map[row][col] == "c" else "flag"]
 					v.draw_texture(texture, at + Vector2(8, TILE - texture.get_height()))
+				"H" when _ship and col == int(_ship.get_meta("ladder")):
+					pass  # the drakkar's rope ladder, drawn with it
 				"H" when _art.has("ladder"):
 					var steps: Texture2D = _art["ladder"]
 					v.draw_texture_rect_region(steps, Rect2(at, Vector2(TILE, TILE)), Rect2(0, fposmod(at.y, steps.get_height()), steps.get_width(), TILE))
