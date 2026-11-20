@@ -130,8 +130,9 @@ const COYOTE_TIME := 0.1
 const JUMP_BUFFER := 0.12
 const HURT_TIME := 1.5
 const VIKING_SPEED := 70.0
-## How close in front (px) Wiesław must be for a Viking to swing his axe, and the rest between swings.
-const VIKING_REACH := 110.0
+## How close in front (px, middle to middle) Wiesław must be for a Viking to swing his short axe,
+## and the rest between swings. Kept below the sword's reach, so Wiesław can strike first.
+const VIKING_REACH := 76.0
 const VIKING_SWING_REST := 1.0
 ## A Viking sees Wiesław this many tiles ahead (and hears him this close behind), stands startled
 ## for VIKING_NOTICE seconds, runs at him at VIKING_CHASE_SPEED and gives up VIKING_FORGET seconds
@@ -276,10 +277,12 @@ const KEY_PRESS_EVERY := 1.4
 const OUTSIDE_SIDES := 3
 ## How far the camera looks ahead in the running direction.
 const LOOK_AHEAD := 140.0
-## Sword: how long a swing lasts, how soon the next one can start, how far it reaches.
+## Sword: how long a swing lasts, how soon the next one can start, how far a blow reaches in front
+## of Wiesław's middle (an enemy is hit when his body is within it) unless the weapon has its own
+## "reach" in bronie.json.
 const ATTACK_TIME := 0.3
 const ATTACK_COOLDOWN := 0.35
-const ATTACK_REACH := 84.0
+const ATTACK_REACH := 104.0
 ## A Viking's health; the sword and a thrown apple each take away their damage.
 const VIKING_HEALTH := 40
 const APPLE_DAMAGE := 10
@@ -310,6 +313,8 @@ var went_back := false
 var start_at_exit := false
 ## Damage of the sword Wiesław carries (other swords can hit harder).
 var sword_damage := 10
+## bronie.json, read once for the weapons' reach.
+var _weapon_specs := {}
 var input_x := 0.0
 var input_jump := false
 var input_attack := false
@@ -543,8 +548,9 @@ var mugs := 0
 ## used up; a slot dragged onto another swaps places with it. Keys and
 ## other carried things are shown at the top instead. The bar goes on from level to level.
 var bar: Array[String] = ["", "", "", "", ""]
-## A slot is the slot picture (25 pixels) drawn twice its size.
-const SLOT := 50.0
+## The bar's pictures are drawn BAR_SCALE times their size; a slot (25 pixels) is SLOT wide.
+const BAR_SCALE := 1.5
+const SLOT := 38.0
 ## Wiesław's own torch, found in the dungeons, and whether he holds it lit. Both go on from level
 ## to level.
 var torch := false
@@ -2467,7 +2473,8 @@ func _swing(delta: float) -> void:
 		return
 	_attack = maxf(_attack - delta, 0.0)
 	var facing := float(_wieslaw.facing)
-	var blade := Rect2(player.position + Vector2(-20.0 if facing > 0 else 20.0 - ATTACK_REACH - 20.0, -PLAYER_SIZE.y), Vector2(ATTACK_REACH + 20.0, PLAYER_SIZE.y - 6))
+	var reach := _weapon_reach()
+	var blade := Rect2(player.position + Vector2(-20.0 if facing > 0 else 20.0 - reach - 20.0, -PLAYER_SIZE.y), Vector2(reach + 20.0, PLAYER_SIZE.y - 6))
 	for viking in vikings.duplicate():
 		var node: Node2D = viking["node"]
 		if node in _struck or not blade.intersects(_enemy_box(viking)):
@@ -2477,9 +2484,19 @@ func _swing(delta: float) -> void:
 	if _boss:
 		_boss.strike(blade, facing, sword_damage)
 	# The far end of the blade, whichever way he faces.
-	var reach := 0.75 if facing > 0 else 0.25
-	for point in [blade.position + blade.size * Vector2(reach, 0.2), blade.position + blade.size * Vector2(reach, 0.6)]:
+	var tip := 0.75 if facing > 0 else 0.25
+	for point in [blade.position + blade.size * Vector2(tip, 0.2), blade.position + blade.size * Vector2(tip, 0.6)]:
 		_break_crate(point)
+
+
+## How far in front of Wiesław's middle his weapon hits: its "reach" in bronie.json, or ATTACK_REACH
+## for a weapon without one and for bare fists.
+func _weapon_reach() -> float:
+	if _weapon_specs.is_empty() and FileAccess.file_exists(CutoutCharacter.WEAPON_DIR + "bronie.json"):
+		var specs: Variant = JSON.parse_string(FileAccess.get_file_as_string(CutoutCharacter.WEAPON_DIR + "bronie.json"))
+		_weapon_specs = specs if specs is Dictionary else {"": {}}
+	var spec: Dictionary = _weapon_specs.get(weapon, {})
+	return float(spec.get("reach", ATTACK_REACH))
 
 
 ## A Viking hit by the sword or an apple flashes and slides back; out of health, he falls over.
@@ -2563,6 +2580,10 @@ func _move_vikings(delta: float) -> void:
 			var front: Vector2 = node.position + Vector2(viking["dir"] * 26.0, 0)
 			var below := tile_at(front + Vector2(0, 10))
 			if tile_at(front + Vector2(0, -10)) in SOLID or not (below in SOLID or below == "="):
+				speed = 0.0
+			# Close enough to swing: he stops instead of walking into Wiesław.
+			var gap: float = (player.position.x - node.position.x) * viking["dir"]
+			if gap > 0.0 and gap < VIKING_REACH * 0.8:
 				speed = 0.0
 			node.set("running", speed > 0.0)
 			if node is PixelViking and node.frames_of("run") > 0:
@@ -2698,10 +2719,9 @@ func _check_touches() -> void:
 				if not dungeon and not _ship:
 					_win()
 					return
+	# Only rats bite on touch; a Viking hurts with his axe alone, so running into one is safe.
 	for viking in vikings.duplicate():
-		var node: Node2D = viking["node"]
-		var them := _enemy_box(viking)
-		if not me.intersects(them) or viking["stun"] > 0.0:
+		if viking.get("kind", "") != "rat" or viking["stun"] > 0.0 or not me.intersects(_enemy_box(viking)):
 			continue
 		_hit(false)
 
@@ -6467,9 +6487,9 @@ func _slot_at(point: Vector2) -> int:
 
 
 func _slot_rect(k: int) -> Rect2:
-	var gap := 8.0
+	var gap := 6.0
 	var width := bar.size() * SLOT + (bar.size() - 1) * gap
-	return Rect2(Vector2((SCREEN.x - width) / 2.0 + k * (SLOT + gap), SCREEN.y - SLOT - 32.0), Vector2(SLOT, SLOT))
+	return Rect2(Vector2(roundf((SCREEN.x - width) / 2.0) + k * (SLOT + gap), SCREEN.y - SLOT - 22.0), Vector2(SLOT, SLOT))
 
 
 ## Puts each thing Wiesław has into the bar's first empty slot, if it is not in the bar yet, and
@@ -6573,12 +6593,12 @@ func _draw_hotbar(v: Node2D) -> void:
 	var dragged := _drag_from >= 0 and _slot_at(pointer) != _drag_from
 	# The embroidered strip under the slots, its bands above and below them.
 	var first := _slot_rect(0)
-	var strip := Rect2(first.position - Vector2(14, 22), Vector2(_slot_rect(bar.size() - 1).end.x - first.position.x + 28, SLOT + 46))
-	var linen := UiSkin.draw_box(v, "pasek", strip)
+	var strip := Rect2(first.position - Vector2(10, 16), Vector2(_slot_rect(bar.size() - 1).end.x - first.position.x + 20, SLOT + 34))
+	var linen := UiSkin.draw_box(v, "pasek", strip, BAR_SCALE)
 	for k in bar.size():
 		var box := _slot_rect(k)
 		var chosen := k == _slot
-		if not UiSkin.draw_box(v, "slot_wybrany" if chosen else "slot", box):
+		if not UiSkin.draw_box(v, "slot_wybrany" if chosen else "slot", box, SLOT / 25.0):
 			v.draw_rect(box, Color(0.08, 0.06, 0.1, 0.7 if chosen else 0.5))
 			v.draw_rect(box, Color("f2c14e") if chosen else Color(1, 1, 1, 0.3), false, 4.0 if chosen else 2.0)
 			v.draw_string_outline(font, box.position + Vector2(5, 17), str(k + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, 4, Color.BLACK)
@@ -6588,15 +6608,15 @@ func _draw_hotbar(v: Node2D) -> void:
 		var count := _draw_slot_thing(v, bar[k], box.get_center())
 		if count > 0:
 			var text := str(count)
-			v.draw_string_outline(font, Vector2(box.position.x + 4, box.end.y - 6), text, HORIZONTAL_ALIGNMENT_RIGHT, SLOT - 8, 18, 4, Color.BLACK)
-			v.draw_string(font, Vector2(box.position.x + 4, box.end.y - 6), text, HORIZONTAL_ALIGNMENT_RIGHT, SLOT - 8, 18, Color.WHITE)
+			v.draw_string_outline(font, Vector2(box.position.x + 2, box.end.y - 3), text, HORIZONTAL_ALIGNMENT_RIGHT, SLOT - 4, 14, 4, Color.BLACK)
+			v.draw_string(font, Vector2(box.position.x + 2, box.end.y - 3), text, HORIZONTAL_ALIGNMENT_RIGHT, SLOT - 4, 14, Color.WHITE)
 	if dragged:
 		_draw_slot_thing(v, bar[_drag_from], pointer)
 	var name: String = {"apple": "Jabłko: rzut", "mug": "Kufel nalewki: wypij", "torch": "Pochodnia: zgaś" if torch_lit else "Pochodnia: zapal"}.get(bar[_slot], "")
 	if name != "":
 		var over := Vector2(0, (strip.position.y if linen else first.position.y) - 10)
-		v.draw_string_outline(font, over, name + "  [E]", HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 17, 4, Color.BLACK)
-		v.draw_string(font, over, name + "  [E]", HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 17, Color(1, 1, 1, 0.85))
+		v.draw_string_outline(font, over, name + "  [E]", HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 15, 4, Color.BLACK)
+		v.draw_string(font, over, name + "  [E]", HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 15, Color(1, 1, 1, 0.85))
 
 
 ## A thing of the bar drawn at a point; returns how many there are (-1: not counted).
@@ -6624,5 +6644,5 @@ func _draw_slot_thing(v: Node2D, kind: String, middle: Vector2) -> int:
 func _draw_slot_picture(v: Node2D, picture: Texture2D, middle: Vector2, bright: bool) -> void:
 	if not picture:
 		return
-	var size := picture.get_size() * (38.0 / maxf(picture.get_width(), picture.get_height()))
+	var size := picture.get_size() * (SLOT * 0.74 / maxf(picture.get_width(), picture.get_height()))
 	v.draw_texture_rect(picture, Rect2(middle - size / 2.0, size), false, Color.WHITE if bright else Color(0.45, 0.45, 0.5, 0.8))
