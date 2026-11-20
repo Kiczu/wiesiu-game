@@ -548,8 +548,9 @@ var mugs := 0
 ## used up; a slot dragged onto another swaps places with it. Keys and
 ## other carried things are shown at the top instead. The bar goes on from level to level.
 var bar: Array[String] = ["", "", "", "", ""]
-## A slot is the slot picture (25 pixels) drawn twice its size.
-const SLOT := 50.0
+## The bar's pictures are drawn BAR_SCALE times their size; a slot (25 pixels) is SLOT wide.
+const BAR_SCALE := 1.5
+const SLOT := 38.0
 ## Wiesław's own torch, found in the dungeons, and whether he holds it lit. Both go on from level
 ## to level.
 var torch := false
@@ -6486,9 +6487,9 @@ func _slot_at(point: Vector2) -> int:
 
 
 func _slot_rect(k: int) -> Rect2:
-	var gap := 8.0
+	var gap := 6.0
 	var width := bar.size() * SLOT + (bar.size() - 1) * gap
-	return Rect2(Vector2((SCREEN.x - width) / 2.0 + k * (SLOT + gap), SCREEN.y - SLOT - 32.0), Vector2(SLOT, SLOT))
+	return Rect2(Vector2(roundf((SCREEN.x - width) / 2.0) + k * (SLOT + gap), SCREEN.y - SLOT - 22.0), Vector2(SLOT, SLOT))
 
 
 ## Puts each thing Wiesław has into the bar's first empty slot, if it is not in the bar yet, and
@@ -6592,12 +6593,12 @@ func _draw_hotbar(v: Node2D) -> void:
 	var dragged := _drag_from >= 0 and _slot_at(pointer) != _drag_from
 	# The embroidered strip under the slots, its bands above and below them.
 	var first := _slot_rect(0)
-	var strip := Rect2(first.position - Vector2(14, 22), Vector2(_slot_rect(bar.size() - 1).end.x - first.position.x + 28, SLOT + 46))
-	var linen := UiSkin.draw_box(v, "pasek", strip)
+	var strip := Rect2(first.position - Vector2(10, 16), Vector2(_slot_rect(bar.size() - 1).end.x - first.position.x + 20, SLOT + 34))
+	var linen := UiSkin.draw_box(v, "pasek", strip, BAR_SCALE)
 	for k in bar.size():
 		var box := _slot_rect(k)
 		var chosen := k == _slot
-		if not UiSkin.draw_box(v, "slot_wybrany" if chosen else "slot", box):
+		if not UiSkin.draw_box(v, "slot_wybrany" if chosen else "slot", box, SLOT / 25.0):
 			v.draw_rect(box, Color(0.08, 0.06, 0.1, 0.7 if chosen else 0.5))
 			v.draw_rect(box, Color("f2c14e") if chosen else Color(1, 1, 1, 0.3), false, 4.0 if chosen else 2.0)
 			v.draw_string_outline(font, box.position + Vector2(5, 17), str(k + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, 4, Color.BLACK)
@@ -6607,15 +6608,15 @@ func _draw_hotbar(v: Node2D) -> void:
 		var count := _draw_slot_thing(v, bar[k], box.get_center())
 		if count > 0:
 			var text := str(count)
-			v.draw_string_outline(font, Vector2(box.position.x + 4, box.end.y - 6), text, HORIZONTAL_ALIGNMENT_RIGHT, SLOT - 8, 18, 4, Color.BLACK)
-			v.draw_string(font, Vector2(box.position.x + 4, box.end.y - 6), text, HORIZONTAL_ALIGNMENT_RIGHT, SLOT - 8, 18, Color.WHITE)
+			v.draw_string_outline(font, Vector2(box.position.x + 2, box.end.y - 3), text, HORIZONTAL_ALIGNMENT_RIGHT, SLOT - 4, 14, 4, Color.BLACK)
+			v.draw_string(font, Vector2(box.position.x + 2, box.end.y - 3), text, HORIZONTAL_ALIGNMENT_RIGHT, SLOT - 4, 14, Color.WHITE)
 	if dragged:
 		_draw_slot_thing(v, bar[_drag_from], pointer)
 	var name: String = {"apple": "Jabłko: rzut", "mug": "Kufel nalewki: wypij", "torch": "Pochodnia: zgaś" if torch_lit else "Pochodnia: zapal"}.get(bar[_slot], "")
 	if name != "":
 		var over := Vector2(0, (strip.position.y if linen else first.position.y) - 10)
-		v.draw_string_outline(font, over, name + "  [E]", HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 17, 4, Color.BLACK)
-		v.draw_string(font, over, name + "  [E]", HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 17, Color(1, 1, 1, 0.85))
+		v.draw_string_outline(font, over, name + "  [E]", HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 15, 4, Color.BLACK)
+		v.draw_string(font, over, name + "  [E]", HORIZONTAL_ALIGNMENT_CENTER, SCREEN.x, 15, Color(1, 1, 1, 0.85))
 
 
 ## A thing of the bar drawn at a point; returns how many there are (-1: not counted).
@@ -6643,5 +6644,5 @@ func _draw_slot_thing(v: Node2D, kind: String, middle: Vector2) -> int:
 func _draw_slot_picture(v: Node2D, picture: Texture2D, middle: Vector2, bright: bool) -> void:
 	if not picture:
 		return
-	var size := picture.get_size() * (38.0 / maxf(picture.get_width(), picture.get_height()))
+	var size := picture.get_size() * (SLOT * 0.74 / maxf(picture.get_width(), picture.get_height()))
 	v.draw_texture_rect(picture, Rect2(middle - size / 2.0, size), false, Color.WHITE if bright else Color(0.45, 0.45, 0.5, 0.8))
