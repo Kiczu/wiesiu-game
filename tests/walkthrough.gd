@@ -1,6 +1,39 @@
 extends Node
-## Plays the whole demo without clicks and checks it can be finished.
+## Checks the menu, the flight and the platformer levels without clicks.
 ## Run: godot --headless --path . res://tests/walkthrough.tscn
+
+## Test maps, one character per tile as in PlatformerGame (a level in the style of Super Mario).
+const LEVEL := [
+	"                                                                                                                                                                          ",
+	"                                                                                                                                                                          ",
+	"                                                                                                                                                                          ",
+	"                                                                                                        a a a                                                             ",
+	"                                                     a  a  a                                                                                                              ",
+	"         BBB                     aaa                                      BBBBB                        =====                        V                                     ",
+	"                                                  #  ===  ===                                                                     ######    B             ##              ",
+	"    a a        a a              ===              ##                                   a a         ===          ===                                       ###              ",
+	"                                     a          ###            a                                                           a   a                        ####              ",
+	" P                       ##       V  #         ####          x     C       V        V                                    B   x   B          a      V   #####        D     ",
+	"#############################  ####################       ######################################                  ########################################################",
+	"#############################  ####################       ######################################                  ########################################################",
+]
+## A level in the style of Apple Knight: ground at many heights, walls to climb with the double
+## jump, spike pits, crates to break with the sword, Vikings on ledges.
+const LEVEL_KNIGHT := [
+	"                                                                                                                                ",
+	"                                                                                                                                ",
+	"                                                                                                                                ",
+	"                                                                 aaaS                                                           ",
+	"                                                   a            ######             a                                            ",
+	"                                      TaaaB       ===           ######            ===     V   B                                 ",
+	"                  aa      a          ######   a                                       ##########                                ",
+	"                     V B ===         ######  ===                              ===     ##########  a  a             B V          ",
+	"      a a a      #######         B V ######                                           ##########  #  #           #####          ",
+	"  P           ##########     ##############             C    VBB      V   ===         ##########  #  #      V  T #####   C  D   ",
+	"########################xxxxx##############            ##################             ##########xx#xx#xxx#######################",
+	"###########################################            ##################             ##########################################",
+]
+
 
 var _failed := false
 var _main: Node
@@ -8,118 +41,14 @@ var _main: Node
 
 func _ready() -> void:
 	Game.fast = true
-	Game.save_prefix = "user://test_save_"
 	_main = load("res://scenes/main.tscn").instantiate()
-	_main.skip_menu = true
 	add_child(_main)
 	await get_tree().process_frame
-
-	_check(_main.room_id == "sala", "the game starts in the throne room")
-	for id in ["okno", "sztandar", "tron", "stol", "drzwi", "ksiaze"]:
-		await _main.run(_main.room.do_look.bind(_main.room.find_hotspot(id)))
-	Game.test_choices = [0, 1, 2, 3]
-	await _do("ksiaze")
-	var player: Character = _main.room.player
-	player.step(Vector2.LEFT, 100.0, _main.room.walk_area)
-	_check(player.position.x == _main.room.walk_area.position.x, "keyboard walking stays inside the walk area")
-	player.position = Vector2(540, 600)
-	player.facing = -1
-	var reached: Hotspot = _main.room.hotspot_in_reach(player)
-	_check(reached == null or reached.id != "stol", "the table is out of reach from further away on the same line")
-	player.position = Vector2(420, 600)
-	player.facing = 1
-	_check(_main.room.hotspot_in_reach(player) == null, "the table is not highlighted behind Wiesław's back")
-	player.facing = -1
-	_check(_main.room.hotspot_in_reach(player).id == "stol", "the table is in reach when facing it")
-	player.position = Vector2(230, 600)
-	player.facing = 1
-	_check(_main.room.hotspot_in_reach(player).id == "stol", "the table is in reach from the left side too")
-	player.position = Vector2(420, 600)
-	player.facing = -1
-	await _press(KEY_E)
-	_check(Game.has_item("kubek"), "cup taken with the E key")
-	await _press(KEY_1)
-	_check(_main.ui.selected_item == "kubek", "key 1 selects the first item")
-	await _press(KEY_ESCAPE)
-	_check(_main.ui.selected_item == "", "Esc puts the item back")
-	await _press(KEY_ESCAPE)
-	_check(_main.menu.is_open() and get_tree().paused, "Esc with nothing selected opens the pause menu")
-	_main.menu.resume_requested.emit()
-	_check(not _main.menu.is_open() and not get_tree().paused, "resuming closes the menu")
-	_main.menu.save_requested.emit(1)
-	var saved := Game.read_save(1)
-	_check(saved.get("room") == "sala" and "kubek" in saved.get("inventory", []), "the game is saved to slot 1")
-
-	await _do("drzwi")
-	_check(_main.room_id == "sad", "the door leads to the orchard")
-	for id in ["jablon", "beczka", "krzaki", "wyjscie", "czeslaw", "leslaw"]:
-		await _main.run(_main.room.do_look.bind(_main.room.find_hotspot(id)))
-	_check(not _main.room.find_hotspot("wikingowie").visible, "no Vikings before nightfall")
-
-	await _do("wyjscie")
-	_check(_main.room_id == "sala", "the orchard exit leads back to the throne room")
-	await _do("drzwi")
-
-	await _do("krzaki")
-	_check(not Game.flag("noc"), "hiding does not work while Czesław counts")
-	Game.test_choices = [0, 1, 2, 3]
-	await _do("leslaw")
-
-	await _do("beczka", "kubek")
-	_check(Game.has_item("nalewka") and not Game.has_item("kubek"), "cup filled with mead")
-	await _do("czeslaw", "nalewka")
-	_check(Game.flag("czeslaw_spi"), "Czesław asleep")
-	await _do("jablon")
-	_check(Game.has_item("jablko"), "apple in inventory")
-
-	await _do("krzaki")
-	_check(Game.flag("noc"), "night fell")
-	_check(_main.room.find_hotspot("wikingowie").visible, "Vikings arrived")
-	await _do("wyjscie")
-	_check(_main.room_id == "sad", "cannot leave during the ambush")
-
-	await _do("wikingowie")
-	_check(not Game.has_item("oko"), "talking alone does not give the eye")
-	await _do("wikingowie", "jablko")
-	_check(Game.has_item("oko"), "magic eye in inventory")
-	await _do("wikingowie", "oko")
-	_check(Game.flag("jablka_odzyskane"), "apples recovered")
-	_check(_main.room_id == "munina", "the drakkar flies to Munina, through the flight mini-game")
-	_check(not _main.ui.is_end_shown(), "Book I does not end the demo")
-
-	for id in ["drakkar", "karczma", "garnek", "kurnik", "kociol", "chlopi", "karczmarz", "rokita"]:
-		await _main.run(_main.room.do_look.bind(_main.room.find_hotspot(id)))
-	await _do("drakkar")
-	_check(_main.room_id == "munina" and not Game.flag("koniec"), "cannot leave before helping the innkeeper")
-	await _do("chlopi")
-	await _do("rokita")
-	await _do("karczmarz")
-	_check(Game.flag("karczmarz_prosil"), "innkeeper asked for help")
-	await _do("garnek")
-	await _do("kociol", "garnek")
-	_check(Game.has_item("smola"), "pot of tar in inventory")
-	await _do("rokita", "smola")
-	_check(not Game.flag("rokita_w_zalodze"), "tar alone is not enough")
-	await _do("kurnik")
-	_check(Game.has_item("pierze"), "feathers in inventory")
-	await _do("rokita", "pierze")
-	_check(Game.flag("rokita_w_zalodze"), "Rokita joins the crew")
-	await _do("drakkar")
-	_check(not Game.flag("koniec"), "cannot leave before the reward")
-	await _do("karczmarz")
-	_check(Game.flag("barany"), "three rams as the reward")
-	await _do("drakkar")
-	_check(Game.flag("koniec"), "demo finished")
-	_check(_main.ui.is_end_shown(), "end screen is shown")
+	_check(_main.menu.is_open() and get_tree().paused, "the game opens on the main menu")
+	_main.menu.close()
 
 	await _check_flight_game()
 	await _check_platformer()
-
-	_check(Game.load_game(1) == "sala", "loading slot 1 returns the throne room")
-	_check(Game.has_item("kubek") and not Game.flag("koniec"), "loading restores the inventory and progress")
-	_check(Game.load_game(2) == "", "an empty slot loads nothing")
-	for slot in Game.SAVE_SLOTS + 1:
-		DirAccess.remove_absolute(Game.save_prefix + str(slot) + ".json")
 
 	print("RESULT: " + ("FAIL" if _failed else "OK"))
 	get_tree().quit(1 if _failed else 0)
@@ -155,7 +84,7 @@ func _check_flight_game() -> void:
 
 func _check_platformer() -> void:
 	var level := PlatformerGame.new()
-	level.layout = "mario"
+	level.level_map = LEVEL
 	level.auto_input = true
 	add_child(level)
 	await _physics(20)
@@ -255,28 +184,28 @@ func _check_platformer() -> void:
 	await _physics(10)
 	level.input_x = 0.0
 	_check(player.position.x > before and level._wieslaw.pose == "run", "platformer: Wiesław runs")
-	player.position = Vector2((level.LEVEL[9].find("D") + 0.5) * PlatformerGame.TILE, 640.0)
+	player.position = Vector2((LEVEL[9].find("D") + 0.5) * PlatformerGame.TILE, 640.0)
 	await _physics(3)
 	_check(level.state == "won", "platformer: reaching the drakkar wins")
 	# The Apple Knight style map: same width in every row, a start and a drakkar, crates break.
-	level.layout = "knight"
+	level.level_map = LEVEL_KNIGHT
 	level.restart()
 	await _physics(5)
 	var widths := {}
-	for row in PlatformerGame.LEVEL_KNIGHT:
+	for row in LEVEL_KNIGHT:
 		widths[row.length()] = true
 	var crate_row := -1
-	for row in PlatformerGame.LEVEL_KNIGHT.size():
-		if PlatformerGame.LEVEL_KNIGHT[row].contains("B"):
+	for row in LEVEL_KNIGHT.size():
+		if LEVEL_KNIGHT[row].contains("B"):
 			crate_row = row
 			break
-	var crate := Vector2((PlatformerGame.LEVEL_KNIGHT[crate_row].find("B") + 0.5) * PlatformerGame.TILE, (crate_row + 0.5) * PlatformerGame.TILE)
+	var crate := Vector2((LEVEL_KNIGHT[crate_row].find("B") + 0.5) * PlatformerGame.TILE, (crate_row + 0.5) * PlatformerGame.TILE)
 	var before_apples := level.apples
 	level._break_crate(crate)
 	_check(widths.size() == 1 and level.player.is_on_floor() and level.tile_at(crate) == " " and level.apples == before_apples + PlatformerGame.CRATE_APPLES, "platformer: the knight map loads and its crates break into apples")
 	# The sword leaves a treasure chest shut; F opens it, and it stays open and gives apples and a lost heart back.
 	var chest_row := 9
-	var chest := Vector2((PlatformerGame.LEVEL_KNIGHT[chest_row].find("T") + 0.5) * PlatformerGame.TILE, (chest_row + 0.5) * PlatformerGame.TILE)
+	var chest := Vector2((LEVEL_KNIGHT[chest_row].find("T") + 0.5) * PlatformerGame.TILE, (chest_row + 0.5) * PlatformerGame.TILE)
 	level.player.position = Vector2(chest.x - 58.0, 640.0)
 	level.lives = PlatformerGame.LIVES - 1
 	before_apples = level.apples
@@ -290,7 +219,7 @@ func _check_platformer() -> void:
 	_check(shut and level.tile_at(chest) == "t" and level.apples == before_apples + PlatformerGame.CHEST_APPLES and level.lives == PlatformerGame.LIVES, "platformer: F, not the sword, opens a treasure chest for apples and a heart")
 	# The royal chest is two tiles wide; F at its right half opens it and fills every heart.
 	var royal_row := 3
-	var royal := Vector2((PlatformerGame.LEVEL_KNIGHT[royal_row].find("S") + 1.5) * PlatformerGame.TILE, (royal_row + 0.5) * PlatformerGame.TILE)
+	var royal := Vector2((LEVEL_KNIGHT[royal_row].find("S") + 1.5) * PlatformerGame.TILE, (royal_row + 0.5) * PlatformerGame.TILE)
 	level.lives = 1
 	before_apples = level.apples
 	level.player.position = Vector2(royal.x, (royal_row + 1) * PlatformerGame.TILE)
@@ -301,7 +230,6 @@ func _check_platformer() -> void:
 	await _crates_both_sides()
 	await _eye_grabbed_early()
 	await _wall_slide()
-	await _level_art_setting()
 	await _eye_boss()
 	# Every campaign level is a rectangle with a start and a drakkar at the end, and loads.
 	for spec in PlatformerCampaign.levels():
@@ -376,21 +304,6 @@ func _eye_grabbed_early() -> void:
 
 
 ## In the air against a wall he slides down slowly, and jump pushes him up and away from it.
-## The settings page picks the level art for a level already being played.
-func _level_art_setting() -> void:
-	var stage := PlatformerGame.new()
-	stage.auto_input = true
-	add_child(stage)
-	await _physics(2)
-	var before: String = Game.level_art
-	for art in ["piksele", "kreskowka"]:
-		Game.level_art = art
-		get_tree().call_group("platformer", "use_level_art")
-		_check(stage._art.is_empty() or stage._art["name"] == art, "settings: level art %s" % art)
-	Game.level_art = before
-	stage.queue_free()
-
-
 func _wall_slide() -> void:
 	var rows: Array[String] = []
 	for i in 9:
@@ -568,19 +481,6 @@ func _climb_to_chest(stage: PlatformerGame) -> void:
 func _physics(frames: int) -> void:
 	for i in frames:
 		await get_tree().physics_frame
-
-
-func _press(key: Key) -> void:
-	var event := InputEventKey.new()
-	event.physical_keycode = key
-	event.pressed = true
-	_main._unhandled_input(event)
-	while _main.busy:
-		await get_tree().process_frame
-
-
-func _do(id: String, item := "") -> void:
-	await _main.run(_main.room.do_interact.bind(_main.room.find_hotspot(id), item))
 
 
 func _check(condition: bool, what: String) -> void:

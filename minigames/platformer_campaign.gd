@@ -5,7 +5,7 @@ extends RefCounted
 ## it go with it here. A new level is a copy of one of these scenes, added to SCENES.
 
 ## Book I: through the castle dungeons to the orchard, the orchard at night, and the fight for the
-## magic eye. levels/poscig.tscn (the chase after the drakkar) is kept out of the story for now.
+## magic eye.
 const SCENES := ["res://levels/01_lochy_zamku.tscn", "res://levels/02_sad_noca.tscn", "res://levels/03_oko_wikingow.tscn"]
 
 

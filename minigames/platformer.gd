@@ -80,36 +80,6 @@ const SKY_ROWS := 4
 ## u a hidden room: paint the room with it, things inside go in as usual; it looks like solid stone
 ## until Wiesław steps in
 ## Crates break under the sword or a thrown apple and give apples.
-const LEVEL := [
-	"                                                                                                                                                                          ",
-	"                                                                                                                                                                          ",
-	"                                                                                                                                                                          ",
-	"                                                                                                        a a a                                                             ",
-	"                                                     a  a  a                                                                                                              ",
-	"         BBB                     aaa                                      BBBBB                        =====                        V                                     ",
-	"                                                  #  ===  ===                                                                     ######    B             ##              ",
-	"    a a        a a              ===              ##                                   a a         ===          ===                                       ###              ",
-	"                                     a          ###            a                                                           a   a                        ####              ",
-	" P                       ##       V  #         ####          x     C       V        V                                    B   x   B          a      V   #####        D     ",
-	"#############################  ####################       ######################################                  ########################################################",
-	"#############################  ####################       ######################################                  ########################################################",
-]
-## A level in the style of Apple Knight: ground at many heights, walls to climb with the double
-## jump, spike pits, crates to break with the sword, Vikings on ledges.
-const LEVEL_KNIGHT := [
-	"                                                                                                                                ",
-	"                                                                                                                                ",
-	"                                                                                                                                ",
-	"                                                                 aaaS                                                           ",
-	"                                                   a            ######             a                                            ",
-	"                                      TaaaB       ===           ######            ===     V   B                                 ",
-	"                  aa      a          ######   a                                       ##########                                ",
-	"                     V B ===         ######  ===                              ===     ##########  a  a             B V          ",
-	"      a a a      #######         B V ######                                           ##########  #  #           #####          ",
-	"  P           ##########     ##############             C    VBB      V   ===         ##########  #  #      V  T #####   C  D   ",
-	"########################xxxxx##############            ##################             ##########xx#xx#xxx#######################",
-	"###########################################            ##################             ##########################################",
-]
 const SOLID := "#LZ"
 ## How long a found hidden room takes to crumble open (seconds, about).
 const SECRET_REVEAL := 1.5
@@ -177,12 +147,9 @@ const VIKING_TURN := 0.3
 const RAT_SPEED := 190.0
 const PLAYER_SIZE := Vector2(40, 92)
 ## Ready-made tiles and background layers, one set per folder: level.json names the files and how
-## the layers scroll. L switches between the sets that are there; without any the level is drawn
-## with plain shapes.
-## Keyed by the name kept in Game.level_art. "piksele" is the author's pixel-art sample board.
+## the layers scroll; without a set the level is drawn with plain shapes.
 ## A set with "night": true in its level.json is the one night levels use, and only they.
-const LEVEL_ART_SETS := {"kreskowka": "res://art/platformer/level_kreskowka/", "piksele": "res://art/platformer/level_autor/",
-	"sad": "res://art/platformer/sad/"}
+const LEVEL_ART_SETS := {"sad": "res://art/platformer/sad/"}
 ## Music (music.ogg, looped) and sound effects (<name>.ogg) for the level, each used when present.
 const AUDIO_DIR := "res://art/platformer/audio/"
 ## Drawn pictures for things in the level (<name>.png), each used when present.
@@ -193,8 +160,6 @@ const ITEMS_DIR := "res://art/platformer/items/"
 ## json lists the tiles for each mask of solid corners (1 top left, 2 top right, 4 bottom left,
 ## 8 bottom right).
 const CASTLE_DIR := "res://art/platformer/zamek/"
-## The same castle pieces drawn finer, used when Game.castle_detail is "drobne".
-const CASTLE_DIR_FINE := "res://art/platformer/zamek_drobne/"
 ## Odds and ends scattered at random (the same every time) on the castle's ceilings, floors and
 ## dungeon walls, listed in ozdoby.json there: see _load_decor and _place_decor.
 const DECOR_DIR := CASTLE_DIR + "ozdoby/"
@@ -351,9 +316,7 @@ var input_attack := false
 var input_throw := false
 ## -1 up, 1 down: climbs a ladder Wiesław is at.
 var input_climb := 0.0
-## Which map to play: "knight" (LEVEL_KNIGHT) or "mario" (LEVEL); N switches.
-var layout := "knight"
-## A map from the campaign (PlatformerCampaign); when set, it is played instead of the layout.
+## The map to play, row by row; a game run on its own (F6) plays the campaign's first level.
 var level_map: Array = []
 ## Night: the level is darker and bluer and there are no sunbeams.
 var night := false
@@ -669,6 +632,16 @@ var _grass_ready := false
 
 
 func _ready() -> void:
+	if level_map.is_empty():
+		var spec: Dictionary = PlatformerCampaign.levels()[0]
+		level_map = spec["map"]
+		night = spec["night"]
+		dungeon = spec["dungeon"]
+		level_name = spec["name"]
+		scene_lights = spec.get("lights", [])
+		scene_darkness = spec.get("darkness", Color(0, 0, 0, 0))
+		scene_pictures = spec.get("pictures", [])
+		dressing_path = spec.get("dressing", "")
 	add_to_group("platformer")
 	_view = SubViewportContainer.new()
 	_view.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -764,10 +737,7 @@ func restart() -> void:
 	_ship = null
 	merchants.clear()
 	vikings.clear()
-	if not level_map.is_empty():
-		map.assign(level_map)
-	else:
-		map.assign(LEVEL_KNIGHT if layout == "knight" else LEVEL)
+	map.assign(level_map)
 	_find_first_ground()
 	_view.modulate = _art.get("night_tint", NIGHT_TINT) if night else (DUNGEON_TINT if dungeon else Color.WHITE)
 	_level = Node2D.new()
@@ -2374,7 +2344,6 @@ func _win() -> void:
 	state = "won"
 	_stop_music()
 	_play("win")
-	Game.set_flag("jablka_proba", apples)
 
 
 ## A Viking of the eye fight runs into Wiesław.
@@ -2819,9 +2788,6 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
 		_pick_slot(wrapi(_slot + (1 if event.button_index == MOUSE_BUTTON_WHEEL_DOWN else -1), 0, bar.size()))
 		get_viewport().set_input_as_handled()
-	elif event is InputEventKey and event.physical_keycode == KEY_L and (_art_sets.size() > 1 or (dungeon and not _pieces.is_empty())):
-		next_art_set()
-		get_viewport().set_input_as_handled()
 	elif not shop.is_empty() and event is InputEventKey and event.physical_keycode in [KEY_1, KEY_2]:
 		buy("heart" if event.physical_keycode == KEY_1 else "mug")
 		get_viewport().set_input_as_handled()
@@ -2830,10 +2796,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif state == "" and event is InputEventKey and event.physical_keycode == KEY_F:
 		use()
-		get_viewport().set_input_as_handled()
-	elif event is InputEventKey and event.physical_keycode == KEY_N and level_map.is_empty():
-		layout = "mario" if layout == "knight" else "knight"
-		restart()
 		get_viewport().set_input_as_handled()
 	elif event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_F3:
 		show_fps = not show_fps
@@ -2958,40 +2920,6 @@ func _load_art() -> void:
 	_art_sets.assign(usable)
 	if not _art_sets.is_empty():
 		_art = _art_sets[0]
-		for art_set in _art_sets:
-			if art_set["name"] == Game.level_art:
-				_art = art_set
-
-
-## Switches to the art set named in Game.level_art (the settings menu changed it).
-func use_level_art() -> void:
-	for art_set in _art_sets:
-		if art_set["name"] == Game.level_art:
-			_art = art_set
-	if dungeon:
-		_load_castle()
-		if _drakkar:
-			_drakkar.queue_redraw()
-	if _static:
-		_redraw_static()
-	_redraw()
-
-
-## Next art set; the choice is saved with the settings.
-func next_art_set() -> void:
-	# In the castle L switches between its chunky and its finer pieces.
-	if dungeon and not _pieces.is_empty():
-		Game.castle_detail = "grube" if Game.castle_detail == "drobne" else "drobne"
-		Game.save_settings()
-		use_level_art()
-		return
-	if _art_sets.is_empty():
-		return
-	_art = _art_sets[(_art_sets.find(_art) + 1) % _art_sets.size()]
-	Game.level_art = _art["name"]
-	Game.save_settings()
-	_redraw_static()
-	_redraw()
 
 
 func _load_art_set(dir: String) -> Dictionary:
@@ -3691,8 +3619,6 @@ func _load_castle() -> void:
 	_pillars.clear()
 	_pillar_parts.clear()
 	var dir := CASTLE_DIR
-	if Game.castle_detail == "drobne" and ResourceLoader.exists(CASTLE_DIR_FINE + "tileset.png"):
-		dir = CASTLE_DIR_FINE
 	# The halls, the dungeons under them and, when there is a sheet for it, the deepest dungeons.
 	for set_name in ["hall", "dungeon", "deep"]:
 		var file: String = {"hall": "tileset", "dungeon": "lochy", "deep": "gleboko"}[set_name]
@@ -6491,10 +6417,6 @@ func _draw_hud() -> void:
 	var modes: Array[String] = []
 	if _music or not _sounds.is_empty():
 		modes.append("M: %s" % {"silent": "cisza", "all": "muzyka i dźwięki"}.get(Game.sound, "same dźwięki"))
-	if _art_sets.size() > 1:
-		modes.append("L: grafika")
-	if level_map.is_empty():
-		modes.append("N: plansza %s" % ("rycerska" if layout == "knight" else "mario"))
 	var mode := "     ".join(modes)
 	v.draw_string_outline(font, Vector2(0, 48), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 20, 6, halo)
 	v.draw_string(font, Vector2(0, 48), mode, HORIZONTAL_ALIGNMENT_RIGHT, SCREEN.x - 30, 20, ink)

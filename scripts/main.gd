@@ -1,23 +1,9 @@
 extends Node2D
+## The game: the main menu, then the platformer levels of PlatformerCampaign, each after its comic
+## pages, the comic ending and the end screen.
 
-const ROOMS := {
-	"sala": preload("res://rooms/sala.gd"),
-	"sad": preload("res://rooms/sad.gd"),
-	"munina": preload("res://rooms/munina.gd"),
-}
-const FIRST_ROOM := "sala"
-const MINIGAMES := {"flight": preload("res://minigames/flight.gd")}
-
-var room: Room
-var room_id := ""
 var ui: GameUI
 var menu: GameMenu
-## Tests start straight in the first room, without the main menu.
-var skip_menu := false
-## True while a cutscene runs; clicks are ignored then.
-var busy := false
-## Last input came from the keyboard: the hotspot in front of Wiesław is the target, not the one under the mouse.
-var keyboard_mode := false
 
 
 func _ready() -> void:
@@ -28,54 +14,15 @@ func _ready() -> void:
 	ui.restart_requested.connect(_to_main_menu)
 	menu = GameMenu.new()
 	add_child(menu)
-	menu.new_game_requested.connect(_new_game)
-	menu.platformer_requested.connect(_play_trial)
-	menu.load_requested.connect(_load)
-	menu.save_requested.connect(func(slot: int) -> void: Game.save_game(slot, room_id))
+	menu.play_requested.connect(_play)
 	menu.resume_requested.connect(menu.close)
 	menu.main_menu_requested.connect(_to_main_menu)
-	if Game.pending_load >= 0:
-		var slot := Game.pending_load
-		Game.pending_load = -1
-		_start(Game.load_game(slot))
-	elif skip_menu:
-		_start(FIRST_ROOM)
-	else:
-		menu.show_main()
+	menu.show_main()
 
 
-func _start(id: String) -> void:
+func _play() -> void:
 	menu.close()
-	_enter_room(id)
-	run(room.intro)
-
-
-func _new_game() -> void:
-	Game.reset()
-	_start(FIRST_ROOM)
-
-
-## Loading mid-game reloads the scene first, so nothing from the old room keeps running.
-func _load(slot: int) -> void:
-	if Game.read_save(slot).is_empty():
-		return
-	if room or busy:
-		Game.pending_load = slot
-		get_tree().paused = false
-		get_tree().reload_current_scene()
-	else:
-		_start(Game.load_game(slot))
-
-
-## The platformer version: for each level its comic pages and the level, then the comic ending and the end screen.
-## `busy` keeps the adventure controls off, since there is no room meanwhile.
-func _play_trial() -> void:
-	menu.close()
-	busy = true
-	menu.can_save = false
-	ui.show_adventure_controls(false)
-	# Each campaign level: its comic pages, then the level; the comic ending comes after the last.
-	# Apples go on from level to level, until the drakkar is won back.
+	# Apples, mugs, the torch and the bar go on from level to level, until the drakkar is won back.
 	var apples := 0
 	var mugs := 0
 	var torch := false
@@ -88,7 +35,6 @@ func _play_trial() -> void:
 	while index < levels.size():
 		var spec: Dictionary = levels[index]
 		var stage := PlatformerGame.new()
-		# Mugs bought from the brothers go on to the next levels.
 		stage.mugs = mugs
 		stage.torch = torch
 		stage.torch_lit = torch_lit
@@ -131,162 +77,12 @@ func _play_trial() -> void:
 
 
 func _to_main_menu() -> void:
-	Game.reset()
 	get_tree().paused = false
 	get_tree().reload_current_scene()
 
 
-func run(scene: Callable) -> void:
-	busy = true
-	await scene.call()
-	while room.pending_exit != "":
-		await ui.fade_out()
-		if room.pending_caption != "":
-			await ui.show_caption(room.pending_caption)
-		if room.pending_minigame != "":
-			await _play_minigame(room.pending_minigame)
-		_enter_room(room.pending_exit)
-		if not Game.fast:
-			Game.save_game(0, room_id)
-		await ui.fade_in()
-		await room.intro()
-	busy = false
-
-
-## Saving is off during a mini-game: the save would put the player back before it.
-func _play_minigame(id: String) -> void:
-	var minigame: Node = MINIGAMES[id].new()
-	minigame.pause_requested.connect(menu.show_pause)
-	menu.can_save = false
-	add_child(minigame)
-	await minigame.finished
-	minigame.queue_free()
-	menu.can_save = true
-
-
-func _enter_room(id: String) -> void:
-	var from := room_id
-	if room:
-		remove_child(room)
-		room.queue_free()
-	room = ROOMS[id].new()
-	room.ui = ui
-	room.entered_from = from
-	room_id = id
-	add_child(room)
-
-
-func _can_play() -> bool:
-	return not busy and not ui.is_end_shown() and not ui.is_inventory_open()
-
-
-func _process(delta: float) -> void:
-	if not room:
-		return
-	var direction := Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	if direction != Vector2.ZERO and _can_play():
-		keyboard_mode = true
-		room.player.step(direction, delta, room.walk_area)
-	var hovered: Hotspot = null
-	if not busy and not ui.is_end_shown():
-		if keyboard_mode:
-			hovered = room.hotspot_in_reach(room.player)
-		else:
-			hovered = room.hotspot_at(get_global_mouse_position())
-	for h in room._hotspots():
-		h.hovered = h == hovered
-	var text := ""
-	if ui.selected_item != "":
-		text = "Użyj: " + Game.item_name(ui.selected_item)
-		if hovered:
-			text += " na " + hovered.display_name
-	elif hovered:
-		text = hovered.display_name
-	if keyboard_mode and hovered:
-		var top := hovered.rect()
-		ui.set_hover(text, Vector2(top.get_center().x, maxf(top.position.y, 40.0)))
-	else:
-		ui.set_hover(text)
-
-
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventMouseMotion:
-		keyboard_mode = false
-	elif event is InputEventKey and event.pressed and not event.echo:
-		_on_key(event)
-		return
-	if not (event is InputEventMouseButton and event.pressed):
-		return
-	if ui.is_speaking():
-		ui.skip_speech()
-		return
-	if busy or ui.is_end_shown():
-		return
-	if ui.is_inventory_open():
-		ui.toggle_inventory()
-		return
-	var point := get_global_mouse_position()
-	var h := room.hotspot_at(point)
-	if event.button_index == MOUSE_BUTTON_RIGHT:
-		if ui.selected_item != "":
-			ui.select_item("")
-		elif h:
-			run(room.do_look.bind(h))
-	elif event.button_index == MOUSE_BUTTON_LEFT:
-		if h:
-			var item := ui.selected_item
-			ui.select_item("")
-			run(room.do_interact.bind(h, item))
-		else:
-			room.player.walk_to(room.clamp_to_walk_area(point))
-
-
-func _on_key(event: InputEventKey) -> void:
-	if event.is_action("fullscreen"):
-		_toggle_fullscreen()
-		return
-	var number := event.physical_keycode - KEY_1
-	if ui.is_speaking():
-		if event.is_action("interact") or event.is_action("cancel"):
-			ui.skip_speech()
-		return
-	if ui.is_choosing():
-		if number >= 0 and number < 9:
-			ui.pick_choice(number)
-		return
-	if busy or ui.is_end_shown():
-		return
-	keyboard_mode = true
-	if event.is_action("inventory"):
-		ui.toggle_inventory()
-	elif event.is_action("cancel"):
-		if ui.is_inventory_open():
-			ui.toggle_inventory()
-		elif ui.selected_item != "":
-			ui.select_item("")
-		else:
-			menu.show_pause()
-	elif number >= 0 and number < 9:
-		if number < Game.inventory.size():
-			var id := Game.inventory[number]
-			ui.select_item("" if ui.selected_item == id else id)
-	elif ui.is_inventory_open():
-		return
-	elif event.is_action("interact"):
-		var h := room.hotspot_in_reach(room.player)
-		if h:
-			var item := ui.selected_item
-			ui.select_item("")
-			run(room.do_interact.bind(h, item))
-	elif event.is_action("look"):
-		var h := room.hotspot_in_reach(room.player)
-		if h:
-			run(room.do_look.bind(h))
-
-
-func _toggle_fullscreen() -> void:
-	Game.fullscreen = DisplayServer.window_get_mode() != DisplayServer.WINDOW_MODE_FULLSCREEN
-	GameMenu.apply_fullscreen()
-	Game.save_settings()
-
-
+	if event is InputEventKey and event.pressed and not event.echo and event.is_action("fullscreen"):
+		Game.fullscreen = DisplayServer.window_get_mode() != DisplayServer.WINDOW_MODE_FULLSCREEN
+		GameMenu.apply_fullscreen()
+		Game.save_settings()

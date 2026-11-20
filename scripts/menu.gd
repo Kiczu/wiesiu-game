@@ -1,25 +1,19 @@
 class_name GameMenu
 extends CanvasLayer
-## Main menu and pause menu: new game, save and load slots, settings.
+## Main menu and pause menu: new game, settings, back to the main menu.
 ## While it is open the game is paused; the menu itself keeps running.
 
-signal new_game_requested
-signal platformer_requested
-signal load_requested(slot: int)
-signal save_requested(slot: int)
+signal play_requested
 signal resume_requested
 signal main_menu_requested
 
 const SCREEN := Vector2(1280, 720)
-const TEXT_SPEEDS := {"wolno": 0.7, "normalnie": 1.0, "szybko": 1.5}
 
 var _background: ColorRect
 var _box: VBoxContainer
 ## "main" or "pause": where Back on a sub-page leads.
 var _home := "main"
 var _page := ""
-## Off during mini-games and cutscenes that a save could not restore.
-var can_save := true
 
 
 func _ready() -> void:
@@ -71,7 +65,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.physical_keycode != KEY_ESCAPE:
 		return
 	get_viewport().set_input_as_handled()
-	if _page in ["save", "load", "settings"]:
+	if _page == "settings":
 		_back()
 	elif _page == "pause":
 		resume_requested.emit()
@@ -86,8 +80,7 @@ func _back() -> void:
 
 func _main_page() -> void:
 	_start_page("main", "Wiesław", "Baśnie słowiańskie")
-	# The platformer is the game for now; the adventure (new_game_requested, saves) is set aside.
-	_button("Nowa gra", func() -> void: platformer_requested.emit())
+	_button("Nowa gra", func() -> void: play_requested.emit())
 	_button("Ustawienia", _settings_page)
 	if not OS.has_feature("web"):
 		_button("Wyjście", func() -> void: get_tree().quit())
@@ -97,30 +90,8 @@ func _main_page() -> void:
 func _pause_page() -> void:
 	_start_page("pause", "Pauza")
 	_button("Wróć do gry", func() -> void: resume_requested.emit())
-	_button("Zapisz grę", _slots_page.bind(true), not can_save)
-	_button("Wczytaj grę", _slots_page.bind(false), Game.latest_save() < 0)
 	_button("Ustawienia", _settings_page)
 	_button("Menu główne", func() -> void: main_menu_requested.emit())
-	_focus_first()
-
-
-func _slots_page(saving: bool) -> void:
-	_start_page("save" if saving else "load", "Zapisz grę" if saving else "Wczytaj grę")
-	for slot in Game.SAVE_SLOTS + 1:
-		if saving and slot == 0:
-			continue
-		var data := Game.read_save(slot)
-		var slot_name := "Autozapis" if slot == 0 else "Zapis %d" % slot
-		var info := "pusty" if data.is_empty() else "%s, %s" % [_room_name(data["room"]), _format_time(data["time"])]
-		var on_press: Callable
-		if saving:
-			on_press = func() -> void:
-				save_requested.emit(slot)
-				_slots_page(true)
-		else:
-			on_press = func() -> void: load_requested.emit(slot)
-		_button("%s: %s" % [slot_name, info], on_press, not saving and data.is_empty())
-	_button("Wstecz", _back)
 	_focus_first()
 
 
@@ -130,25 +101,6 @@ func _settings_page() -> void:
 		Game.fullscreen = not Game.fullscreen
 		apply_fullscreen()
 		Game.save_settings()
-		_settings_page())
-	var speed_name := "normalnie"
-	for key in TEXT_SPEEDS:
-		if is_equal_approx(TEXT_SPEEDS[key], Game.text_speed):
-			speed_name = key
-	_button("Szybkość dymków: " + speed_name, func() -> void:
-		var names := TEXT_SPEEDS.keys()
-		Game.text_speed = TEXT_SPEEDS[names[(names.find(speed_name) + 1) % names.size()]]
-		Game.save_settings()
-		_settings_page())
-	_button("Grafika: " + ("piksele" if Game.level_art == "piksele" else "kreskówka"), func() -> void:
-		Game.level_art = "kreskowka" if Game.level_art == "piksele" else "piksele"
-		Game.save_settings()
-		get_tree().call_group("platformer", "use_level_art")
-		_settings_page())
-	_button("Zamek: " + ("szczegółowy" if Game.castle_detail == "drobne" else "grube piksele"), func() -> void:
-		Game.castle_detail = "grube" if Game.castle_detail == "drobne" else "drobne"
-		Game.save_settings()
-		get_tree().call_group("platformer", "use_level_art")
 		_settings_page())
 	_button("Wstecz", _back)
 	_focus_first()
@@ -200,14 +152,3 @@ func _focus_first() -> void:
 func _grab_focus(button: Button) -> void:
 	if is_instance_valid(button) and button.is_inside_tree():
 		button.grab_focus()
-
-
-static func _room_name(id: String) -> String:
-	return {"sala": "Sala tronowa", "sad": "Sad", "munina": "Munina"}.get(id, id)
-
-
-## "2026-10-20 22:15:03" -> "20.10 22:15"
-static func _format_time(time: String) -> String:
-	if time.length() < 16:
-		return time
-	return "%s.%s %s" % [time.substr(8, 2), time.substr(5, 2), time.substr(11, 5)]
