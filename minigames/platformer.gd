@@ -576,6 +576,9 @@ var _note_time := 0.0
 static var show_fps := false
 ## The stars of a sky drawn in code: place, size, brightness and twinkle speed, made once.
 var _stars: Array = []
+## A soft white dot fading out to its edge: star halos and the moon's glow are drawn with it, so
+## they share one texture and the browser draws them in a few batches instead of hundreds.
+var _soft_dot: GradientTexture2D
 ## Apples brought from the levels before; a lost try starts again with these.
 var start_apples := 0
 ## Keys picked up and not yet used on a locked door.
@@ -3207,17 +3210,25 @@ func _draw_night_sky(v: Node2D, scroll: float, sky: Dictionary) -> void:
 			_stars.append([Vector2(random.randf(), pow(random.randf(), 1.6) * 0.8), pow(random.randf(), 3.0) * 2.2 + 0.8,
 				random.randf_range(0.35, 1.0), random.randf_range(0.5, 2.5)])
 	var star_colour := Color(str(sky.get("star_color", "fff6e0")))
+	var dot := _get_soft_dot()
+	# Halos first, then the stars themselves, then the glints: each pass is one batch.
+	var shown: Array = []
 	for star: Array in _stars:
 		var at := Vector2(fposmod(star[0].x * SCREEN.x - scroll * 0.01 * VIEW_ZOOM, SCREEN.x), star[0].y * SCREEN.y)
 		var shine: float = star[2] * (0.7 + 0.3 * sin(_anim * star[3] + at.x))
+		shown.append([at, float(star[1]), shine])
+		var halo: float = star[1] * 2.6
+		v.draw_texture_rect(dot, Rect2(at - Vector2(halo, halo), Vector2(halo, halo) * 2.0), false, Color(star_colour, shine * 0.3))
+	for star: Array in shown:
 		var size: float = star[1]
-		v.draw_circle(at, size * 2.6, Color(star_colour, shine * 0.12))
-		v.draw_circle(at, size, Color(star_colour, shine))
+		v.draw_texture_rect(dot, Rect2(star[0] - Vector2(size, size) * 1.4, Vector2(size, size) * 2.8), false, Color(star_colour, star[2]))
+	for star: Array in shown:
+		var size: float = star[1]
 		if size > 2.4:
 			# The brightest few get a faint cross of light.
-			var glint := Color(star_colour, shine * 0.35)
-			v.draw_line(at - Vector2(size * 4.0, 0), at + Vector2(size * 4.0, 0), glint, 1.0)
-			v.draw_line(at - Vector2(0, size * 4.0), at + Vector2(0, size * 4.0), glint, 1.0)
+			var glint := Color(star_colour, star[2] * 0.35)
+			v.draw_rect(Rect2(star[0] - Vector2(size * 4.0, 0.5), Vector2(size * 8.0, 1.0)), glint)
+			v.draw_rect(Rect2(star[0] - Vector2(0.5, size * 4.0), Vector2(1.0, size * 8.0)), glint)
 	if not sky.has("moon"):
 		return
 	var moon: Dictionary = sky["moon"]
@@ -3228,9 +3239,9 @@ func _draw_night_sky(v: Node2D, scroll: float, sky: Dictionary) -> void:
 	centre += Vector2(-scroll * float(moon.get("speed", 0.0)) * VIEW_ZOOM, (_ground_line() - GROUND_LINE) * float(moon.get("follow", 0.0)))
 	var radius := float(moon.get("radius", 64.0))
 	var glow := Color(str(moon.get("glow", "c8d4ff")))
-	# A soft glow: many faint circles, so no rings show.
-	for ring in 24:
-		v.draw_circle(centre, radius * (1.05 + ring * 0.11), Color(glow, 0.014))
+	# A soft glow fading out to about three and a half times the moon's size.
+	var reach := radius * 3.6
+	v.draw_texture_rect(_get_soft_dot(), Rect2(centre - Vector2(reach, reach), Vector2(reach, reach) * 2.0), false, Color(glow, 0.3))
 	if moon.has("texture"):
 		var texture: Texture2D = moon["texture"]
 		var width := radius * 2.0 * float(moon.get("picture_size", 1.0))
@@ -3243,6 +3254,21 @@ func _draw_night_sky(v: Node2D, scroll: float, sky: Dictionary) -> void:
 	var patch := face.darkened(0.12)
 	for spot: Vector3 in [Vector3(-0.3, -0.2, 0.28), Vector3(0.2, -0.35, 0.18), Vector3(0.15, 0.2, 0.32), Vector3(-0.35, 0.35, 0.15)]:
 		v.draw_circle(centre + Vector2(spot.x, spot.y) * radius, spot.z * radius, Color(patch, 0.55))
+
+
+func _get_soft_dot() -> GradientTexture2D:
+	if not _soft_dot:
+		var fade := Gradient.new()
+		fade.set_color(0, Color(1, 1, 1, 1))
+		fade.set_color(1, Color(1, 1, 1, 0))
+		_soft_dot = GradientTexture2D.new()
+		_soft_dot.gradient = fade
+		_soft_dot.fill = GradientTexture2D.FILL_RADIAL
+		_soft_dot.fill_from = Vector2(0.5, 0.5)
+		_soft_dot.fill_to = Vector2(1.0, 0.5)
+		_soft_dot.width = 64
+		_soft_dot.height = 64
+	return _soft_dot
 
 
 func _draw_layers(v: Node2D, layers: Array, scroll: float, fill_sky: bool) -> void:
@@ -3323,18 +3349,38 @@ func _draw_mist(v: Node2D, mist: Array, bottom: float, offset: float) -> void:
 	var strength := float(mist[1])
 	var height := float(mist[2]) * VIEW_ZOOM
 	var strip := 40.0
+	var top := bottom - height
+	var mid := bottom - height * 0.3
+	var clear := Color(colour, 0.0)
+	# Two long shapes across the screen (fading top, solid foot), their colour changing every
+	# strip: two draws however wide the screen is.
+	var along := PackedVector2Array()
+	var thick := PackedColorArray()
 	var x := -fposmod(offset * 0.6, strip)
-	while x < SCREEN.x:
+	while true:
 		var world := x + offset * 0.6
 		var patch := 0.65 + 0.2 * sin(world * 0.0031 + _anim * 0.15) + 0.15 * sin(world * 0.0107 - _anim * 0.23)
-		var thick := Color(colour, strength * patch)
-		var clear := Color(colour, 0.0)
-		var top := bottom - height
-		var mid := bottom - height * 0.3
-		v.draw_polygon(PackedVector2Array([Vector2(x, top), Vector2(x + strip, top), Vector2(x + strip, mid), Vector2(x, mid)]),
-			PackedColorArray([clear, clear, thick, thick]))
-		v.draw_rect(Rect2(x, mid, strip, bottom - mid + 1.0), thick)
+		along.append(Vector2(x, 0.0))
+		thick.append(Color(colour, strength * patch))
+		if x >= SCREEN.x:
+			break
 		x += strip
+	var fade_points := PackedVector2Array()
+	var fade_colours := PackedColorArray()
+	var foot_points := PackedVector2Array()
+	var foot_colours := PackedColorArray()
+	for k in along.size():
+		fade_points.append(Vector2(along[k].x, mid))
+		fade_colours.append(thick[k])
+		foot_points.append(Vector2(along[k].x, mid))
+		foot_colours.append(thick[k])
+	for k in range(along.size() - 1, -1, -1):
+		fade_points.append(Vector2(along[k].x, top))
+		fade_colours.append(clear)
+		foot_points.append(Vector2(along[k].x, bottom + 1.0))
+		foot_colours.append(thick[k])
+	v.draw_polygon(fade_points, fade_colours)
+	v.draw_polygon(foot_points, foot_colours)
 
 
 func _draw_background() -> void:
@@ -6283,6 +6329,12 @@ func _draw_foreground() -> void:
 		_draw_layers(_foreground, _art["foreground"], _camera.get_screen_center_position().x, false)
 		if _art.has("near"):
 			_draw_near_ground(_foreground, _art["near"])
+	# All falling leaves go to the screen as one list of triangles, and the glowing motes all use
+	# the same soft dot, so the browser draws them in a couple of batches.
+	var leaf_points := PackedVector2Array()
+	var leaf_colours := PackedColorArray()
+	var leaf_corners := PackedInt32Array()
+	var dot := _get_soft_dot()
 	for p in _particles:
 		# No leaves fall in the dungeon or down in the cellars.
 		if (dungeon or _below > 0.5) and p["leaf"]:
@@ -6291,20 +6343,30 @@ func _draw_foreground() -> void:
 		var depth: float = p["depth"]
 		if p["leaf"]:
 			var turn: float = p["phase"] * 1.3
-			_foreground.draw_set_transform(at, turn, Vector2(1.0, absf(sin(turn)) * 0.8 + 0.2) * depth)
-			_foreground.draw_colored_polygon(PackedVector2Array([Vector2(-6, 0), Vector2(0, -3), Vector2(6, 0), Vector2(0, 3)]), p["color"])
+			var place := Transform2D(turn, Vector2(1.0, absf(sin(turn)) * 0.8 + 0.2) * depth, 0.0, at)
+			var first := leaf_points.size()
+			for corner in [Vector2(-6, 0), Vector2(0, -3), Vector2(6, 0), Vector2(0, 3)]:
+				leaf_points.append(place * corner)
+				leaf_colours.append(p["color"])
+			leaf_corners.append_array([first, first + 1, first + 2, first, first + 2, first + 3])
 		elif night and not dungeon and not _art.get("no_fireflies", false):
 			# Fireflies: a slow blink, now and then out for a while.
 			var blink := clampf(sin(p["phase"] * 2.1) * 1.6 - 0.2, 0.0, 1.0)
+			if blink <= 0.0:
+				continue
 			var firefly := Color(0.78, 1.0, 0.5)
-			_foreground.draw_circle(at, 7.0 * depth, Color(firefly, 0.10 * blink))
-			_foreground.draw_circle(at, 3.0 * depth, Color(firefly, 0.25 * blink))
-			_foreground.draw_circle(at, 1.4 * depth, Color(firefly, 0.95 * blink))
+			_draw_dot(dot, at, 7.0 * depth, Color(firefly, 0.3 * blink))
+			_draw_dot(dot, at, 2.4 * depth, Color(firefly, blink))
 		else:
 			var glow: float = 0.45 + 0.35 * sin(p["phase"] * 3.0)
-			_foreground.draw_circle(at, 3.0 * depth, Color(p["color"], 0.18 * glow))
-			_foreground.draw_circle(at, 1.2 * depth, Color(p["color"], 0.8 * glow))
-	_foreground.draw_set_transform(Vector2.ZERO)
+			_draw_dot(dot, at, 3.0 * depth, Color(p["color"], 0.5 * glow))
+			_draw_dot(dot, at, 1.6 * depth, Color(p["color"], glow))
+	if not leaf_points.is_empty():
+		RenderingServer.canvas_item_add_triangle_array(_foreground.get_canvas_item(), leaf_corners, leaf_points, leaf_colours)
+
+
+func _draw_dot(dot: Texture2D, at: Vector2, radius: float, colour: Color) -> void:
+	_foreground.draw_texture_rect(dot, Rect2(at - Vector2(radius, radius), Vector2(radius, radius) * 2.0), false, colour)
 
 
 ## Light over the whole picture: slow sunbeams from the top left and a darker edge.
