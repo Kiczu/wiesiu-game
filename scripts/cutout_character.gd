@@ -12,9 +12,10 @@ const ART_SETS := {"smooth": "res://art/platformer/wieslaw/"}
 ## Ready-made animation frames: frames.json lists, for each pose, its fps, whether it loops and
 ## its frames, each with the point of the image that stands on the ground.
 const ANIM_DIR := "res://art/platformer/wieslaw_klatki_chibi/"
-## Weapons held in the near hand: bronie.json gives each one's picture, the point of its grip and
-## how big it is next to the frames. Frames made for a weapon (poses named "<pose>_bron") mark
-## the hand and the weapon's angle; in the other poses the weapon is put away.
+## Weapons held in the near hand: bronie.json gives each one's picture, the point of its grip,
+## how big it is next to the frames and how far a blow with it reaches ("reach", px, read by the
+## platformer). Frames made for a weapon (poses named "<pose>_bron") mark the hand and the
+## weapon's angle; in the other poses the weapon is put away.
 const WEAPON_DIR := "res://art/platformer/bron/"
 ## How much of the frame around the hand is drawn again over the weapon, so the fist holds its grip.
 const FIST := 6.0

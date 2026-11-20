@@ -277,8 +277,9 @@ const KEY_PRESS_EVERY := 1.4
 const OUTSIDE_SIDES := 3
 ## How far the camera looks ahead in the running direction.
 const LOOK_AHEAD := 140.0
-## Sword: how long a swing lasts, how soon the next one can start, how far it reaches in front of
-## Wiesław's middle (an enemy is hit when his body is within it).
+## Sword: how long a swing lasts, how soon the next one can start, how far a blow reaches in front
+## of Wiesław's middle (an enemy is hit when his body is within it) unless the weapon has its own
+## "reach" in bronie.json.
 const ATTACK_TIME := 0.3
 const ATTACK_COOLDOWN := 0.35
 const ATTACK_REACH := 104.0
@@ -312,6 +313,8 @@ var went_back := false
 var start_at_exit := false
 ## Damage of the sword Wiesław carries (other swords can hit harder).
 var sword_damage := 10
+## bronie.json, read once for the weapons' reach.
+var _weapon_specs := {}
 var input_x := 0.0
 var input_jump := false
 var input_attack := false
@@ -2469,7 +2472,8 @@ func _swing(delta: float) -> void:
 		return
 	_attack = maxf(_attack - delta, 0.0)
 	var facing := float(_wieslaw.facing)
-	var blade := Rect2(player.position + Vector2(-20.0 if facing > 0 else 20.0 - ATTACK_REACH - 20.0, -PLAYER_SIZE.y), Vector2(ATTACK_REACH + 20.0, PLAYER_SIZE.y - 6))
+	var reach := _weapon_reach()
+	var blade := Rect2(player.position + Vector2(-20.0 if facing > 0 else 20.0 - reach - 20.0, -PLAYER_SIZE.y), Vector2(reach + 20.0, PLAYER_SIZE.y - 6))
 	for viking in vikings.duplicate():
 		var node: Node2D = viking["node"]
 		if node in _struck or not blade.intersects(_enemy_box(viking)):
@@ -2479,9 +2483,19 @@ func _swing(delta: float) -> void:
 	if _boss:
 		_boss.strike(blade, facing, sword_damage)
 	# The far end of the blade, whichever way he faces.
-	var reach := 0.75 if facing > 0 else 0.25
-	for point in [blade.position + blade.size * Vector2(reach, 0.2), blade.position + blade.size * Vector2(reach, 0.6)]:
+	var tip := 0.75 if facing > 0 else 0.25
+	for point in [blade.position + blade.size * Vector2(tip, 0.2), blade.position + blade.size * Vector2(tip, 0.6)]:
 		_break_crate(point)
+
+
+## How far in front of Wiesław's middle his weapon hits: its "reach" in bronie.json, or ATTACK_REACH
+## for a weapon without one and for bare fists.
+func _weapon_reach() -> float:
+	if _weapon_specs.is_empty() and FileAccess.file_exists(CutoutCharacter.WEAPON_DIR + "bronie.json"):
+		var specs: Variant = JSON.parse_string(FileAccess.get_file_as_string(CutoutCharacter.WEAPON_DIR + "bronie.json"))
+		_weapon_specs = specs if specs is Dictionary else {"": {}}
+	var spec: Dictionary = _weapon_specs.get(weapon, {})
+	return float(spec.get("reach", ATTACK_REACH))
 
 
 ## A Viking hit by the sword or an apple flashes and slides back; out of health, he falls over.
