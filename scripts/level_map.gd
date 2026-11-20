@@ -25,9 +25,25 @@ const MIN_ROWS := 12
 		wall_guides = value
 		queue_redraw()
 
+## In the editor, a grid of boxes as big as what the camera shows (SCREEN_CELLS), so rooms can be
+## made one screen tall and wide.
+@export var screen_guides := true:
+	set(value):
+		screen_guides = value
+		queue_redraw()
+
+## How many cells the camera shows across and down.
+const SCREEN_CELLS := Vector2i(25, 14)
+const GUIDE_SCREEN := Color(1.0, 0.9, 0.3, 0.35)
 const GUIDE_BACKDROP := Color(0.55, 0.75, 1.0, 0.22)
 const GUIDE_WINDOW := Color(0.4, 1.0, 0.5, 0.9)
 const GUIDE_TORCH := Color(1.0, 0.6, 0.2, 0.9)
+
+
+## Where the first text row's first cell is, in cells of the Map.
+func _first_cell() -> Vector2i:
+	var used := ($Map as TileMapLayer).get_used_rect()
+	return Vector2i(used.position.x, used.end.y - maxi(used.size.y, MIN_ROWS))
 
 
 ## The painted level as text rows, the lowest painted row at the bottom.
@@ -46,10 +62,114 @@ func to_rows() -> Array[String]:
 	return rows
 
 
-## Name, night and rows of the level scene at path.
+## The lights placed in the scene: copies of every PointLight2D under the level (the ready ones
+## are in levels/swiatla/), moved to where they stand over the text rows. A light with the
+## "migotanie" meta flickers like a flame.
+func scene_lights() -> Array:
+	var origin := Vector2(_first_cell() * ($Map as TileMapLayer).tile_set.tile_size)
+	var lights := []
+	for light: PointLight2D in find_children("*", "PointLight2D", true, false):
+		var copy: PointLight2D = light.duplicate()
+		copy.position = _place_of(light) - origin
+		lights.append(copy)
+	return lights
+
+
+## How dark the scene is: the colour of a CanvasModulate placed in it, or clear when there is none.
+func scene_darkness() -> Color:
+	for shade: CanvasModulate in find_children("*", "CanvasModulate", true, false):
+		return shade.color
+	return Color(0, 0, 0, 0)
+
+
+## The groups of pictures laid by hand in the scene, by node name, and the layer each becomes in
+## the game: "back" behind the ground, "ground" the ground itself (its drawn rims give way under
+## it), "front" in front of Wiesław and "near" right at the screen. Nearer layers move faster
+## (see LAYER_DEPTHS); a group inside a group may set its own "glebia".
+## A group's colour (modulate) tints everything in it, like a farther or nearer layer.
+## How much faster than the level each layer moves, so nearer ones pass by faster, like in depth.
+const LAYER_DEPTHS := {"back": -0.15, "ground": 0.0, "front": 0.6, "near": 2.0}
+const PICTURE_GROUPS := {"Tył": "back", "Tyl": "back", "Ziemia": "ground", "Przód": "front", "Przod": "front",
+	"Pierwszy plan": "near", "Pierwszy_plan": "near", "Blisko": "near"}
+
+
+## The pictures laid in the scene's picture groups (see PICTURE_GROUPS): for each Sprite2D, a copy
+## standing where it stands over the text rows, tinted by the groups it is in, as
+## {"layer", "node", "depth"}; "depth" is how much faster than the level it moves (see _depth_of).
+func scene_pictures() -> Array:
+	var origin := Vector2(_first_cell() * ($Map as TileMapLayer).tile_set.tile_size)
+	var pictures := []
+	for group in get_children():
+		var layer: String = PICTURE_GROUPS.get(String(group.name), "")
+		if layer == "" or not group is CanvasItem:
+			continue
+		for sprite: Sprite2D in group.find_children("*", "Sprite2D", true, false):
+			if not sprite.texture or _tint_of(sprite).a <= 0.0:
+				continue
+			var copy: Sprite2D = sprite.duplicate(0)
+			for child in copy.get_children():
+				copy.remove_child(child)
+				child.free()
+			copy.transform = _transform_of(sprite)
+			copy.position -= origin
+			copy.modulate = _tint_of(sprite)
+			pictures.append({"layer": layer, "node": copy, "depth": _depth_of(sprite, LAYER_DEPTHS[layer])})
+	return pictures
+
+
+## How much faster than the level a laid picture moves (slower when below 0): the "glebia" meta
+## of the picture or of the nearest group it is in, or the layer's own.
+func _depth_of(node: Node, layer_depth: float) -> float:
+	var part := node
+	while part and part != self:
+		if part.has_meta("glebia"):
+			return float(part.get_meta("glebia"))
+		part = part.get_parent()
+	return layer_depth
+
+
+## How a node under the level is placed in the level: moved, turned and scaled.
+func _transform_of(node: Node2D) -> Transform2D:
+	var at := Transform2D()
+	var part: Node = node
+	while part and part != self:
+		if part is Node2D:
+			at = (part as Node2D).transform * at
+		part = part.get_parent()
+	return at
+
+
+## The colour a node under the level is drawn with: its own times every group's it is in, clear
+## when it or a group it is in is hidden.
+func _tint_of(node: CanvasItem) -> Color:
+	var tint := Color.WHITE
+	var part: Node = node
+	while part and part != self:
+		if part is CanvasItem:
+			# A hidden group or picture is left out: clear.
+			tint *= (part as CanvasItem).modulate if (part as CanvasItem).visible else Color.TRANSPARENT
+		part = part.get_parent()
+	return tint
+
+
+## Where a node under the level stands in the level, whatever it is placed in.
+func _place_of(node: Node2D) -> Vector2:
+	return _transform_of(node).origin
+
+
+## The scene of pictures laid in 3D in front of the level scene at path (see LevelDressing):
+## "<name>_3d.tscn" beside it, or "" when there is none.
+static func dressing_of(path: String) -> String:
+	var dressing := path.get_basename() + "_3d.tscn"
+	return dressing if ResourceLoader.exists(dressing) else ""
+
+
+## Name, night, rows, lights, darkness and pictures of the level scene at path.
 static func read(path: String) -> Dictionary:
 	var level: LevelMap = load(path).instantiate()
-	var spec := {"name": level.level_name, "night": level.night, "dungeon": level.dungeon, "map": level.to_rows()}
+	var spec := {"name": level.level_name, "night": level.night, "dungeon": level.dungeon, "map": level.to_rows(),
+		"lights": level.scene_lights(), "darkness": level.scene_darkness(), "pictures": level.scene_pictures(),
+		"dressing": dressing_of(path)}
 	level.free()
 	return spec
 
@@ -70,11 +190,24 @@ func _ready() -> void:
 	stage.night = night
 	stage.dungeon = dungeon
 	stage.level_name = level_name
+	stage.scene_lights = scene_lights()
+	stage.scene_darkness = scene_darkness()
+	stage.scene_pictures = scene_pictures()
+	stage.dressing_path = dressing_of(scene_file_path)
+	# The placed lights, darkness and pictures go into the game; here they would stand in the
+	# wrong places.
+	for node in find_children("*", "PointLight2D", true, false) + find_children("*", "CanvasModulate", true, false):
+		node.queue_free()
+	for group in get_children():
+		if PICTURE_GROUPS.has(String(group.name)):
+			group.queue_free()
 	add_child(stage)
 	stage.finished.connect(stage.restart)
 
 
 func _draw() -> void:
+	if Engine.is_editor_hint() and screen_guides:
+		_draw_screen_guides()
 	if not Engine.is_editor_hint() or not dungeon or not wall_guides:
 		return
 	var map := get_node_or_null("Map") as TileMapLayer
@@ -179,3 +312,26 @@ func _solid_runs(image: Image) -> Array[Vector2]:
 func _letter(map: TileMapLayer, cell: Vector2i) -> String:
 	var tile := map.get_cell_atlas_coords(cell)
 	return LETTERS[tile.x] if tile.x >= 0 and tile.x < LETTERS.length() else " "
+
+
+## Boxes of one screen each over the painted cells, counted from the left and the bottom.
+func _draw_screen_guides() -> void:
+	var map := get_node_or_null("Map") as TileMapLayer
+	if not map:
+		return
+	var used := map.get_used_rect()
+	if used.size.x == 0:
+		return
+	var tile := float(PlatformerGame.TILE)
+	var left := used.position.x * tile
+	var right := used.end.x * tile
+	var bottom := used.end.y * tile
+	var top := used.position.y * tile
+	var x := left
+	while x <= right:
+		draw_dashed_line(Vector2(x, top), Vector2(x, bottom), GUIDE_SCREEN, 4.0, 24.0)
+		x += SCREEN_CELLS.x * tile
+	var y := bottom
+	while y >= top:
+		draw_dashed_line(Vector2(left, y), Vector2(right, y), GUIDE_SCREEN, 4.0, 24.0)
+		y -= SCREEN_CELLS.y * tile
