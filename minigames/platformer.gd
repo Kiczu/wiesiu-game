@@ -554,9 +554,9 @@ const SLOT := 38.0
 ## Wiesław's own torch, found in the dungeons, and whether he holds it lit. Both go on from level
 ## to level.
 var torch := false
-## The weapon in Wiesław's hand (a name from art/platformer/bron/bronie.json), or "" for none until
-## it is drawn to fit him. It lives in his equipment, not in the bar, and is changed only at a rest stop.
-var weapon := ""
+## The weapon in Wiesław's hand (a name from art/platformer/bron/bronie.json), or "" for none.
+## It lives in his equipment, not in the bar, and is changed only at a rest stop.
+var weapon := "miecz"
 var torch_lit := false
 ## How far the torch in hand shines (tiles) and how bright.
 const LIGHT_HELD := Vector2(6.5, 1.6)

@@ -14,8 +14,10 @@ const ART_SETS := {"smooth": "res://art/platformer/wieslaw/"}
 const ANIM_DIR := "res://art/platformer/wieslaw_klatki_chibi/"
 ## Weapons held in the near hand: bronie.json gives each one's picture, the point of its grip,
 ## how big it is next to the frames and how far a blow with it reaches ("reach", px, read by the
-## platformer). Frames made for a weapon (poses named "<pose>_bron") mark the hand and the
-## weapon's angle; in the other poses the weapon is put away.
+## platformer). Frames made for a weapon (poses named "<pose>_bron") either have it drawn in or
+## mark the hand and the weapon's angle, and then the weapon's picture is put there; in the other
+## poses the weapon is put away. A pose for the weapon and something held ("<pose>_bron_<holding>")
+## comes first when both are in hand.
 const WEAPON_DIR := "res://art/platformer/bron/"
 ## How much of the frame around the hand is drawn again over the weapon, so the fist holds its grip.
 const FIST := 6.0
@@ -230,9 +232,12 @@ func _load_weapon() -> void:
 
 func _show_frame(delta: float) -> void:
 	var shown := pose
-	if holding != "" and _anim.has(pose + "_" + holding):
+	var armed := not _weapon_spec.is_empty()
+	if armed and holding != "" and _anim.has(pose + "_bron_" + holding):
+		shown = pose + "_bron_" + holding
+	elif holding != "" and _anim.has(pose + "_" + holding):
 		shown = pose + "_" + holding
-	elif not _weapon_spec.is_empty() and _anim.has(pose + "_bron"):
+	elif armed and _anim.has(pose + "_bron"):
 		shown = pose + "_bron"
 	var current: Dictionary = _anim.get(shown, _anim["idle"])
 	if shown != _anim_pose:
